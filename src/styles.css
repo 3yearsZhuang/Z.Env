@@ -1077,11 +1077,54 @@ body.glass .input {
   color: var(--text-dim);
 }
 
-/* ---------- 软件渠道页 ---------- */
+/* ---------- 支持列表页 ---------- */
 .soft-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
+}
+.support-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.support-search {
+  flex: 1;
+  max-width: 320px;
+}
+.support-chips {
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.chip {
+  padding: 5px 12px;
+  font-size: 12.5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+}
+.chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft, transparent);
+}
+.soft-card button.soft-install {
+  font: inherit;
+  width: 100%;
+  text-align: left;
+}
+button.soft-install {
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.empty.small {
+  padding: 24px;
+  color: var(--text-dim);
 }
 .soft-card {
   display: flex;

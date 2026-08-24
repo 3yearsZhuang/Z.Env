@@ -154,8 +154,8 @@ export const KNOWN_TOOLS = [
   "cobol", "eiffel", "logo",
 ];
 
-/** 工具分类 */
-const TOOL_CATS: Record<string, string[]> = {
+/** 工具分类（支持列表页复用） */
+export const TOOL_CATS: Record<string, string[]> = {
   "语言运行时": [
     "node", "python", "ruby", "go", "rust", "java", "kotlin", "dotnet",
     "php", "swift", "dart", "flutter", "haskell", "lua", "perl", "zig",

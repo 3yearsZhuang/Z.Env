@@ -110,8 +110,8 @@ export default function App() {
             className={`nav-item ${tab === "software" ? "active" : ""}`}
             onClick={() => setTab("software")}
           >
-            <span className="nav-icon">⇓</span>
-            <span className="nav-label">软件渠道</span>
+            <span className="nav-icon">⌂</span>
+            <span className="nav-label">支持列表</span>
           </button>
         </nav>
 
