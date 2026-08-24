@@ -253,9 +253,20 @@ export const SOFT_SET = new Set(SOFTWARE.map((s) => s.name));
 // 纯标记/概念（无安装实体），从展示移除，不属运行时也不属软件下载
 const HIDDEN_SET = new Set(["markdown", "json", "yaml", "toml", "logo", "coverage"]);
 
-/** 仅运行时集合（供展示与设置页自检；排除软件与纯格式项） */
+// 实测 `mise ls-remote <n>` 无版本源的运行时/工具，避免在运行时页展示为“可安装”误导
+const NO_SRC_SET = new Set([
+  "haskell", "nim", "c", "cpp", "csharp", "r", "ocaml", "typescript", "javascript",
+  "d", "lisp", "objectivec", "prolog", "reason", "pascal", "ada", "applescript",
+  "fortran", "coq", "clojurescript", "coffeescript", "vue", "react", "svelte",
+  "eslint", "jest", "vitest", "nx", "vite", "webpack", "rollup", "parcel", "gulp",
+  "babel", "gcc", "cargo", "nix", "bash", "fish", "nu", "composer", "volta",
+  "pypy", "ipython", "jupyter", "twine", "virtualenv", "gopls", "goimports",
+  "fsharp", "raku", "idris", "pike", "smalltalk", "tcl", "rexx", "cobol", "eiffel",
+]);
+
+/** 仅运行时集合（供展示与设置页自检；排除软件、纯格式项及实测无源项） */
 export const KNOWN_RUNTIMES = KNOWN_TOOLS.filter(
-  (n) => !SOFT_SET.has(n) && !HIDDEN_SET.has(n)
+  (n) => !SOFT_SET.has(n) && !HIDDEN_SET.has(n) && !NO_SRC_SET.has(n)
 );
 
 export default function ToolsView() {
