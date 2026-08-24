@@ -23,6 +23,23 @@ interface Props {
 
 type RemoteSource = "mise" | "asdf" | "github" | "official";
 
+const SOURCE_LABEL: Record<RemoteSource, string> = {
+  mise: "mise 官方",
+  asdf: "ASDF 插件",
+  github: "GitHub Releases",
+  official: "官方生态源",
+};
+
+// 各源读取函数
+const SOURCE_FETCH: Record<RemoteSource, (tool: string) => Promise<string[]>> = {
+  mise: listRemoteVersions,
+  asdf: listRemoteVersionsAsdf,
+  github: listRemoteVersionsGithub,
+  official: listRemoteVersionsOfficial,
+};
+// 自动回退顺序：用户所选源优先，其后按此补序
+const SOURCE_ORDER: RemoteSource[] = ["mise", "official", "github", "asdf"];
+
 export default function InstallDialog({ tool, external, onClose, onDone }: Props) {
   // 已接管标记持久化到 localStorage，跨会话保留
   const ADOPT_KEY = "zenv:adopted";
@@ -37,6 +54,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
 
   const [remote, setRemote] = useState<string[]>([]);
   const [source, setSource] = useState<RemoteSource>("mise");
+  const [usedSource, setUsedSource] = useState<RemoteSource>("mise");
   const [loadingRemote, setLoadingRemote] = useState(true);
   const [selected, setSelected] = useState("");
   const [manual, setManual] = useState("");
@@ -73,26 +91,29 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     (async () => {
       setLoadingRemote(true);
       setError(null);
-      try {
-        const versions = await (source === "asdf"
-          ? listRemoteVersionsAsdf(tool.name)
-          : source === "github"
-          ? listRemoteVersionsGithub(tool.name)
-          : source === "official"
-          ? listRemoteVersionsOfficial(tool.name)
-          : listRemoteVersions(tool.name));
-        if (!alive) return;
-        setRemote(versions);
-        const installed = new Set(tool.versions.map((v) => v.version));
-        const candidate = versions.find((v) => !installed.has(v));
-        if (candidate) setSelected(candidate);
-      } catch {
-        // 远程版本获取失败（如 C/C++ 等无对应源）：静默处理，不展示红色报错，
-        // 让用户走“手动输入版本号”路径。
-        if (alive) setRemote([]);
-      } finally {
-        if (alive) setLoadingRemote(false);
+      // 用户所选源优先，其后按固定顺序自动回退，取首个非空结果
+      const ordered = [source, ...SOURCE_ORDER.filter((s) => s !== source)];
+      let found: string[] = [];
+      let used: RemoteSource | null = null;
+      for (const s of ordered) {
+        try {
+          const v = await SOURCE_FETCH[s](tool.name);
+          if (v && v.length > 0) {
+            found = v;
+            used = s;
+            break;
+          }
+        } catch {
+          // 该源不可用，继续尝试下一源
+        }
       }
+      if (!alive) return;
+      setUsedSource(used ?? source);
+      setRemote(found);
+      const installed = new Set(tool.versions.map((v) => v.version));
+      const candidate = found.find((v) => !installed.has(v));
+      if (candidate) setSelected(candidate);
+      setLoadingRemote(false);
     })();
     return () => {
       alive = false;
@@ -250,6 +271,12 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                   <option value="official">官方生态源</option>
                 </select>
               </div>
+              {!loadingRemote && remote.length > 0 && (
+                <div className="dialog-tip">
+                  当前版本列表来自：{SOURCE_LABEL[usedSource]}
+                  {usedSource !== source ? "（自动回退）" : ""}
+                </div>
+              )}
               {loadingRemote ? (
                 <div className="empty small">正在获取远程版本列表…</div>
               ) : filteredRemote.length > 0 ? (

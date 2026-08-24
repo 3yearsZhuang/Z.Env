@@ -3,11 +3,12 @@ import Dashboard from "./components/Dashboard";
 import ToolsView from "./components/ToolsView";
 import ProjectsView from "./components/ProjectsView";
 import SettingsView from "./components/SettingsView";
+import SoftwareView from "./components/SoftwareView";
 import EasterEgg from "./components/EasterEgg";
 import { initLogger, logInfo } from "./logger";
 import "./styles.css";
 
-type Tab = "dashboard" | "tools" | "projects" | "settings";
+type Tab = "dashboard" | "tools" | "projects" | "settings" | "software";
 type Theme = "auto" | "light" | "dark";
 const THEME_NEXT: Record<Theme, Theme> = {
   auto: "light",
@@ -105,6 +106,13 @@ export default function App() {
             <span className="nav-icon">⚙</span>
             <span className="nav-label">设置</span>
           </button>
+          <button
+            className={`nav-item ${tab === "software" ? "active" : ""}`}
+            onClick={() => setTab("software")}
+          >
+            <span className="nav-icon">⇓</span>
+            <span className="nav-label">软件渠道</span>
+          </button>
         </nav>
 
         <div className="sidebar-footer">
@@ -125,6 +133,7 @@ export default function App() {
         {tab === "tools" && <ToolsView />}
         {tab === "projects" && <ProjectsView />}
         {tab === "settings" && <SettingsView onEaster={() => setEaster(true)} />}
+        {tab === "software" && <SoftwareView />}
       </main>
 
       {easter && <EasterEgg onClose={() => setEaster(false)} />}

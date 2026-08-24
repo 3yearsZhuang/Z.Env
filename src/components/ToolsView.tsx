@@ -204,6 +204,60 @@ const TOOL_CATS: Record<string, string[]> = {
 };
 const CAT_KEYS = Object.keys(TOOL_CATS);
 
+/** 可托管但非 mise 运行时的软件/服务：分离到“软件渠道”页，并提供官方下载入口 */
+export interface DownloadSoft {
+  name: string;
+  url: string;
+  desc?: string;
+}
+export const SOFTWARE: DownloadSoft[] = [
+  { name: "docker", url: "https://docs.docker.com/get-docker/", desc: "容器平台" },
+  { name: "kubectl", url: "https://kubernetes.io/docs/tasks/tools/", desc: "Kubernetes CLI" },
+  { name: "kind", url: "https://kind.sigs.k8s.io/", desc: "本地 Kubernetes" },
+  { name: "k3d", url: "https://k3d.io/", desc: "本地 Kubernetes" },
+  { name: "minikube", url: "https://minikube.sigs.k8s.io/docs/start/", desc: "本地 Kubernetes" },
+  { name: "k9s", url: "https://k9scli.io/", desc: "K8s 终端 UI" },
+  { name: "helmfile", url: "https://github.com/helmfile/helmfile", desc: "Helm 编排" },
+  { name: "kubeconform", url: "https://github.com/yannh/kubeconform", desc: "K8s 校验" },
+  { name: "argocd", url: "https://argoproj.github.io/cd/", desc: "GitOps CD" },
+  { name: "istioctl", url: "https://istio.io/latest/docs/setup/install/", desc: "服务网格 CLI" },
+  { name: "consul", url: "https://www.consul.io/downloads", desc: "服务发现" },
+  { name: "nomad", url: "https://www.nomadproject.io/downloads", desc: "调度器" },
+  { name: "mysql", url: "https://dev.mysql.com/downloads/mysql/", desc: "数据库" },
+  { name: "postgresql", url: "https://www.postgresql.org/download/", desc: "数据库" },
+  { name: "redis", url: "https://redis.io/download/", desc: "缓存/数据库" },
+  { name: "mongodb", url: "https://www.mongodb.com/try/download/community", desc: "文档数据库" },
+  { name: "sqlite", url: "https://www.sqlite.org/download.html", desc: "嵌入式数据库" },
+  { name: "mariadb", url: "https://mariadb.org/download/", desc: "数据库" },
+  { name: "clickhouse", url: "https://clickhouse.com/docs/en/install", desc: "分析数据库" },
+  { name: "mssql", url: "https://www.microsoft.com/en-us/sql-server/sql-server-downloads", desc: "关系数据库" },
+  { name: "cassandra", url: "https://cassandra.apache.org/_/download.html", desc: "分布式 DB" },
+  { name: "couchdb", url: "https://couchdb.apache.org/#download", desc: "文档数据库" },
+  { name: "elasticsearch", url: "https://www.elastic.co/downloads/elasticsearch", desc: "搜索/分析" },
+  { name: "influxdb", url: "https://www.influxdata.com/downloads/", desc: "时序数据库" },
+  { name: "awscli", url: "https://aws.amazon.com/cli/", desc: "AWS CLI" },
+  { name: "gcloud", url: "https://cloud.google.com/sdk/docs/install", desc: "Google Cloud CLI" },
+  { name: "az", url: "https://learn.microsoft.com/cli/azure/install-azure-cli", desc: "Azure CLI" },
+  { name: "gh", url: "https://github.com/cli/cli/releases", desc: "GitHub CLI" },
+  { name: "git-lfs", url: "https://git-lfs.com/", desc: "Git 大文件" },
+  { name: "age", url: "https://github.com/FiloSottile/age", desc: "文件加密" },
+  { name: "envsubst", url: "https://github.com/a8m/envsubst", desc: "环境变量替换" },
+  { name: "wget", url: "https://www.gnu.org/software/wget/", desc: "网络下载" },
+  { name: "curl", url: "https://curl.se/download.html", desc: "网络传输" },
+  { name: "sonar", url: "https://www.sonarsource.com/products/sonarqube/downloads/", desc: "代码质量" },
+  { name: "sentry", url: "https://sentry.io/", desc: "错误监控" },
+  { name: "talisman", url: "https://github.com/thought-machine/talisman", desc: "秘钥守护" },
+];
+export const SOFT_SET = new Set(SOFTWARE.map((s) => s.name));
+
+// 纯标记/概念（无安装实体），从展示移除，不属运行时也不属软件下载
+const HIDDEN_SET = new Set(["markdown", "json", "yaml", "toml", "logo", "coverage"]);
+
+/** 仅运行时集合（供展示与设置页自检；排除软件与纯格式项） */
+export const KNOWN_RUNTIMES = KNOWN_TOOLS.filter(
+  (n) => !SOFT_SET.has(n) && !HIDDEN_SET.has(n)
+);
+
 export default function ToolsView() {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
@@ -274,8 +328,8 @@ export default function ToolsView() {
     list.push(s);
     externalByTool.set(s.tool, list);
   }
-  // 候选工具中尚未被 mise 托管的
-  const others = KNOWN_TOOLS.filter((n) => !installedSet.has(n));
+  // 候选工具中尚未被 mise 托管的（排除软件下载项与纯格式项）
+  const others = KNOWN_RUNTIMES.filter((n) => !installedSet.has(n));
   // 未安装的候选也按统一卡片展示（0 个版本），允许安装。
 // 排序：已安装 > 仅托管 > 未安装，组内按名称。
 const rank = (t: ToolInfo) =>

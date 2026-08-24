@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { listTools, listRegistry, ToolInfo } from "../api";
-import { KNOWN_TOOLS } from "./ToolsView";
+import { KNOWN_RUNTIMES } from "./ToolsView";
 import { getLogs, LogEntry } from "../logger";
 
 /** 真实收款码图片路径（放入 public/donate/ 下即可自动嵌入；缺失则回退占位假码） */
@@ -152,7 +152,7 @@ export default function EasterEgg({ onClose }: { onClose: () => void }) {
     return () => clearInterval(t);
   }, []);
 
-  const coveredSet = new Set([...installed, ...KNOWN_TOOLS]);
+  const coveredSet = new Set([...installed, ...KNOWN_RUNTIMES]);
   const coveredCount = registry.filter((n) => coveredSet.has(n)).length;
   const missing = registry.filter((n) => !coveredSet.has(n));
 
