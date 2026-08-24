@@ -656,6 +656,8 @@ pub fn list_remote_versions_official(tool: &str) -> Result<Vec<String>, String> 
         "dotnet" | "dotnet-sdk" => github_tag_versions("dotnet/runtime"),
         "rust" | "cargo" => github_tag_versions("rust-lang/rust"),
         "swift" => github_tag_versions("swiftlang/swift"),
+        "scala" => github_tag_versions("scala/scala"),
+        "kotlin" => github_tag_versions("JetBrains/kotlin"),
         "terraform" => github_tag_versions("hashicorp/terraform"),
         "helm" => github_tag_versions("helm/helm"),
         _ => Err(format!("{} 暂无官方生态源", tool)),
