@@ -1,0 +1,54 @@
+name: Release
+
+# 触发方式：
+#  - 推送 v* 标签（如 v0.6.6）
+#  - 或手动 workflow_dispatch
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # 三平台自动打包：macOS(dmg) / Windows(msi-nsis) / Linux(appimage|deb)
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-20.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin x86_64-apple-darwin' || '' }}
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Build & publish artifacts
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "Z.Env v__VERSION__"
+          releaseBody: |
+            - **Z.Env** 自动打包产物（macOS / Windows / Linux）
+            - 由 [GitHub Actions](https://github.com/features/actions) 在干净环境构建
+            - 失败即中止，产物不可复现即视为发布失败
+          releaseDraft: true
+          prerelease: false

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4150"/>
+      <stop offset="1" stop-color="#15181f"/>
+    </linearGradient>
+    <linearGradient id="z" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7db0ff"/>
+      <stop offset="0.55" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#5b6cff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 整块不透明背景（四角不透明）：macOS 系统会自动套用磨边圆角(squircle)与阴影 -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- 终端式 Z 折线 -->
+  <path d="M300 360 H724 M532 512 L724 360 M300 664 H724 M532 512 L300 664"
+        fill="none" stroke="url(#z)" stroke-width="96"
+        stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- 启动光标 -->
+  <circle cx="300" cy="768" r="64" fill="#2bd6a0"/>
+</svg>
