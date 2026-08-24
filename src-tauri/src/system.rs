@@ -408,9 +408,9 @@ fn read_windows_memories() -> Vec<MemoryInfo> {
     let Some(text) = out else { return Vec::new() };
     let mut memories = Vec::new();
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
-        let items: Vec<&serde_json::Value> = match json {
+        let items: Vec<&serde_json::Value> = match &json {
             serde_json::Value::Array(a) => a.iter().collect(),
-            ref v => std::iter::once(v).collect(),
+            v => std::iter::once(v).collect(),
         };
         for m in items {
             let manu = m
@@ -457,9 +457,9 @@ fn read_windows_storage() -> Vec<MemoryInfo> {
     let Some(text) = out else { return Vec::new() };
     let mut storage = Vec::new();
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
-        let items: Vec<&serde_json::Value> = match json {
+        let items: Vec<&serde_json::Value> = match &json {
             serde_json::Value::Array(a) => a.iter().collect(),
-            ref v => std::iter::once(v).collect(),
+            v => std::iter::once(v).collect(),
         };
         for d in items {
             let model = d
