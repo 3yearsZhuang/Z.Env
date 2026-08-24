@@ -625,10 +625,18 @@ pub fn list_remote_versions_github(tool: &str) -> Result<Vec<String>, String> {
     Ok(list)
 }
 
-/// 通用 curl 抓取并解析 JSON。
+/// 通用 curl 抓取并解析 JSON（带超时，避免网络挂起拖慢界面）。
 fn curl_json(url: &str) -> Result<serde_json::Value, String> {
     let out = Command::new("curl")
-        .args(["-s", "-L", "-H", "User-Agent: mise-gui", url])
+        .args([
+            "-s",
+            "-L",
+            "--max-time",
+            "10",
+            "-H",
+            "User-Agent: mise-gui",
+            url,
+        ])
         .output()
         .map_err(|e| format!("无法请求: {}", e))?;
     let text = String::from_utf8_lossy(&out.stdout);
@@ -643,7 +651,59 @@ pub fn list_remote_versions_official(tool: &str) -> Result<Vec<String>, String> 
         "go" | "golang" => go_proxy_versions(),
         "python" | "python3" => python_ftp_versions(),
         "java" | "openjdk" | "temurin" => adoptium_versions(),
+        "ruby" => github_tag_versions("ruby/ruby"),
+        "php" => github_tag_versions("php/php-src"),
+        "dotnet" | "dotnet-sdk" => github_tag_versions("dotnet/runtime"),
+        "rust" | "cargo" => github_tag_versions("rust-lang/rust"),
+        "swift" => github_tag_versions("swiftlang/swift"),
+        "terraform" => github_tag_versions("hashicorp/terraform"),
+        "helm" => github_tag_versions("helm/helm"),
         _ => Err(format!("{} 暂无官方生态源", tool)),
+    }
+}
+
+/// 从某 GitHub 仓库的 tags 提取“看起来像版本号”的纯版本列表。
+/// 自动处理 `v3.3.0` / `v3_3_0` / `php-8.3.0` / `1.75.0` 等差异。
+fn github_tag_versions(repo: &str) -> Result<Vec<String>, String> {
+    let url = format!(
+        "https://api.github.com/repos/{}/tags?per_page=100&page=1",
+        repo
+    );
+    let json = curl_json(&url)?;
+    let arr = json
+        .as_array()
+        .ok_or_else(|| "GitHub 返回格式异常".to_string())?;
+    let mut list: Vec<String> = Vec::new();
+    for tag in arr {
+        let name = tag.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        if let Some(v) = clean_tag_version(name) {
+            list.push(v);
+        }
+    }
+    list.dedup();
+    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
+    if list.is_empty() {
+        Err(format!("{} 官方源未取到版本", repo))
+    } else {
+        Ok(list)
+    }
+}
+
+/// 把形如 `v3_3_0` / `php-8.3.0` / `1.75.0` 的 tag 名清洗为纯版本串。
+fn clean_tag_version(name: &str) -> Option<String> {
+    // 下划线视为点分隔（ruby 旧式 tag）
+    let dotted = name.replace('_', ".");
+    let start = dotted.find(|c: char| c.is_ascii_digit())?;
+    let crop = &dotted[start..];
+    let v: String = crop
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.')
+        .collect();
+    // 至少是主.次，避免只取到一级数字产生误导
+    if v.split('.').count() >= 2 {
+        Some(v)
+    } else {
+        None
     }
 }
 
@@ -671,7 +731,13 @@ fn node_dist_versions() -> Result<Vec<String>, String> {
 /// Go 官方 proxy 模块列表：https://proxy.golang.org/golang/go/@v/list
 fn go_proxy_versions() -> Result<Vec<String>, String> {
     let out = Command::new("curl")
-        .args(["-s", "-L", "https://proxy.golang.org/golang/go/@v/list"])
+        .args([
+            "-s",
+            "-L",
+            "--max-time",
+            "10",
+            "https://proxy.golang.org/golang/go/@v/list",
+        ])
         .output()
         .map_err(|e| format!("无法请求 Go proxy: {}", e))?;
     let text = String::from_utf8_lossy(&out.stdout);
@@ -692,7 +758,13 @@ fn go_proxy_versions() -> Result<Vec<String>, String> {
 /// Python 官方下载页目录：https://www.python.org/ftp/python/ （解析 3.N.N 目录名）
 fn python_ftp_versions() -> Result<Vec<String>, String> {
     let out = Command::new("curl")
-        .args(["-s", "-L", "https://www.python.org/ftp/python/"])
+        .args([
+            "-s",
+            "-L",
+            "--max-time",
+            "10",
+            "https://www.python.org/ftp/python/",
+        ])
         .output()
         .map_err(|e| format!("无法请求 Python 源: {}", e))?;
     let html = String::from_utf8_lossy(&out.stdout);
