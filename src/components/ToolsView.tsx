@@ -247,6 +247,7 @@ export const SOFTWARE: DownloadSoft[] = [
   { name: "sonar", url: "https://www.sonarsource.com/products/sonarqube/downloads/", desc: "代码质量" },
   { name: "sentry", url: "https://sentry.io/", desc: "错误监控" },
   { name: "talisman", url: "https://github.com/thought-machine/talisman", desc: "秘钥守护" },
+  { name: "git", url: "https://git-scm.com/downloads", desc: "版本控制" },
   // ---- 无 mise 版本源、但有官方下载渠道的语言与工具 ----
   { name: "haskell", url: "https://www.haskell.org/downloads/", desc: "GHC 工具链" },
   { name: "nim", url: "https://nim-lang.org/install.html", desc: "语言" },

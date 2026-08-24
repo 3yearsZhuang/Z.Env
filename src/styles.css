@@ -1155,6 +1155,23 @@ button.soft-install {
 .soft-name {
   font-weight: 600;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inst-badge {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--bg);
+}
+.inst-badge.yes {
+  color: #2e9e5b;
+  border-color: #2e9e5b;
+  background: rgba(46, 158, 91, 0.12);
 }
 .soft-desc {
   font-size: 12px;

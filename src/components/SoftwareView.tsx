@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { KNOWN_RUNTIMES, SOFTWARE, TOOL_CATS } from "./ToolsView";
+import { listTools } from "../api";
 import InstallDialog from "./InstallDialog";
 import type { ToolInfo } from "../api";
 
@@ -74,6 +75,16 @@ export default function SoftwareView() {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("全部");
   const [installFor, setInstallFor] = useState<ToolInfo | null>(null);
+  const [installed, setInstalled] = useState<Set<string>>(new Set());
+
+  const refreshInstalled = () => {
+    listTools()
+      .then((ts) => setInstalled(new Set(ts.map((t) => t.name))))
+      .catch(() => {});
+  };
+  useEffect(() => {
+    refreshInstalled();
+  }, []);
 
   const items = useMemo<Item[]>(() => {
     const arr: Item[] = [];
@@ -151,21 +162,31 @@ export default function SoftwareView() {
               <span className="soft-link">官方下载 ↔</span>
             </a>
           ) : (
-            <button
-              className="soft-card soft-install"
-              key={it.name}
-              onClick={() =>
-                setInstallFor({ name: it.name, versions: [], active_versions: [] })
-              }
-              title="用 mise 安装"
-            >
-              <SoftIcon name={it.name} />
-              <div className="soft-info">
-                <span className="soft-name">{it.name}</span>
-                <span className="soft-desc">mise 可安装</span>
-              </div>
-              <span className="soft-link">安装 +</span>
-            </button>
+            (() => {
+              const isInstalled = installed.has(it.name);
+              return (
+                <button
+                  className="soft-card soft-install"
+                  key={it.name}
+                  onClick={() =>
+                    setInstallFor({ name: it.name, versions: [], active_versions: [] })
+                  }
+                  title={isInstalled ? "查看已安装版本" : "用 mise 安装"}
+                >
+                  <SoftIcon name={it.name} />
+                  <div className="soft-info">
+                    <span className="soft-name">
+                      {it.name}
+                      <span className={"inst-badge" + (isInstalled ? " yes" : "")}>
+                        {isInstalled ? "已安装" : "可安装"}
+                      </span>
+                    </span>
+                    <span className="soft-desc">mise 管理</span>
+                  </div>
+                  <span className="soft-link">{isInstalled ? "管理" : "安装 +"}</span>
+                </button>
+              );
+            })()
           )
         )}
         {filtered.length === 0 && (
@@ -177,7 +198,10 @@ export default function SoftwareView() {
         <InstallDialog
           tool={installFor}
           onClose={() => setInstallFor(null)}
-          onDone={() => setInstallFor(null)}
+          onDone={() => {
+            setInstallFor(null);
+            refreshInstalled();
+          }}
         />
       )}
     </div>
