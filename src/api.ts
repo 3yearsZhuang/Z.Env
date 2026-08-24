@@ -68,6 +68,33 @@ export function checkMise(): Promise<MiseStatus> {
   return invoke("check_mise");
 }
 
+/** 操作系统信息 */
+export interface OsInfo {
+  name: string;
+  version: string;
+  arch: string;
+}
+
+/** 包管理器信息 */
+export interface PkgInfo {
+  name: string;
+  version: string | null;
+  available: boolean;
+}
+
+/** 一次性环境汇总信息 */
+export interface EnvInfo {
+  mise_version: string | null;
+  git_version: string | null;
+  os: OsInfo;
+  pkg: PkgInfo[];
+}
+
+/** 采集环境信息：mise/git 版本、系统版本、包管理器版本 */
+export function getEnvInfo(): Promise<EnvInfo> {
+  return invoke("get_env_info");
+}
+
 /** 其他工具托管的一个运行时版本 */
 export interface ToolSource {
   tool: string;

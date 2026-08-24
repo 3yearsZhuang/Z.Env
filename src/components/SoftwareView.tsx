@@ -71,6 +71,24 @@ function SoftIcon({ name }: { name: string }) {
   );
 }
 
+const PKG_MANAGERS = ["brew", "winget", "apt", "pacman"] as const;
+type PkgName = (typeof PKG_MANAGERS)[number];
+
+/** 各包管理器对应的安装命令（默认包名 = 工具名） */
+function pkgCommand(pm: PkgName, name: string): string {
+  return `${pm} install ${name}`;
+}
+
+/** 复制命令到剪贴板 */
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* 忽略 */
+  }
+}
+
+/** 支持列表页 */
 export default function SoftwareView() {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("全部");
@@ -158,6 +176,22 @@ export default function SoftwareView() {
               <div className="soft-info">
                 <span className="soft-name">{it.name}</span>
                 {it.desc && <span className="soft-desc">{it.desc}</span>}
+                <span className="pkg-row" title="点击复制安装命令">
+                  {PKG_MANAGERS.map((pm) => (
+                    <span
+                      key={pm}
+                      className="pkg-chip"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        copyText(pkgCommand(pm, it.name));
+                      }}
+                      title={`${pkgCommand(pm, it.name)} · 点击复制`}
+                    >
+                      {pm}
+                    </span>
+                  ))}
+                </span>
               </div>
               <span className="soft-link">官方下载 ↔</span>
             </a>

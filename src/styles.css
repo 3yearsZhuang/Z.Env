@@ -1077,7 +1077,50 @@ body.glass .input {
   color: var(--text-dim);
 }
 
+/* ---------- 环境信息条（首页） ---------- */
+.env-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.env-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+}
+.env-chip b {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* ---------- 支持列表页 ---------- */
+.pkg-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.pkg-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  background: var(--bg);
+  cursor: pointer;
+  user-select: none;
+}
+.pkg-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft, transparent);
+}
 .soft-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

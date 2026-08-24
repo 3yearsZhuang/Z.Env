@@ -4,6 +4,8 @@ import {
   SystemStats,
   checkMise,
   MiseStatus,
+  getEnvInfo,
+  EnvInfo,
   errorMessage,
 } from "../api";
 
@@ -205,6 +207,7 @@ function Card({
 export default function Dashboard() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [mise, setMise] = useState<MiseStatus | null>(null);
+  const [env, setEnv] = useState<EnvInfo | null>(null);
   const [cpuHistory, setCpuHistory] = useState<number[]>([]);
   const [memoryHistory, setMemoryHistory] = useState<number[]>([]);
   const [diskHistory, setDiskHistory] = useState<number[]>([]);
@@ -247,6 +250,9 @@ export default function Dashboard() {
     checkMise()
       .then(setMise)
       .catch(() => setMise({ installed: false, version: null }));
+    getEnvInfo()
+      .then(setEnv)
+      .catch(() => setEnv(null));
     refresh();
     if (refreshMs > 0) {
       timerRef.current = window.setInterval(refresh, refreshMs);
@@ -316,6 +322,36 @@ export default function Dashboard() {
             mise.jdx.dev
           </a>{" "}
           安装后，即可管理运行时版本（安装：<code>curl https://mise.run | sh</code>）
+        </div>
+      )}
+
+      {env && (
+        <div className="env-strip">
+          <span className="env-chip">
+            系统 <b>{env.os.name} {env.os.version}</b>（{env.os.arch}）
+          </span>
+          <span className="env-chip">
+            mise <b>{env.mise_version ?? "未安装"}</b>
+          </span>
+          <span className="env-chip">
+            git{" "}
+            <b>
+              {env.git_version
+                ? env.git_version.replace(/^git version\s+/i, "")
+                : "未安装"}
+            </b>
+          </span>
+          {env.pkg
+            .filter((p) => p.available)
+            .map((p) => (
+              <span className="env-chip" key={p.name} title={p.version ?? ""}>
+                {p.name}{" "}
+                <b>{p.version ? p.version.split(/\s+/).slice(0, 2).join(" ") : p.version}</b>
+              </span>
+            ))}
+          {env.pkg.length > 0 && env.pkg.every((p) => !p.available) && (
+            <span className="env-chip">未检测到已知包管理器</span>
+          )}
         </div>
       )}
 

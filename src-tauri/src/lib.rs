@@ -1,3 +1,4 @@
+mod env;
 mod mise;
 mod system;
 
@@ -46,6 +47,12 @@ fn system_stats(state: tauri::State<'_, AppData>) -> Result<system::SystemStats,
 #[tauri::command]
 fn check_mise() -> mise::MiseStatus {
     mise::mise_status()
+}
+
+/// 采集一次性环境信息：mise/git 版本、系统信息与各包管理器版本。
+#[tauri::command]
+fn get_env_info() -> env::EnvInfo {
+    env::collect_env_info()
 }
 
 /// 扫描其他工具托管（nvm/pyenv/asdf/sdkman/rvm 等）的运行时。
@@ -185,6 +192,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             system_stats,
             check_mise,
+            get_env_info,
             detect_tool_sources,
             list_tools,
             list_remote_versions,
