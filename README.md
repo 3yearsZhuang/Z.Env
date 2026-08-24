@@ -9,14 +9,22 @@
 **系统概览**
 - CPU / 内存 / 磁盘 / 网络 / 电量 / GPU 实时占用（正方形亚克力卡片）
 - 历史使用率曲线、网络上下行双环
-- 硬件型号（CPU、内存、磁盘、GPU）启动时读取并缓存
+- 硬件型号（CPU、内存、磁盘、GPU）首次采样时读取并缓存
+- 顶部环境横幅：系统与各包管理器（brew/winget/apt/pacman）版本一览
 - 刷新间隔自选（0.1 / 0.5 / 2 / 5 秒 / 关闭）
 
+**支持列表**
+- 全量软件/运行时，与「运行时工具」共用同一套分类标签（TOOL_CATS）
+- mise 源可安装的运行时 + 仅官方下载的软件（附安装弹窗）
+- 系统包管理器 **原生安装**：brew / winget / apt / pacman，点击即执行并流式显示进度
+- 已安装状态来自真实探测（macOS 走 `brew list`），跨启动保持准确
+
 **运行时工具**
-- 列举 mise 托管的所有运行时与已装版本，区分「已安装 / 仅托管 / 未安装」
+- 本机环境一览：可由 mise 安装，或已通过其他渠道（nvm/pyenv/asdf、**brew 等**）托管
+- 聚合展示所有已装版本（含其他渠道版本，带渠道标签）
 - 一键安装、卸载、切换全局版本，实时进度条 + 可展开 CLI 输出
 - **多远程源**：mise 官方、ASDF 插件、GitHub Releases、官方生态源（Node/Go/Python/Java）
-- 接管 / 解除接管 nvm、pyenv、asdf 等用户级托管环境（系统/Homebrew 明确标注不可接管）
+- 其他渠道已装环境可**原生卸载**（brew/winget/apt/pacman，二次确认）
 - 官方运行时图标 + 分类筛选 + 紧凑模式（支持 200+ 运行时）
 
 **项目配置**
@@ -64,7 +72,7 @@ CI 与发布流水线见 `.github/workflows/`：
 - **release.yml**：推送 `v*` 标签或手动触发，用 `tauri-action` 在 **macOS / Windows / Linux** 三平台自动打包（dmg / msi-nsis / appimage+deb）并发布 GitHub Release。
 
 ```bash
-git tag v0.6.6 && git push origin v0.6.6   # 触发自动打包
+git tag v0.6.7 && git push origin v0.6.7   # 触发自动打包
 ```
 
 ## 相关链接

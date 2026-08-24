@@ -55,6 +55,38 @@ fn get_env_info() -> env::EnvInfo {
     env::collect_env_info()
 }
 
+/// 通过系统包管理器（brew/winget/apt/pacman）原生安装指定软件，流式推送进度。
+#[tauri::command]
+async fn install_system_package(
+    app: tauri::AppHandle,
+    manager: String,
+    name: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        env::install_system_package(&app, &manager, &name)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// 探测指定系统包管理器当前已安装的软件名列表。
+#[tauri::command]
+fn detect_system_installed(manager: String) -> Result<Vec<String>, String> {
+    env::detect_system_installed(&manager)
+}
+
+/// 探测指定系统包管理器当前已装的软件及其版本。
+#[tauri::command]
+fn detect_system_versions(manager: String) -> Result<Vec<env::SystemPkg>, String> {
+    env::detect_system_versions(&manager)
+}
+
+/// 原生卸载系统软件包（brew/winget/apt/pacman）。
+#[tauri::command]
+fn uninstall_system_package(manager: String, name: String) -> Result<String, String> {
+    env::uninstall_system_package(&manager, &name)
+}
+
 /// 扫描其他工具托管（nvm/pyenv/asdf/sdkman/rvm 等）的运行时。
 #[tauri::command]
 fn detect_tool_sources() -> Vec<mise::ToolSource> {
@@ -166,15 +198,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppData::default())
         .setup(|app| {
-            // 启动时一次性读取硬件静态信息（CPU/内存/存储/GPU 型号），此后仅复用缓存
-            {
-                let state = app.state::<AppData>();
-                let mut sys = state.system.lock().unwrap();
-                let mut hw = state.hardware.lock().unwrap();
-                if hw.is_none() {
-                    *hw = Some(system::collect_hardware(&mut sys));
-                }
-            }
+            // 不再在启动时同步采集硬件信息；改为首次 system_stats 时惰性计算，窗口可立即显示，
+            // 避免首次安装/启动因 system_profiler / 磁盘扫描（尤其 Windows）导致加载缓慢。
             // macOS：应用“液态玻璃”风格的毛玻璃背景
             #[cfg(target_os = "macos")]
             {
@@ -187,12 +212,23 @@ pub fn run() {
                     );
                 }
             }
+            // Windows：应用亚克力毛玻璃背景，避免 transparent 窗口呈现全透明
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = window_vibrancy::apply_acrylic(&win, Some((18, 18, 18, 150)));
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             system_stats,
             check_mise,
             get_env_info,
+            install_system_package,
+            detect_system_installed,
+            detect_system_versions,
+            uninstall_system_package,
             detect_tool_sources,
             list_tools,
             list_remote_versions,

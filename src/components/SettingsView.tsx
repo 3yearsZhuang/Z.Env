@@ -2,7 +2,7 @@ import { useRef } from "react";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "跨平台 mise 图形化管理器";
-const APP_VERSION = "0.6.6";
+const APP_VERSION = "0.6.7";
 
 const STACK = [
   "Tauri 2",

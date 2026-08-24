@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  listTools,
-  useVersion,
-  uninstallVersion,
+  detectSystemVersions,
   detectToolSources,
-  ToolSource,
   errorMessage,
+  getEnvInfo,
+  listTools,
+  uninstallSystemPackage,
+  uninstallVersion,
+  useVersion,
+  SystemPkg,
+  ToolSource,
   ToolInfo,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import { ChannelDialog } from "./SoftwareView";
 
 /** 常见运行时对应的官方 SVG 图标（存放于 public/tools/） */
 const TOOL_ICON_PATHS: Record<string, string> = {
@@ -204,6 +209,17 @@ export const TOOL_CATS: Record<string, string[]> = {
 };
 const CAT_KEYS = Object.keys(TOOL_CATS);
 
+/** 共享标签系统：按 TOOL_CATS 判定工具归属分类；未收录的一律归入“其他”。
+ *  供“运行时工具”与“支持列表”两页共用同一套标签。 */
+export function categoryOf(name: string): string {
+  for (const k of CAT_KEYS) {
+    if ((TOOL_CATS[k] || []).includes(name)) return k;
+  }
+  return "其他";
+}
+/** 标签列表（含“其他”）；供两页共用 */
+export const CAT_KEYS_ALL = [...CAT_KEYS, "其他"];
+
 /** 可托管但非 mise 运行时的软件/服务：分离到“软件渠道”页，并提供官方下载入口 */
 export interface DownloadSoft {
   name: string;
@@ -338,6 +354,9 @@ export default function ToolsView() {
   const [installFor, setInstallFor] = useState<ToolInfo | null>(null);
   const [catFilter, setCatFilter] = useState<string>("全部");
   const [compact, setCompact] = useState(false);
+  // 本机可用的包管理器（供“仅第三方”工具的渠道弹窗使用）
+  const [pkgAvail, setPkgAvail] = useState<Set<string>>(new Set());
+  const [softChannel, setSoftChannel] = useState<{ name: string; url?: string; desc?: string } | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -347,8 +366,39 @@ export default function ToolsView() {
         listTools(),
         detectToolSources(),
       ]);
+      // 并入系统包管理器（winget/apt/pacman）已装的本机工具；brew 已由 detect_tool_sources
+      // 的 Cellar 扫描提供（含版本与路径），这里排除以避免重复。
+      let systemRes: ToolSource[] = [];
+      const env = await getEnvInfo().catch(() => null);
+      if (env) {
+        setPkgAvail(new Set(env.pkg.filter((p) => p.available).map((p) => p.name)));
+        const supported = new Set([
+          ...KNOWN_RUNTIMES,
+          ...SOFTWARE.map((s) => s.name),
+        ]);
+        const availPkg = env.pkg
+          .filter((p) => p.available && p.name !== "brew")
+          .map((p) => p.name);
+        const perMgr = await Promise.all(
+          availPkg.map((pm) =>
+            detectSystemVersions(pm)
+              .then((pkgs) => ({ pm, pkgs }))
+              .catch(() => ({ pm, pkgs: [] as SystemPkg[] }))
+          )
+        );
+        systemRes = perMgr.flatMap(({ pm, pkgs }) =>
+          pkgs
+            .filter((p) => supported.has(p.name))
+            .map((p) => ({
+              tool: p.name,
+              version: p.version ?? "",
+              manager: pm,
+              path: "",
+            }))
+        );
+      }
       setTools(toolsRes);
-      setSources(sourcesRes);
+      setSources([...sourcesRes, ...systemRes]);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -388,6 +438,41 @@ export default function ToolsView() {
     }
   }
 
+  // “卸载”二次确认：保存待删除键
+  const [confirmUninstall, setConfirmUninstall] = useState<string | null>(null);
+
+  /** 打开安装入口：mise 可管理的运行时走 mise 安装弹窗；
+   *  仅第三方（下载类）走与“支持列表”等效的渠道弹窗。 */
+  function openInstall(tool: ToolInfo) {
+    if (KNOWN_RUNTIMES.includes(tool.name)) {
+      setInstallFor(tool);
+    } else {
+      const soft = SOFTWARE.find((s) => s.name === tool.name);
+      setSoftChannel({ name: tool.name, url: soft?.url, desc: soft?.desc });
+    }
+  }
+
+  /** 原生卸载其他渠道（brew/系统包管理器）安装的环境 */
+  async function uninstallExternal(tool: string, s: ToolSource) {
+    const key = `${s.manager}::${tool}::${s.version}`;
+    if (confirmUninstall !== key) {
+      setConfirmUninstall(key); // 第一次点击进入确认态
+      return;
+    }
+    setConfirmUninstall(null);
+    setBusy(`${tool}@${s.version}`);
+    setNotice(null);
+    try {
+      await uninstallSystemPackage(s.manager, s.tool);
+      setNotice(`已卸载 ${tool}（${s.manager}）`);
+      await refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // 已由 mise 托管
   const installedSet = new Set(tools.map((t) => t.name));
   // 其他工具托管 -> 按工具聚合
@@ -397,8 +482,14 @@ export default function ToolsView() {
     list.push(s);
     externalByTool.set(s.tool, list);
   }
-  // 候选工具中尚未被 mise 托管的（排除软件下载项与纯格式项）
-  const others = KNOWN_RUNTIMES.filter((n) => !installedSet.has(n));
+  // 候选展示项：未由 mise 托管的已知运行时，加上“其他渠道(brew 等)已装”的工具
+//（即使用户只把它当软件下载项，如 git，只要本机通过 brew 装了也要显示）。
+const others = Array.from(
+  new Set([
+    ...KNOWN_RUNTIMES.filter((n) => !installedSet.has(n)),
+    ...[...externalByTool.keys()].filter((n) => !installedSet.has(n)),
+  ])
+).sort();
   // 未安装的候选也按统一卡片展示（0 个版本），允许安装。
 // 排序：已安装 > 仅托管 > 未安装，组内按名称。
 const rank = (t: ToolInfo) =>
@@ -414,11 +505,11 @@ const merged: ToolInfo[] = [
   const r = rank(a) - rank(b);
   return r !== 0 ? r : a.name.localeCompare(b.name);
 });
-// 分类筛选
+// 分类筛选（共享标签系统，含“其他”）
 const filtered =
   catFilter === "全部"
     ? merged
-    : merged.filter((t) => (TOOL_CATS[catFilter] || []).includes(t.name));
+    : merged.filter((t) => categoryOf(t.name) === catFilter);
 // 紧凑模式状态色
 const statusOf = (t: ToolInfo) =>
   t.versions.length > 0 ? "installed" : externalByTool.get(t.name)?.length ? "managed" : "uninstalled";
@@ -430,7 +521,7 @@ const statusLabel = (t: ToolInfo) =>
       <div className="view-head">
         <div>
           <h1>运行时工具</h1>
-          <p className="view-sub">由 mise 管理的所有运行时与已安装版本</p>
+          <p className="view-sub">本机环境一览：可由 mise 安装，或已通过其他渠道（nvm/pyenv/asdf、brew 等）托管</p>
         </div>
         <button
           className="btn-ghost"
@@ -449,7 +540,7 @@ const statusLabel = (t: ToolInfo) =>
           >
             全部
           </button>
-          {CAT_KEYS.map((c) => (
+          {CAT_KEYS_ALL.map((c) => (
             <button
               key={c}
               className={`chip ${catFilter === c ? "active" : ""}`}
@@ -476,20 +567,20 @@ const statusLabel = (t: ToolInfo) =>
         <div className="empty">正在读取环境…</div>
       ) : compact ? (
         <div className="tool-grid compact">
-          {CAT_KEYS.map((cat) => {
-            const grp = filtered.filter((t) => (TOOL_CATS[cat] || []).includes(t.name));
+          {CAT_KEYS_ALL.map((cat) => {
+            const grp = filtered.filter((t) => categoryOf(t.name) === cat);
             if (grp.length === 0) return null;
             return (
               <div className="compact-group" key={cat}>
-                <span className="compact-group-label">{cat}</span>
-                <div className="compact-row">
-                  {grp.map((tool) => (
-                    <button
-                      key={tool.name}
-                      className={`tc-chip ${statusOf(tool)}`}
-                      onClick={() => setInstallFor(tool)}
-                      title={`${tool.name} · ${statusLabel(tool)}`}
-                    >
+                                <span className="compact-group-label">{cat}</span>
+                                <div className="compact-row">
+                                  {grp.map((tool) => (
+                                    <button
+                                      key={tool.name}
+                                      className={`tc-chip ${statusOf(tool)}`}
+                                      onClick={() => openInstall(tool)}
+                                      title={`${tool.name} · ${statusLabel(tool)}`}
+                                    >
                       <ToolBadge name={tool.name} />
                     </button>
                   ))}
@@ -540,10 +631,15 @@ const statusLabel = (t: ToolInfo) =>
                           {tool.versions.length === 0 && (
                             <div className="empty small">
                               {externalByTool.get(tool.name)?.length
-                                ? `由 ${externalByTool
-                                    .get(tool.name)!
-                                    .map((s) => s.manager)
-                                    .join(", ")} 托管 · 尚未用 mise 安装`
+                                ? `由 ${[
+                                    ...new Set(
+                                      externalByTool.get(tool.name)!.map((s) => s.manager)
+                                    ),
+                                  ].join(", ")} 托管 · ${
+                                    KNOWN_RUNTIMES.includes(tool.name)
+                                      ? "尚未用 mise 安装"
+                                      : "无法用 mise 安装"
+                                  }`
                                 : "尚未安装版本"}
                             </div>
                           )}
@@ -590,10 +686,72 @@ const statusLabel = (t: ToolInfo) =>
                               </div>
                             );
                           })}
+                          {/* 其他渠道已装版本：按版本去重展示，渠道标签与卸载按钮按管理器去重，避免同版本/同名重复 */}
+                          {[
+                            ...(() => {
+                              const by = new Map<string, ToolSource[]>();
+                              externalByTool.get(tool.name)?.forEach((s) => {
+                                const k = s.version;
+                                const arr = by.get(k) || [];
+                                arr.push(s);
+                                by.set(k, arr);
+                              });
+                              return by;
+                            })().entries(),
+                          ].map(([version, list]) => {
+                            const mgrKey = [...new Set(list.map((s) => s.manager))].join(",");
+                            const busyKey = `${tool.name}@${version}`;
+                            const uniqUninstall = [
+                              ...new Map(
+                                list
+                                  .filter((s) =>
+                                    ["brew", "winget", "apt", "pacman"].includes(s.manager)
+                                  )
+                                  .map((s) => [s.manager, s])
+                              ).values(),
+                            ];
+                            return (
+                              <div className="version-row" key={`${mgrKey}-${version}`}>
+                                <div className="version-info">
+                                  <span className="version-no">{version || "?"}</span>
+                                  {[...new Set(list.map((s) => s.manager))].map((mgr) => (
+                                    <span className="pill channel small" key={mgr}>
+                                      {mgr}
+                                    </span>
+                                  ))}
+                                  <span className="pill muted small">其他渠道</span>
+                                </div>
+                                <div className="version-actions">
+                                  {uniqUninstall.map((s) => {
+                                    const ukey = `${s.manager}::${tool.name}::${s.version}`;
+                                    return (
+                                      <button
+                                        className="btn xs danger"
+                                        key={s.manager}
+                                        disabled={busy === busyKey}
+                                        onClick={() => uninstallExternal(tool.name, s)}
+                                        title={
+                                          confirmUninstall === ukey
+                                            ? "再次点击确认卸载"
+                                            : `通过 ${s.manager} 卸载`
+                                        }
+                                      >
+                                        {confirmUninstall === ukey
+                                          ? "确认卸载？"
+                                          : s.manager === "brew"
+                                            ? "卸载"
+                                            : `卸载(${s.manager})`}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                         <button
                           className="btn add"
-                          onClick={() => setInstallFor(tool)}
+                          onClick={() => openInstall(tool)}
                         >
                           + 安装其他版本
                         </button>
@@ -615,6 +773,15 @@ const statusLabel = (t: ToolInfo) =>
             await refresh();
             setNotice("安装完成");
           }}
+        />
+      )}
+      {softChannel && (
+        <ChannelDialog
+          name={softChannel.name}
+          url={softChannel.url}
+          desc={softChannel.desc}
+          available={pkgAvail}
+          onClose={() => setSoftChannel(null)}
         />
       )}
     </div>

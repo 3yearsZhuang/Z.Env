@@ -86,6 +86,13 @@ export default function App() {
             <span className="nav-label">系统概览</span>
           </button>
           <button
+            className={`nav-item ${tab === "software" ? "active" : ""}`}
+            onClick={() => setTab("software")}
+          >
+            <span className="nav-icon">⌂</span>
+            <span className="nav-label">支持列表</span>
+          </button>
+          <button
             className={`nav-item ${tab === "tools" ? "active" : ""}`}
             onClick={() => setTab("tools")}
           >
@@ -105,13 +112,6 @@ export default function App() {
           >
             <span className="nav-icon">⚙</span>
             <span className="nav-label">设置</span>
-          </button>
-          <button
-            className={`nav-item ${tab === "software" ? "active" : ""}`}
-            onClick={() => setTab("software")}
-          >
-            <span className="nav-icon">⌂</span>
-            <span className="nav-label">支持列表</span>
           </button>
         </nav>
 

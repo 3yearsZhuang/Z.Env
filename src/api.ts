@@ -221,6 +221,54 @@ export function installAllProject(
   return invoke("install_all_project", { path, content });
 }
 
+/** 通过系统包管理器（brew/winget/apt/pacman）原生安装指定软件 */
+export function installSystemPackage(
+  manager: string,
+  name: string
+): Promise<string> {
+  return invoke("install_system_package", { manager, name });
+}
+
+/** 探测指定系统包管理器当前已安装的软件名列表 */
+export function detectSystemInstalled(manager: string): Promise<string[]> {
+  return invoke("detect_system_installed", { manager });
+}
+
+/** 系统包管理器已装的一个软件及其版本 */
+export interface SystemPkg {
+  name: string;
+  version: string | null;
+}
+
+/** 探测指定系统包管理器当前已装的软件及其版本 */
+export function detectSystemVersions(manager: string): Promise<SystemPkg[]> {
+  return invoke("detect_system_versions", { manager });
+}
+
+/** 原生卸载系统软件包（brew/winget/apt/pacman） */
+export function uninstallSystemPackage(
+  manager: string,
+  name: string
+): Promise<string> {
+  return invoke("uninstall_system_package", { manager, name });
+}
+
+/** 原生安装进度事件负载 */
+export interface SysInstallProgressPayload {
+  manager: string;
+  name: string;
+  line: string;
+}
+
+/** 订阅系统包管理器安装进度事件，返回取消监听的函数 */
+export function onSysInstallProgress(
+  cb: (payload: SysInstallProgressPayload) => void
+): Promise<UnlistenFn> {
+  return listen<SysInstallProgressPayload>("sys:install-progress", (e) =>
+    cb(e.payload)
+  );
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
