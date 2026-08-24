@@ -302,6 +302,8 @@ export const SOFTWARE: DownloadSoft[] = [
   { name: "tcl", url: "https://www.tcl.tk/software/tcltk/", desc: "Tcl/Tk" },
   { name: "cobol", url: "https://gnucobol.sourceforge.io/", desc: "GnuCOBOL" },
   { name: "eiffel", url: "https://www.eiffel.org/", desc: "EiffelSTudio" },
+  { name: "kubernetes", url: "https://kubernetes.io/releases/", desc: "容器编排" },
+  { name: "flux", url: "https://fluxcd.io/flux/installation/", desc: "GitOps CLI" },
 ];
 export const SOFT_SET = new Set(SOFTWARE.map((s) => s.name));
 
@@ -317,6 +319,7 @@ const NO_SRC_SET = new Set([
   "babel", "gcc", "cargo", "nix", "bash", "fish", "nu", "composer", "volta",
   "pypy", "ipython", "jupyter", "twine", "virtualenv", "gopls", "goimports",
   "fsharp", "raku", "idris", "pike", "smalltalk", "tcl", "rexx", "cobol", "eiffel",
+  "kubernetes", "graphql", "flux",
 ]);
 
 /** 仅运行时集合（供展示与设置页自检；排除软件、纯格式项及实测无源项） */
