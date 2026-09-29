@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CAT_KEYS_ALL, KNOWN_RUNTIMES, SOFTWARE, categoryOf } from "./ToolsView";
+import { CAT_KEYS_ALL, KNOWN_RUNTIMES, SOFTWARE, categoryOf } from "../data/catalog";
 import {
   detectSystemInstalled,
   errorMessage,
@@ -9,6 +9,7 @@ import {
   onSysInstallProgress,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import type { ToolInfo } from "../api";
 
 /** 渠道安装弹窗：仅官方下载的软件，提供官方下载与各包管理器安装命令 */
@@ -26,11 +27,10 @@ export function ChannelDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="w-[420px] p-0">
         <div className="dialog-head">
-          <h3>{name}</h3>
-          <button className="btn-close" onClick={onClose}>×</button>
+          <DialogTitle>{name}</DialogTitle>
         </div>
         <div className="dialog-body">
           {desc && <p className="dialog-tip">{desc}</p>}
@@ -61,8 +61,8 @@ export function ChannelDialog({
         <div className="dialog-foot">
           <button className="btn-ghost" onClick={onClose}>关闭</button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -151,7 +151,7 @@ export default function SoftwareView() {
       un = fn;
     });
     return () => {
-      un && un();
+      un?.();
     };
   }, []);
 

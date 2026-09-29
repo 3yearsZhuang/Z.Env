@@ -5,13 +5,14 @@ import {
   listRemoteVersionsGithub,
   listRemoteVersionsOfficial,
   installVersionStreaming,
-  linkVersion,
-  unlinkVersion,
+  managedAdopt,
+  managedUnadopt,
   onInstallProgress,
   errorMessage,
   ToolInfo,
   ToolSource,
 } from "../api";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 
 interface Props {
   tool: ToolInfo;
@@ -178,14 +179,19 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     }
   }
 
-  /** 接管：把已托管的外部环境链接为 mise 版本，不重新下载 */
-  async function handleAdopt(version: string, path: string, key: string) {
+  /** 接管：把已托管的外部环境链接为 mise 版本（brew 走托管模式），不重新下载 */
+  async function handleAdopt(
+    version: string,
+    path: string,
+    key: string,
+    manager: string
+  ) {
     setBusy(true);
     setAdopting(`${tool.name}@${version}`);
     setError(null);
     setToast(null);
     try {
-      await linkVersion(tool.name, version, path);
+      await managedAdopt(tool.name, version, manager, path);
       setAdopting(null);
       saveAdopted(adopted.includes(key) ? adopted : [...adopted, key]);
       onDone(); // 刷新父级工具列表
@@ -204,7 +210,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     setError(null);
     setToast(null);
     try {
-      await unlinkVersion(tool.name, version);
+      await managedUnadopt(tool.name, version);
       setAdopting(null);
       saveAdopted(adopted.filter((k) => k !== key));
       onDone();
@@ -217,7 +223,13 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
   }
 
   /** 接管（含解除）均需二次确认 */
-  function requestAdopt(version: string, path: string, key: string, isDone: boolean) {
+  function requestAdopt(
+    version: string,
+    path: string,
+    key: string,
+    isDone: boolean,
+    manager: string
+  ) {
     setConfirm(
       isDone
         ? {
@@ -226,19 +238,16 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
           }
         : {
             msg: `确认将 ${tool.name}@${version} 接管到 mise 管理吗？`,
-            onOk: () => handleAdopt(version, path, key),
+            onOk: () => handleAdopt(version, path, key, manager),
           }
     );
   }
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogContent className="w-[420px] p-0" showClose={!busy}>
         <div className="dialog-head">
-          <h3>安装 {tool.name}</h3>
-          <button className="btn-close" onClick={onClose}>
-            ✕
-          </button>
+          <DialogTitle>安装 {tool.name}</DialogTitle>
         </div>
 
         {error && (
@@ -307,15 +316,15 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                     接管已存在环境（无需重新下载）
                   </label>
                   <div className="dialog-tip">
-                    接管仅适用于 nvm / pyenv / asdf / sdkman / rvm 等
-                    <strong>用户级目录</strong>托管的版本。由<strong>系统</strong>
-                    （Homebrew、/usr/bin、Xcode Command Line Tools 等）全局安装的
-                    运行时无法通过接管纳管，请改用下方安装或由系统直接管理。
+                    nvm / pyenv / asdf 等用户级目录直连接管；brew 安装的版本走
+                    <strong>托管模式</strong>（应用维护软链并在 brew 升级后自动重连）。
+                    仅<strong>系统</strong>组件（/usr/bin、Xcode CLT 等）无法接管。
                   </div>
                   <div className="adopt-list">
                     {external.map((s, i) => {
-                      // brew / system 等系统级来源无法被 mise link 接管
-                      const adoptable = !["system", "brew"].includes(s.manager);
+                      // 系统组件（/usr/bin、Xcode CLT 等）没有独立版本目录，无法接管；
+                      // brew 走托管模式（应用维护软链 + 对账自愈），其余直连
+                      const adoptable = s.manager !== "system";
                       const key = adoptable ? adoptedKey(s.manager, s.version) : "";
                       const done = adoptable && adopted.includes(key);
                       return (
@@ -328,19 +337,21 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                               className={`btn xs ${done ? "" : "primary"}`}
                               disabled={busy}
                               onClick={() =>
-                                requestAdopt(s.version, s.path, key, done)
+                                requestAdopt(s.version, s.path, key, done, s.manager)
                               }
                               title={
                                 done
                                   ? "已接入 mise · 点击解除接管"
-                                  : "点击接管到 mise"
+                                  : s.manager === "brew"
+                                    ? "托管模式接管到 mise（brew 升级后自动重连）"
+                                    : "点击接管到 mise"
                               }
                             >
                               {done ? "已接管 · 点击解除" : "接管"}
                             </button>
                           ) : (
                             <span className="pill muted small">
-                              系统/Homebrew · 不可接管
+                              系统组件 · 不可接管
                             </span>
                           )}
                         </div>
@@ -436,7 +447,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
