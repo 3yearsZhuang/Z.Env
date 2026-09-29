@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import CodeMirror from "@uiw/react-codemirror";
+import { StreamLanguage } from "@codemirror/language";
+import { toml } from "@codemirror/legacy-modes/mode/toml";
 import {
   readProjectConfig,
   writeProjectConfig,
   installAllProject,
+  detectToolSources,
+  stableBinPath,
   errorMessage,
+  ToolSource,
 } from "../api";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 
 /** 常见技术栈环境预设：一键生成全套运行环境 */
 const PRESETS: {
@@ -59,6 +66,24 @@ function presetToToml(tools: Record<string, string>): string {
   return `# 由 Mise GUI 环境预设生成\n[tools]\n${rows}\n`;
 }
 
+/** 监听 <html>.dark 类变化，让编辑器主题跟随应用明暗切换 */
+function useDarkMode(): boolean {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark"),
+  );
+  useEffect(() => {
+    const ob = new MutationObserver(() =>
+      setDark(document.documentElement.classList.contains("dark")),
+    );
+    ob.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => ob.disconnect();
+  }, []);
+  return dark;
+}
+
 export default function ProjectsView() {
   const [path, setPath] = useState("");
   const [content, setContent] = useState("");
@@ -69,6 +94,47 @@ export default function ProjectsView() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [userPresets, setUserPresets] = useState<{ name: string; content: string }[]>([]);
+  const dark = useDarkMode();
+
+  // 整机环境绑定（策略 C）：把 brew/scoop 安装的运行时以 PATH 方式绑定进项目 mise.toml
+  const [bindOpen, setBindOpen] = useState(false);
+  const [bindSources, setBindSources] = useState<ToolSource[]>([]);
+  const [bindBusy, setBindBusy] = useState<string | null>(null);
+
+  function openBindDialog() {
+    detectToolSources()
+      .then((all) =>
+        setBindSources(all.filter((s) => ["brew", "scoop"].includes(s.manager))),
+      )
+      .catch(() => setBindSources([]));
+    setBindOpen(true);
+  }
+
+  /** 把稳定 bin 路径写进当前 mise.toml：已有 _.path 则并入数组，已有 [env] 则插入，否则追加 */
+  async function bindSource(s: ToolSource) {
+    setBindBusy(`${s.manager}::${s.tool}`);
+    try {
+      const bin = await stableBinPath(s.manager, s.tool, s.path);
+      const pathLine = `_.path = ["${bin}"]`;
+      setContent((prev) => {
+        if (/^_.path = \[.*\]$/m.test(prev)) {
+          return prev.replace(/^_.path = \[(.*)\]$/m, `_.path = [$1, "${bin}"]`);
+        }
+        if (/^\[env\]$/m.test(prev)) {
+          return prev.replace(/^\[env\]$/m, `[env]\n${pathLine}`);
+        }
+        return `${prev.trimEnd()}\n\n[env]\n${pathLine}\n`;
+      });
+      setNotice(
+        `已把 ${s.tool}（${s.manager}）以 PATH 方式绑定进当前配置，保存后生效`,
+      );
+      setBindOpen(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBindBusy(null);
+    }
+  }
 
   const PRESET_STORAGE_KEY = "mise-gui:user-presets";
   // 启动时读取本地保存的用户预设
@@ -276,13 +342,28 @@ export default function ProjectsView() {
 
         {loaded && (
           <>
-            <textarea
-              className="editor"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              spellCheck={false}
-            />
+            <div
+              className="editor-cm"
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                overflow: "hidden",
+              }}
+            >
+              <CodeMirror
+                value={content}
+                height="380px"
+                theme={dark ? "dark" : "light"}
+                extensions={[StreamLanguage.define(toml)]}
+                basicSetup={{ foldGutter: false, searchKeymap: false }}
+                onChange={(v) => setContent(v)}
+                style={{ fontSize: 13 }}
+              />
+            </div>
             <div className="form-actions">
+              <button className="btn" onClick={openBindDialog} disabled={!loaded}>
+                整机环境绑定
+              </button>
               <button className="btn" onClick={handleLoad} disabled={loading}>
                 重新读取
               </button>
@@ -319,6 +400,45 @@ export default function ProjectsView() {
           </div>
         )}
       </div>
+
+      <Dialog open={bindOpen} onOpenChange={(o) => setBindOpen(o)}>
+        <DialogContent className="w-[460px] p-0">
+          <div className="dialog-head">
+            <DialogTitle>绑定整机环境（PATH 方式）</DialogTitle>
+          </div>
+          <div className="dialog-body">
+            <div className="dialog-tip">
+              不建立任何软链：把包管理器维护的稳定 bin 路径写入当前 mise.toml 的
+              <code>[env] _.path</code>，项目激活时自动可用。适用于 brew / scoop
+              安装的运行时。
+            </div>
+            {bindSources.length === 0 && (
+              <div className="empty small">未发现可通过稳定路径绑定的运行时</div>
+            )}
+            <div className="adopt-list">
+              {bindSources.map((s, i) => (
+                <div className="adopt-row" key={i}>
+                  <span className="adopt-info">
+                    {s.manager} · {s.tool} · {s.version}
+                  </span>
+                  <button
+                    className="btn xs primary"
+                    disabled={bindBusy !== null}
+                    onClick={() => bindSource(s)}
+                  >
+                    {bindBusy === `${s.manager}::${s.tool}` ? "绑定中…" : "写入配置"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="dialog-foot">
+            <button className="btn-ghost" onClick={() => setBindOpen(false)}>
+              关闭
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

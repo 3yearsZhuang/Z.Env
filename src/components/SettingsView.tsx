@@ -1,8 +1,17 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { check, Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import {
+  enable as enableAutostart,
+  disable as disableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
+import { errorMessage } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "跨平台 mise 图形化管理器";
-const APP_VERSION = "0.6.7";
+const FALLBACK_VERSION = "0.6.7";
 
 const STACK = [
   "Tauri 2",
@@ -26,8 +35,30 @@ interface Props {
   onEaster: () => void;
 }
 
+type UpState = "idle" | "checking" | "downloading" | "none" | "error";
+
 export default function SettingsView({ onEaster }: Props) {
   const clickCount = useRef(0);
+  const [version, setVersion] = useState(FALLBACK_VERSION);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // 应用更新
+  const [update, setUpdate] = useState<Update | null>(null);
+  const [upState, setUpState] = useState<UpState>("idle");
+  const [upMsg, setUpMsg] = useState("");
+  const [upProgress, setUpProgress] = useState(0);
+
+  // 开机自启
+  const [autoStart, setAutoStart] = useState(false);
+
+  useEffect(() => {
+    getVersion()
+      .then(setVersion)
+      .catch(() => {});
+    isAutostartEnabled()
+      .then(setAutoStart)
+      .catch(() => {});
+  }, []);
 
   const handleVersionClick = () => {
     clickCount.current += 1;
@@ -36,6 +67,67 @@ export default function SettingsView({ onEaster }: Props) {
       onEaster();
     }
   };
+
+  async function handleCheckUpdate() {
+    setUpState("checking");
+    setUpMsg("正在检查更新…");
+    setUpdate(null);
+    try {
+      const u = await check();
+      if (u) {
+        setUpdate(u);
+        setUpMsg(`发现新版本 ${u.version}（当前 ${version}）`);
+      } else {
+        setUpState("none");
+        setUpMsg("已是最新版本");
+      }
+    } catch (e) {
+      setUpState("error");
+      setUpMsg(errorMessage(e));
+    }
+  }
+
+  async function handleInstallUpdate() {
+    if (!update) return;
+    setUpState("downloading");
+    setUpProgress(0);
+    let total = 0;
+    let received = 0;
+    try {
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Started") {
+          total = event.data.contentLength ?? 0;
+        } else if (event.event === "Progress") {
+          received += event.data.chunkLength;
+          if (total > 0) {
+            setUpProgress(Math.min(100, Math.round((received / total) * 100)));
+          }
+        } else if (event.event === "Finished") {
+          setUpMsg("下载完成，即将重启应用…");
+        }
+      });
+      await relaunch();
+    } catch (e) {
+      setUpState("error");
+      setUpMsg(errorMessage(e));
+    }
+  }
+
+  async function toggleAutoStart() {
+    try {
+      if (autoStart) {
+        await disableAutostart();
+        setAutoStart(false);
+        setNotice("已关闭开机自启");
+      } else {
+        await enableAutostart();
+        setAutoStart(true);
+        setNotice("已开启开机自启");
+      }
+    } catch (e) {
+      setNotice(`设置开机自启失败：${errorMessage(e)}`);
+    }
+  }
 
   return (
     <div className="view">
@@ -46,6 +138,12 @@ export default function SettingsView({ onEaster }: Props) {
         </div>
       </div>
 
+      {notice && (
+        <div className="banner info" onClick={() => setNotice(null)}>
+          {notice}
+        </div>
+      )}
+
       <section className="about-hero">
         <div className="about-mark">
           <img src="/zenv-icon.svg" alt={APP_NAME} draggable={false} />
@@ -54,13 +152,56 @@ export default function SettingsView({ onEaster }: Props) {
         <div className="about-version">
           版本{" "}
           <code onClick={handleVersionClick} title="?">
-            {APP_VERSION}
+            {version}
           </code>
         </div>
         <p className="about-desc">
           {APP_TAGLINE}。将 <strong>mise</strong> 包装为可视化界面，统合系统资源监控、
           运行时工具管理与项目环境预设。
         </p>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">通用</h2>
+        <div className="setting-list">
+          <button
+            className="setting-row"
+            onClick={toggleAutoStart}
+            title="登录系统时自动启动 Z.Env"
+          >
+            <span className="setting-info" style={{ flex: 1 }}>
+              <span className="setting-name">开机自启</span>
+              <span className="setting-desc">登录系统时自动启动 Z.Env 并常驻托盘</span>
+            </span>
+            <span className={`pill ${autoStart ? "active" : "muted"}`}>
+              {autoStart ? "已开启" : "已关闭"}
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">应用更新</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <button
+            className="btn primary"
+            onClick={handleCheckUpdate}
+            disabled={upState === "checking" || upState === "downloading"}
+          >
+            {upState === "checking" ? "检查中…" : "检查更新"}
+          </button>
+          {upMsg && (
+            <span className="setting-desc">
+              {upMsg}
+              {upState === "downloading" ? ` ${upProgress}%` : ""}
+            </span>
+          )}
+          {update && upState !== "downloading" && (
+            <button className="btn primary" onClick={handleInstallUpdate}>
+              下载并安装
+            </button>
+          )}
+        </div>
       </section>
 
       <section className="panel">
