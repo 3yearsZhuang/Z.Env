@@ -16,14 +16,22 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Check version consistency
+        run: npm run check:version
+      - name: Lint (eslint)
+        run: npm run lint
+      - name: Unit tests (vitest)
+        run: npm test
       - name: Type-check & build
         run: npm run build
       - name: Security audit (npm)
-        run: npm audit --omit=dev --audit-level=high || true
+        # 依赖存在 high 及以上漏洞时阻断 CI
+        run: npm audit --omit=dev --audit-level=high
 
   # 后端：格式 + lint(clippy) + 编译，Linux 需安装 WebKit 系统依赖
+  # ubuntu-20.04 runner 已被 GitHub 淘汰（2025-04 起不可用），升到 24.04
   rust:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -42,5 +50,7 @@ jobs:
         run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - name: Lint (clippy)
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Unit tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build
         run: cargo build --manifest-path src-tauri/Cargo.toml
