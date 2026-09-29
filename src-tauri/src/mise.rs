@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tauri::{AppHandle, Emitter};
 
+use crate::error::AppError;
+
 /// mise 安装状态（用于首页提醒）。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -417,12 +419,6 @@ pub struct ToolInfo {
     pub active_versions: Vec<String>,
 }
 
-/// 远程可安装版本（来自 `mise ls-remote <tool> --json`）
-#[derive(Debug, Clone, Deserialize)]
-pub struct RemoteVersion {
-    pub version: String,
-}
-
 /// 定位 mise 可执行文件。
 /// 优先使用绝对路径（GUI 应用不一定继承 shell 的 PATH）。
 pub fn find_mise() -> PathBuf {
@@ -490,17 +486,24 @@ fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// 把子进程启动失败映射为更友好的错误：mise 不在 PATH 时给出安装引导文案。
+fn spawn_mise_error(mise: &std::path::Path, e: std::io::Error) -> AppError {
+    if e.kind() == std::io::ErrorKind::NotFound {
+        AppError::MiseNotInstalled
+    } else {
+        AppError::Io(format!("无法执行 mise ({}): {}", mise.display(), e))
+    }
+}
+
 /// 执行一个 mise 命令并返回标准输出。失败时返回错误信息。
-pub fn run_mise(args: &[&str]) -> Result<String, String> {
+pub fn run_mise(args: &[&str]) -> Result<String, AppError> {
     let mise = find_mise();
     let mut command = Command::new(&mise);
     command.args(args).env("PATH", build_path());
     if let Some(h) = home_dir() {
         command.current_dir(h);
     }
-    let output = command
-        .output()
-        .map_err(|e| format!("无法执行 mise ({}): {}", mise.display(), e))?;
+    let output = command.output().map_err(|e| spawn_mise_error(&mise, e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if output.status.success() {
@@ -509,18 +512,20 @@ pub fn run_mise(args: &[&str]) -> Result<String, String> {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         let combined = if stderr.is_empty() { stdout } else { stderr };
         if combined.is_empty() {
-            Err("mise 命令失败（无输出，请检查工具名或是否已安装对应插件）".to_string())
+            Err(AppError::Other(
+                "mise 命令失败（无输出，请检查工具名或是否已安装对应插件）".to_string(),
+            ))
         } else {
-            Err(combined)
+            Err(AppError::Other(combined))
         }
     }
 }
 
 /// 列出所有已安装的工具及其版本。
-pub fn list_tools() -> Result<Vec<ToolInfo>, String> {
+pub fn list_tools() -> Result<Vec<ToolInfo>, AppError> {
     let output = run_mise(&["ls", "--json"])?;
-    let map: Result<serde_json::Map<String, serde_json::Value>, _> = serde_json::from_str(&output);
-    let map = map.map_err(|e| format!("解析 mise ls 输出失败: {}", e))?;
+    let map: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&output)
+        .map_err(|e| AppError::Parse(format!("解析 mise ls 输出失败: {}", e)))?;
 
     let mut tools: Vec<ToolInfo> = Vec::new();
     for (name, value) in map {
@@ -543,304 +548,12 @@ pub fn list_tools() -> Result<Vec<ToolInfo>, String> {
     Ok(tools)
 }
 
-/// 查看某个工具的远程可安装版本。
-pub fn list_remote_versions(tool: &str) -> Result<Vec<String>, String> {
-    // mise ls-remote 默认远端大版本列表；限定工具名
-    let output = run_mise(&["ls-remote", tool, "--json"])?;
-    let versions: Vec<RemoteVersion> =
-        serde_json::from_str(&output).map_err(|e| format!("解析 {} 远程版本失败: {}", tool, e))?;
-    let mut list: Vec<String> = versions.into_iter().map(|v| v.version).collect();
-    // 去重并保留顺序；前端期望较新的在前面
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    Ok(list)
-}
-
-/// 通过 ASDF 源获取远程版本（若安装了 asdf）。
-pub fn list_remote_versions_asdf(tool: &str) -> Result<Vec<String>, String> {
-    let out = Command::new("asdf")
-        .args(["list-all", tool])
-        .output()
-        .map_err(|e| format!("无法执行 asdf list-all: {}", e))?;
-    if !out.status.success() {
-        return Err("asdf 不可用或工具无对应插件".to_string());
-    }
-    let text = String::from_utf8_lossy(&out.stdout);
-    let mut list: Vec<String> = text
-        .lines()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect();
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    Ok(list)
-}
-
-/// 若干常见运行时对应的 GitHub 仓库（用于依 tags 抓取版本，作为备份源）。
-const GITHUB_REPOS: &[(&str, &str)] = &[
-    ("node", "nodejs/node"),
-    ("npm", "npm/cli"),
-    ("bun", "oven-sh/bun"),
-    ("deno", "denoland/deno"),
-    ("terraform", "hashicorp/terraform"),
-];
-
-/// 通过 GitHub Tags API 获取远程版本。仅支持 `GITHUB_REPOS` 中收录的运行时；
-/// 标签名规范化：去掉前缀 "v"、剔除含预发布分隔符的条目。
-pub fn list_remote_versions_github(tool: &str) -> Result<Vec<String>, String> {
-    let repo = GITHUB_REPOS
-        .iter()
-        .find(|(t, _)| *t == tool)
-        .map(|(_, r)| *r)
-        .ok_or_else(|| format!("暂无 {} 的 GitHub 源映射", tool))?;
-    let url = format!(
-        "https://api.github.com/repos/{}/tags?per_page=100&page=1",
-        repo
-    );
-    let out = Command::new("curl")
-        .args(["-s", "-L", "-H", "User-Agent: mise-gui", &url])
-        .output()
-        .map_err(|e| format!("无法请求 GitHub: {}", e))?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    if text.contains("\"message\"") {
-        return Err("GitHub API 返回异常（可能已达未授权限流）".to_string());
-    }
-    let json: serde_json::Value =
-        serde_json::from_str(&text).map_err(|_| "GitHub 返回格式异常".to_string())?;
-    let arr = json
-        .as_array()
-        .ok_or_else(|| "GitHub 返回格式异常".to_string())?;
-    let mut list: Vec<String> = Vec::new();
-    for tag in arr {
-        let name = tag.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        // 只保留形如 "X.Y.Z"、可被 mise 直接安装的纯版本标签
-        let v = name.trim_start_matches('v');
-        if v.is_empty() || !v.chars().all(|c| c.is_ascii_digit() || c == '.') {
-            continue;
-        }
-        list.push(v.to_string());
-    }
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    Ok(list)
-}
-
-/// 通用 curl 抓取并解析 JSON（带超时，避免网络挂起拖慢界面）。
-fn curl_json(url: &str) -> Result<serde_json::Value, String> {
-    let out = Command::new("curl")
-        .args([
-            "-s",
-            "-L",
-            "--max-time",
-            "10",
-            "-H",
-            "User-Agent: mise-gui",
-            url,
-        ])
-        .output()
-        .map_err(|e| format!("无法请求: {}", e))?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    serde_json::from_str(&text).map_err(|_| "请求返回格式异常".to_string())
-}
-
-/// “官方生态源”：按运行时分发到其官方/权威的版本列表。
-/// 仅支持已知映射；不支持的返回 Err（前端静默转为“手动输入”）。
-pub fn list_remote_versions_official(tool: &str) -> Result<Vec<String>, String> {
-    match tool {
-        "node" | "nodejs" => node_dist_versions(),
-        "go" | "golang" => go_proxy_versions(),
-        "python" | "python3" => python_ftp_versions(),
-        "java" | "openjdk" | "temurin" => adoptium_versions(),
-        "ruby" => github_tag_versions("ruby/ruby"),
-        "php" => github_tag_versions("php/php-src"),
-        "dotnet" | "dotnet-sdk" => github_tag_versions("dotnet/runtime"),
-        "rust" | "cargo" => github_tag_versions("rust-lang/rust"),
-        "swift" => github_tag_versions("swiftlang/swift"),
-        "scala" => github_tag_versions("scala/scala"),
-        "kotlin" => github_tag_versions("JetBrains/kotlin"),
-        "terraform" => github_tag_versions("hashicorp/terraform"),
-        "helm" => github_tag_versions("helm/helm"),
-        _ => Err(format!("{} 暂无官方生态源", tool)),
-    }
-}
-
-/// 从某 GitHub 仓库的 tags 提取“看起来像版本号”的纯版本列表。
-/// 自动处理 `v3.3.0` / `v3_3_0` / `php-8.3.0` / `1.75.0` 等差异。
-fn github_tag_versions(repo: &str) -> Result<Vec<String>, String> {
-    let url = format!(
-        "https://api.github.com/repos/{}/tags?per_page=100&page=1",
-        repo
-    );
-    let json = curl_json(&url)?;
-    let arr = json
-        .as_array()
-        .ok_or_else(|| "GitHub 返回格式异常".to_string())?;
-    let mut list: Vec<String> = Vec::new();
-    for tag in arr {
-        let name = tag.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        if let Some(v) = clean_tag_version(name) {
-            list.push(v);
-        }
-    }
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    if list.is_empty() {
-        Err(format!("{} 官方源未取到版本", repo))
-    } else {
-        Ok(list)
-    }
-}
-
-/// 把形如 `v3_3_0` / `php-8.3.0` / `1.75.0` 的 tag 名清洗为纯版本串。
-fn clean_tag_version(name: &str) -> Option<String> {
-    // 下划线视为点分隔（ruby 旧式 tag）
-    let dotted = name.replace('_', ".");
-    let start = dotted.find(|c: char| c.is_ascii_digit())?;
-    let crop = &dotted[start..];
-    let v: String = crop
-        .chars()
-        .filter(|c| c.is_ascii_digit() || *c == '.')
-        .collect();
-    // 至少是主.次，避免只取到一级数字产生误导
-    if v.split('.').count() >= 2 {
-        Some(v)
-    } else {
-        None
-    }
-}
-
-/// Node 官方 dist 索引：https://nodejs.org/dist/index.json
-fn node_dist_versions() -> Result<Vec<String>, String> {
-    let json = curl_json("https://nodejs.org/dist/index.json")?;
-    let arr = json
-        .as_array()
-        .ok_or_else(|| "Node 源格式异常".to_string())?;
-    let mut list: Vec<String> = arr
-        .iter()
-        .filter_map(|v| v.get("version").and_then(|x| x.as_str()))
-        .map(|s| s.trim_start_matches('v').to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    if list.is_empty() {
-        Err("未获取到 Node 版本".to_string())
-    } else {
-        Ok(list)
-    }
-}
-
-/// Go 官方 proxy 模块列表：https://proxy.golang.org/golang/go/@v/list
-fn go_proxy_versions() -> Result<Vec<String>, String> {
-    let out = Command::new("curl")
-        .args([
-            "-s",
-            "-L",
-            "--max-time",
-            "10",
-            "https://proxy.golang.org/golang/go/@v/list",
-        ])
-        .output()
-        .map_err(|e| format!("无法请求 Go proxy: {}", e))?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    let mut list: Vec<String> = text
-        .lines()
-        .map(|l| l.trim().trim_start_matches('v').to_string())
-        .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.'))
-        .collect();
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    if list.is_empty() {
-        Err("未获取到 Go 版本".to_string())
-    } else {
-        Ok(list)
-    }
-}
-
-/// Python 官方下载页目录：https://www.python.org/ftp/python/ （解析 3.N.N 目录名）
-fn python_ftp_versions() -> Result<Vec<String>, String> {
-    let out = Command::new("curl")
-        .args([
-            "-s",
-            "-L",
-            "--max-time",
-            "10",
-            "https://www.python.org/ftp/python/",
-        ])
-        .output()
-        .map_err(|e| format!("无法请求 Python 源: {}", e))?;
-    let html = String::from_utf8_lossy(&out.stdout);
-    let mut list: Vec<String> = Vec::new();
-    let bytes: Vec<u8> = html.bytes().collect();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        // 找 `<a href="3.N.N/">`，读取目录名
-        if bytes[i..].starts_with(b"<a href=\"") {
-            let start = i + b"<a href=\"".len();
-            if let Some(end) = html[start..].find("/\">") {
-                let name = &html[start..start + end];
-                let digits: Vec<char> = name
-                    .chars()
-                    .filter(|c| c.is_ascii_digit() || *c == '.')
-                    .collect();
-                let clean: String = digits.iter().collect();
-                if !clean.is_empty() && clean.starts_with('3') && clean.matches('.').count() >= 2 {
-                    list.push(clean);
-                }
-                i = start + end + 3;
-                continue;
-            }
-        }
-        i += 1;
-    }
-    list.dedup();
-    list.sort_by(|a, b| normalize_version(b).cmp(&normalize_version(a)));
-    if list.is_empty() {
-        Err("未获取到 Python 版本".to_string())
-    } else {
-        Ok(list)
-    }
-}
-
-/// Adoptium（Java）可用 release 主版本：https://api.adoptium.net/v3/info/available_releases
-fn adoptium_versions() -> Result<Vec<String>, String> {
-    let json = curl_json("https://api.adoptium.net/v3/info/available_releases")?;
-    let mut list: Vec<String> = Vec::new();
-    if let Some(v) = json.get("available_releases").and_then(|x| x.as_array()) {
-        for e in v {
-            if let Some(n) = e.as_i64() {
-                list.push(format!("temurin-{}", n));
-            }
-        }
-        // 长期支持(LTS)优先置顶
-        let mut lts: Vec<String> = Vec::new();
-        if let Some(v) = json
-            .get("available_lts_releases")
-            .and_then(|x| x.as_array())
-        {
-            for e in v {
-                if let Some(n) = e.as_i64() {
-                    lts.push(format!("temurin-{}", n));
-                }
-            }
-        }
-        let non_lts: Vec<String> = list.iter().cloned().filter(|x| !lts.contains(x)).collect();
-        lts.extend(non_lts);
-        list = lts;
-    }
-    if list.is_empty() {
-        Err("未获取到 Java 版本".to_string())
-    } else {
-        Ok(list)
-    }
-}
-
 /// 列出 mise 支持的全部运行时/插件名（用于自检覆盖完整性）。
-pub fn list_registry() -> Result<Vec<String>, String> {
+pub fn list_registry() -> Result<Vec<String>, AppError> {
     let raw = match run_mise(&["registry"]) {
         Ok(o) => o,
         Err(_) => run_mise(&["plugins", "ls-remote"])
-            .map_err(|_| "无法获取 mise 运行时列表".to_string())?,
+            .map_err(|_| AppError::Other("无法获取 mise 运行时列表".to_string()))?,
     };
     let mut out: Vec<String> = Vec::new();
     for line in raw.lines() {
@@ -857,26 +570,8 @@ pub fn list_registry() -> Result<Vec<String>, String> {
     Ok(out)
 }
 
-/// 一个简单的版本比较辅助（按点分段、按段数字比较）。
-fn normalize_version(v: &str) -> Vec<u64> {
-    let mut segs = Vec::new();
-    let mut num = String::new();
-    for ch in v.chars() {
-        if ch.is_ascii_digit() {
-            num.push(ch);
-        } else if !num.is_empty() {
-            segs.push(num.parse().unwrap_or(0));
-            num.clear();
-        }
-    }
-    if !num.is_empty() {
-        segs.push(num.parse().unwrap_or(0));
-    }
-    segs
-}
-
 /// 安装指定工具版本。
-pub fn install_version(tool: &str, version: &str) -> Result<String, String> {
+pub fn install_version(tool: &str, version: &str) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     run_mise(&["install", &spec]).map(|_| format!("{} 安装完成", spec))
 }
@@ -886,7 +581,7 @@ pub fn install_version_streaming(
     app: &AppHandle,
     tool: &str,
     version: &str,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     let mise = find_mise();
 
@@ -899,9 +594,7 @@ pub fn install_version_streaming(
     if let Some(h) = home_dir() {
         command.current_dir(h);
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("无法启动 mise install: {}", e))?;
+    let mut child = command.spawn().map_err(|e| spawn_mise_error(&mise, e))?;
 
     let stdout = child.stdout.take().expect("stdout pipe");
     let stderr = child.stderr.take().expect("stderr pipe");
@@ -923,14 +616,14 @@ pub fn install_version_streaming(
 
     let status = child
         .wait()
-        .map_err(|e| format!("等待 mise 进程失败: {}", e))?;
+        .map_err(|e| AppError::Io(format!("等待 mise 进程失败: {}", e)))?;
     let _ = t_out.join();
     let _ = t_err.join();
 
     if status.success() {
         Ok(format!("{} 安装完成", spec))
     } else {
-        Err(format!("{} 安装失败", spec))
+        Err(AppError::Other(format!("{} 安装失败", spec)))
     }
 }
 
@@ -976,13 +669,13 @@ fn pump_stream<R: Read>(mut reader: R, app: &AppHandle, tool: &str, version: &st
 }
 
 /// 卸载指定工具版本。
-pub fn uninstall_version(tool: &str, version: &str) -> Result<String, String> {
+pub fn uninstall_version(tool: &str, version: &str) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     run_mise(&["uninstall", &spec]).map(|_| format!("{} 卸载完成", spec))
 }
 
 /// 切换（激活）某个工具版本。global 为 true 时写入全局配置。
-pub fn use_version(tool: &str, version: &str, global: bool) -> Result<String, String> {
+pub fn use_version(tool: &str, version: &str, global: bool) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     // 注意：global=false 时不要传空字符串参数，否则 `mise use ""` 可能解析异常。
     if global {
@@ -994,7 +687,7 @@ pub fn use_version(tool: &str, version: &str, global: bool) -> Result<String, St
 
 /// 接管：将已存在的外部环境目录链接为 mise 管理版本（`mise link`），
 /// 无需重新下载。
-pub fn link_version(tool: &str, version: &str, path: &str) -> Result<String, String> {
+pub fn link_version(tool: &str, version: &str, path: &str) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     run_mise(&["link", &spec, path]).map(|_| format!("已接管 {} -> {}", spec, path))
 }
@@ -1002,70 +695,71 @@ pub fn link_version(tool: &str, version: &str, path: &str) -> Result<String, Str
 /// 解除接管：移除某版本与外部目录的链接。
 /// mise 无 `unlink` 子命令（`unlink` 会被当作未知命令报“no tasks defined”）；
 /// 对由 `link` 创建的 symlink，用 `mise uninstall` 即可移除链接而不删除外部目录。
-pub fn unlink_version(tool: &str, version: &str) -> Result<String, String> {
+pub fn unlink_version(tool: &str, version: &str) -> Result<String, AppError> {
     let spec = format!("{}@{}", tool, version);
     run_mise(&["uninstall", &spec]).map(|_| format!("已解除接管（移除链接）{}", spec))
 }
 
 /// 读取项目根目录的 mise 配置文件内容。
-pub fn read_project_config(path: &str) -> Result<String, String> {
+pub fn read_project_config(path: &str) -> Result<String, AppError> {
     let p = PathBuf::from(path);
     if !p.exists() {
-        return Err(format!("路径不存在：{}", path));
+        return Err(AppError::Other(format!("路径不存在：{}", path)));
     }
     if p.is_file() {
-        std::fs::read_to_string(&p).map_err(|e| format!("读取 {} 失败: {}", path, e))
+        std::fs::read_to_string(&p).map_err(|e| AppError::Io(format!("读取 {} 失败: {}", path, e)))
     } else {
         // 目录：优先找 mise.toml，其次是 .tool-versions
         let candidates = [p.join("mise.toml"), p.join(".tool-versions")];
         for c in candidates {
             if c.exists() {
                 return std::fs::read_to_string(&c)
-                    .map_err(|e| format!("读取 {} 失败: {}", c.display(), e));
+                    .map_err(|e| AppError::Io(format!("读取 {} 失败: {}", c.display(), e)));
             }
         }
-        Err(format!(
+        Err(AppError::Other(format!(
             "目录 {} 下找不到 mise.toml 或 .tool-versions",
             path
-        ))
+        )))
     }
 }
 
 /// 将项目配置内容写入指定路径的 mise.toml。
-pub fn write_project_config(path: &str, content: &str) -> Result<String, String> {
+pub fn write_project_config(path: &str, content: &str) -> Result<String, AppError> {
     let p = PathBuf::from(path);
     if p.is_dir() {
         let target = p.join("mise.toml");
         std::fs::write(&target, content)
-            .map_err(|e| format!("写入 {} 失败: {}", target.display(), e))?;
+            .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", target.display(), e)))?;
         Ok(format!("已保存到 {}", target.display()))
     } else {
-        std::fs::write(&p, content).map_err(|e| format!("写入 {} 失败: {}", path, e))?;
+        std::fs::write(&p, content)
+            .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", path, e)))?;
         Ok(format!("已保存到 {}", path))
     }
 }
 
 /// 在指定工作目录中运行一次 mise 命令。
-fn run_mise_in(cwd: &str, args: &[&str]) -> Result<String, String> {
+fn run_mise_in(cwd: &str, args: &[&str]) -> Result<String, AppError> {
     let mise = find_mise();
     let output = Command::new(&mise)
         .args(args)
         .current_dir(cwd)
         .env("PATH", build_path())
         .output()
-        .map_err(|e| format!("无法执行 mise ({}): {}", mise.display(), e))?;
+        .map_err(|e| spawn_mise_error(&mise, e))?;
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if output.status.success() {
         Ok(stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         let combined = if stderr.is_empty() { stdout } else { stderr };
-        Err(combined)
+        Err(AppError::Other(combined))
     }
 }
 
 /// 将配置写入项目并一次性安装全套环境（`mise install`）。
-pub fn install_all_project(dir: &str, content: &str) -> Result<String, String> {
+pub fn install_all_project(dir: &str, content: &str) -> Result<String, AppError> {
     let p = PathBuf::from(dir);
     let target = if p.is_dir() {
         p
@@ -1074,7 +768,8 @@ pub fn install_all_project(dir: &str, content: &str) -> Result<String, String> {
     };
     let _ = std::fs::create_dir_all(&target);
     let toml = target.join("mise.toml");
-    std::fs::write(&toml, content).map_err(|e| format!("写入 {} 失败: {}", toml.display(), e))?;
+    std::fs::write(&toml, content)
+        .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", toml.display(), e)))?;
 
     let out = run_mise_in(&target.display().to_string(), &["install"])?;
     let summary: Vec<&str> = out.lines().take(10).collect();
@@ -1083,4 +778,58 @@ pub fn install_all_project(dir: &str, content: &str) -> Result<String, String> {
         toml.display(),
         summary.join("\n")
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// scan_versions：有 bin/ 的一级子目录识别为版本，隐藏目录与无 bin/ 的跳过
+    #[test]
+    fn scan_versions_detects_tool_dirs_with_bin() {
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().join("versions");
+        // 合法：含 bin/ 的版本目录（version_fn 去掉 v 前缀）
+        std::fs::create_dir_all(base.join("v20.0.0/bin")).unwrap();
+        std::fs::write(base.join("v20.0.0/bin/node"), "").unwrap();
+        // 非法：隐藏目录、无 bin/ 的目录
+        std::fs::create_dir_all(base.join(".hidden/bin")).unwrap();
+        std::fs::create_dir_all(base.join("no-bin")).unwrap();
+
+        let mut out = Vec::new();
+        scan_versions(&mut out, &base, "node", "test", |n| {
+            n.trim_start_matches('v').to_string()
+        });
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].tool, "node");
+        assert_eq!(out[0].version, "20.0.0");
+        assert_eq!(out[0].manager, "test");
+    }
+
+    /// read/write_project_config：目录写入 mise.toml 并能读回；指定文件路径直读；
+    /// 无配置与路径不存在时报错
+    #[test]
+    fn project_config_roundtrip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("proj");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        write_project_config(dir.to_str().unwrap(), "node = '20'\n").unwrap();
+        let content = read_project_config(dir.to_str().unwrap()).unwrap();
+        assert_eq!(content, "node = '20'\n");
+
+        // 直接指定文件路径也能读
+        let file = dir.join("mise.toml");
+        assert_eq!(
+            read_project_config(file.to_str().unwrap()).unwrap(),
+            "node = '20'\n"
+        );
+
+        // 目录下无配置文件时报错
+        let empty = tmp.path().join("empty");
+        std::fs::create_dir_all(&empty).unwrap();
+        assert!(read_project_config(empty.to_str().unwrap()).is_err());
+        // 路径不存在时报错
+        assert!(read_project_config(tmp.path().join("nope").to_str().unwrap()).is_err());
+    }
 }

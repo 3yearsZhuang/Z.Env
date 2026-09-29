@@ -48,7 +48,11 @@ fn os_info() -> OsInfo {
     {
         let name = out("sw_vers", &["-productName"]).unwrap_or_else(|| "macOS".into());
         let version = out("sw_vers", &["-productVersion"]).unwrap_or_default();
-        return OsInfo { name, version, arch };
+        return OsInfo {
+            name,
+            version,
+            arch,
+        };
     }
     #[cfg(target_os = "linux")]
     {
@@ -63,7 +67,11 @@ fn os_info() -> OsInfo {
                 version = v.trim_matches('"').to_string();
             }
         }
-        return OsInfo { name, version, arch };
+        return OsInfo {
+            name,
+            version,
+            arch,
+        };
     }
     #[cfg(target_os = "windows")]
     {
@@ -74,10 +82,18 @@ fn os_info() -> OsInfo {
         }
         // 尝试从 (OS 注册表/CMD ver) 提取时，name 统一为 Windows
         name = "Windows".into();
-        return OsInfo { name, version, arch };
+        return OsInfo {
+            name,
+            version,
+            arch,
+        };
     }
     #[allow(unreachable_code)]
-    OsInfo { name: "Unknown".into(), version: String::new(), arch }
+    OsInfo {
+        name: "Unknown".into(),
+        version: String::new(),
+        arch,
+    }
 }
 
 /// 采集一次性环境信息（mise/git/系统/各包管理器版本）。
@@ -94,10 +110,19 @@ pub fn collect_env_info() -> EnvInfo {
         ("pacman", "--version"),
     ] {
         let v = out(name, &[arg]);
-        pkg.push(PkgInfo { name: name.to_string(), version: v.clone(), available: v.is_some() });
+        pkg.push(PkgInfo {
+            name: name.to_string(),
+            version: v.clone(),
+            available: v.is_some(),
+        });
     }
 
-    EnvInfo { mise_version, git_version, os, pkg }
+    EnvInfo {
+        mise_version,
+        git_version,
+        os,
+        pkg,
+    }
 }
 
 /// 在子线程运行命令并带超时返回输出，避免 winget/apt 等首启过慢导致界面卡顿。
@@ -116,12 +141,20 @@ fn run_limited(prog: &str, argv: Vec<String>, label: &str) -> Result<std::proces
 /// brew 用 `brew list --formula`；winget/apt/pacman 尽力解析首列名称。
 pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, String> {
     let (prog, argv): (String, Vec<String>) = match manager {
-        "brew" => ("brew".to_string(), ["list", "--formula"].map(String::from).to_vec()),
+        "brew" => (
+            "brew".to_string(),
+            ["list", "--formula"].map(String::from).to_vec(),
+        ),
         "winget" => (
             "winget".to_string(),
-            ["list", "--disable-interactivity"].map(String::from).to_vec(),
+            ["list", "--disable-interactivity"]
+                .map(String::from)
+                .to_vec(),
         ),
-        "apt" => ("apt".to_string(), ["list", "--installed"].map(String::from).to_vec()),
+        "apt" => (
+            "apt".to_string(),
+            ["list", "--installed"].map(String::from).to_vec(),
+        ),
         "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
         _ => return Err(format!("不支持的包管理器: {}", manager)),
     };
@@ -171,12 +204,20 @@ pub struct SystemPkg {
 /// brew 用 `brew list --versions`；winget/apt/pacman 尽力解析名称与版本列。
 pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, String> {
     let (prog, argv): (String, Vec<String>) = match manager {
-        "brew" => ("brew".to_string(), ["list", "--versions"].map(String::from).to_vec()),
+        "brew" => (
+            "brew".to_string(),
+            ["list", "--versions"].map(String::from).to_vec(),
+        ),
         "winget" => (
             "winget".to_string(),
-            ["list", "--disable-interactivity"].map(String::from).to_vec(),
+            ["list", "--disable-interactivity"]
+                .map(String::from)
+                .to_vec(),
         ),
-        "apt" => ("apt".to_string(), ["list", "--installed"].map(String::from).to_vec()),
+        "apt" => (
+            "apt".to_string(),
+            ["list", "--installed"].map(String::from).to_vec(),
+        ),
         "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
         _ => return Err(format!("不支持的包管理器: {}", manager)),
     };
@@ -197,7 +238,10 @@ pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, String> {
         }
         let (name, version) = match manager {
             // apt："pkg/arch version ..." → 名称取 '/' 前，版本取第二列
-            "apt" => (t.split('/').next().unwrap_or("").trim().to_string(), tokens.get(1).map(|s| s.to_string())),
+            "apt" => (
+                t.split('/').next().unwrap_or("").trim().to_string(),
+                tokens.get(1).map(|s| s.to_string()),
+            ),
             // winget：列次序 [名称, Id, 版本, ...]，跳过列标题
             "winget" => {
                 let n = tokens[0].to_string();
@@ -240,7 +284,11 @@ pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, Str
     if output.status.success() {
         Ok(format!("{} 已卸载", name))
     } else {
-        Err(format!("{} 卸载失败：{}", name, String::from_utf8_lossy(&output.stderr).trim()))
+        Err(format!(
+            "{} 卸载失败：{}",
+            name,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ))
     }
 }
 
@@ -272,8 +320,13 @@ pub fn install_system_package(
     match manager {
         "brew" => argv.extend(["install", name].map(String::from)),
         "winget" => argv.extend(
-            ["install", "--accept-source-agreements", "--accept-package-agreements", name]
-                .map(String::from),
+            [
+                "install",
+                "--accept-source-agreements",
+                "--accept-package-agreements",
+                name,
+            ]
+            .map(String::from),
         ),
         "apt" => {
             argv.extend(["install", "-y", name].map(String::from));
@@ -287,7 +340,10 @@ pub fn install_system_package(
     }
 
     let mut command = Command::new(&prog);
-    command.args(&argv).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command
+        .args(&argv)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     if let Some(h) = home() {
         command.current_dir(h);
     }
