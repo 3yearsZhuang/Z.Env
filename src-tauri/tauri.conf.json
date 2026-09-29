@@ -22,7 +22,15 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/3yearsZhuang/Z.Env/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVENTY0NEYxNUI4MjIwRkEKUldUNklJSmI4VVJXWFdxeCtkby90eUhWMU55RVhFRkkyUVBnRFhzQzI2ZU5xU2c5R1JJNy9PNVgK"
     }
   },
   "bundle": {
