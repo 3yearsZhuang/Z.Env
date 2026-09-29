@@ -505,8 +505,8 @@ fn read_linux_memories() -> Vec<MemoryInfo> {
             let mut size = String::new();
             let mut memtype = String::new();
             let mut speed = String::new();
-            for j in i + 1..lines.len() {
-                let l = lines[j].trim();
+            for (j, raw) in lines.iter().enumerate().skip(i + 1) {
+                let l = raw.trim();
                 if l.starts_with("Size:") {
                     size = l.trim_start_matches("Size:").trim().to_string();
                 } else if l.starts_with("Type:") {
@@ -774,7 +774,7 @@ fn read_linux_gpus() -> Vec<GpuInfo> {
                 .nth(3)
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty());
-            let fallback = parts.nth(0).unwrap_or("").trim().to_string();
+            let fallback = parts.next().unwrap_or("").trim().to_string();
             let name = name.unwrap_or(fallback);
             if !name.is_empty() {
                 gpus.push(GpuInfo {
