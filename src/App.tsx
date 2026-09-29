@@ -1,4 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
+import {
+  Blocks,
+  FolderKanban,
+  Gauge,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  Wrench,
+} from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import ToolsView from "./components/ToolsView";
 import ProjectsView from "./components/ProjectsView";
@@ -6,6 +16,7 @@ import SettingsView from "./components/SettingsView";
 import SoftwareView from "./components/SoftwareView";
 import EasterEgg from "./components/EasterEgg";
 import { initLogger, logInfo } from "./logger";
+import "./index.css";
 import "./styles.css";
 
 type Tab = "dashboard" | "tools" | "projects" | "settings" | "software";
@@ -15,12 +26,33 @@ const THEME_NEXT: Record<Theme, Theme> = {
   light: "dark",
   dark: "auto",
 };
-const THEME_ICON: Record<Theme, string> = { auto: "◐", light: "☀", dark: "☾" };
 const THEME_LABEL: Record<Theme, string> = {
   auto: "跟随系统",
   light: "浅色",
   dark: "深色",
 };
+const THEME_ICON: Record<Theme, ComponentType<{ size?: number }>> = {
+  auto: Monitor,
+  light: Sun,
+  dark: Moon,
+};
+
+/** 解析生效主题：auto 跟随系统，其余用所选值 */
+function resolveTheme(t: Theme): "light" | "dark" {
+  if (t !== "auto") return t;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+const NAV: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[] =
+  [
+    { key: "dashboard", label: "系统概览", icon: Gauge },
+    { key: "software", label: "支持列表", icon: Blocks },
+    { key: "tools", label: "运行时工具", icon: Wrench },
+    { key: "projects", label: "项目配置", icon: FolderKanban },
+    { key: "settings", label: "设置", icon: Settings },
+  ];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -49,9 +81,19 @@ export default function App() {
     document.body.classList.add("glass");
   }, []);
 
-  // 日夜主题：auto 跟随系统
+  // 明暗主题：auto 跟随系统（监听系统切换实时生效）。
+  // 解析结果写入 <html>.dark 类驱动设计令牌切换，data-theme 同步给个别旧样式。
   useEffect(() => {
-    document.body.dataset.theme = theme;
+    const apply = () => {
+      const effective = resolveTheme(theme);
+      document.documentElement.classList.toggle("dark", effective === "dark");
+      document.body.dataset.theme = effective;
+    };
+    apply();
+    if (theme !== "auto") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, [theme]);
 
   // 响应式：窄窗口自动复用"点击收起"逻辑（仅图标）
@@ -63,6 +105,8 @@ export default function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const ThemeIcon = THEME_ICON[theme];
 
   return (
     <div className="app">
@@ -78,41 +122,18 @@ export default function App() {
         </div>
 
         <nav className="nav">
-          <button
-            className={`nav-item ${tab === "dashboard" ? "active" : ""}`}
-            onClick={() => setTab("dashboard")}
-          >
-            <span className="nav-icon">◉</span>
-            <span className="nav-label">系统概览</span>
-          </button>
-          <button
-            className={`nav-item ${tab === "software" ? "active" : ""}`}
-            onClick={() => setTab("software")}
-          >
-            <span className="nav-icon">⌂</span>
-            <span className="nav-label">支持列表</span>
-          </button>
-          <button
-            className={`nav-item ${tab === "tools" ? "active" : ""}`}
-            onClick={() => setTab("tools")}
-          >
-            <span className="nav-icon">▤</span>
-            <span className="nav-label">运行时工具</span>
-          </button>
-          <button
-            className={`nav-item ${tab === "projects" ? "active" : ""}`}
-            onClick={() => setTab("projects")}
-          >
-            <span className="nav-icon">▰</span>
-            <span className="nav-label">项目配置</span>
-          </button>
-          <button
-            className={`nav-item ${tab === "settings" ? "active" : ""}`}
-            onClick={() => setTab("settings")}
-          >
-            <span className="nav-icon">⚙</span>
-            <span className="nav-label">设置</span>
-          </button>
+          {NAV.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              className={`nav-item ${tab === key ? "active" : ""}`}
+              onClick={() => setTab(key)}
+            >
+              <span className="nav-icon">
+                <Icon size={17} />
+              </span>
+              <span className="nav-label">{label}</span>
+            </button>
+          ))}
         </nav>
 
         <div className="sidebar-footer">
@@ -121,7 +142,9 @@ export default function App() {
             onClick={() => changeTheme(THEME_NEXT[theme])}
             title={"切换主题：" + THEME_LABEL[theme]}
           >
-            <span className="theme-icon">{THEME_ICON[theme]}</span>
+            <span className="theme-icon">
+              <ThemeIcon size={14} />
+            </span>
             <span className="theme-label">{THEME_LABEL[theme]}</span>
           </button>
           <div className="footer-tag">mise · 版本管理</div>

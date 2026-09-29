@@ -1,0 +1,97 @@
+/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（zinc 中性色 + 蓝色主色）。
+ * 明/暗两套令牌在此集中定义；styles.css 的旧变量（--bg/--accent 等）全部映射到这里，
+ * 明暗切换由 App.tsx 解析（auto 跟随系统）后切换 <html> 上的 .dark 类。 */
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #fafafa;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #2563eb;
+  --primary-foreground: #f8fafc;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #93c5fd;
+  --radius: 0.625rem;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0b0c0f;
+  --foreground: #f4f4f5;
+  --card: #15171c;
+  --card-foreground: #f4f4f5;
+  --popover: #15171c;
+  --popover-foreground: #f4f4f5;
+  --primary: #5b9dff;
+  --primary-foreground: #0b1220;
+  --secondary: #1b1e25;
+  --secondary-foreground: #e4e4e7;
+  --muted: #1b1e25;
+  --muted-foreground: #9ba1ad;
+  --accent: #1b1e25;
+  --accent-foreground: #f4f4f5;
+  --destructive: #ef6b74;
+  --success: #43c08a;
+  --warning: #e0b45a;
+  --border: #262a33;
+  --input: #262a33;
+  --ring: #2f6bd8;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+}
