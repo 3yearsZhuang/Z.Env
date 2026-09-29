@@ -269,6 +269,60 @@ export function onSysInstallProgress(
   );
 }
 
+// ---------- 托管接入（整机运行时 → mise） ----------
+
+/** 托管清单条目（含健康状态） */
+export interface ManagedEntry {
+  tool: string;
+  version: string;
+  manager: string;
+  target: string;
+  healthy: boolean;
+}
+
+/** 对账事件：brew 升级/卸载后的自动重连或移除 */
+export interface ReconcileEvent {
+  tool: string;
+  from: string;
+  to: string | null;
+  action: "relinked" | "removed" | "failed";
+  message: string;
+}
+
+/** 接入 mise：按来源自动选策略（用户级目录直连 / brew 托管软链），带注册校验与回滚 */
+export function managedAdopt(
+  tool: string,
+  version: string,
+  manager: string,
+  path: string
+): Promise<string> {
+  return invoke("managed_adopt", { tool, version, manager, path });
+}
+
+/** 解除接入 */
+export function managedUnadopt(tool: string, version: string): Promise<string> {
+  return invoke("managed_unadopt", { tool, version });
+}
+
+/** 对账：失效接入自动重连或移除，返回事件列表 */
+export function managedReconcile(): Promise<ReconcileEvent[]> {
+  return invoke("managed_reconcile");
+}
+
+/** 托管清单与健康状态 */
+export function managedList(): Promise<ManagedEntry[]> {
+  return invoke("managed_list");
+}
+
+/** 策略 C：包管理器自维护的稳定 bin 路径（写入项目 mise.toml 的 env._path） */
+export function stableBinPath(
+  manager: string,
+  name: string,
+  path: string
+): Promise<string> {
+  return invoke("stable_bin_path", { manager, name, path });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
