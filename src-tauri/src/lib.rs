@@ -1,4 +1,5 @@
 mod cache;
+mod discover;
 mod doctor;
 mod env;
 mod env_center;
@@ -287,6 +288,12 @@ fn env_center_remove(key: String) -> Result<String, String> {
     env_center::remove(&key).map_err(String::from)
 }
 
+/// 项目发现：扫描常用目录，识别 .git / 技术栈指纹 / mise.toml，对照已装工具给出缺失清单
+#[tauri::command(async)]
+fn discover_projects() -> Vec<discover::DiscoveredProject> {
+    discover::run()
+}
+
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
 #[tauri::command(async)]
 fn stable_bin_path(manager: String, name: String, path: String) -> Result<String, String> {
@@ -401,6 +408,7 @@ pub fn run() {
             env_center_list,
             env_center_set,
             env_center_remove,
+            discover_projects,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

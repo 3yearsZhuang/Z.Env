@@ -357,6 +357,22 @@ export function envCenterRemove(key: string): Promise<string> {
   return invoke("env_center_remove", { key });
 }
 
+// ---------- 项目发现 ----------
+
+/** 发现的项目：tools 为指纹/mise.toml 推断，missingTools 为其中本机未安装的 */
+export interface DiscoveredProject {
+  name: string;
+  path: string;
+  hasMiseToml: boolean;
+  tools: string[];
+  missingTools: string[];
+}
+
+/** 项目发现：扫描常用目录（只读） */
+export function discoverProjects(): Promise<DiscoveredProject[]> {
+  return invoke("discover_projects");
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;

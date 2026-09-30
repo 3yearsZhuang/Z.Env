@@ -6,8 +6,10 @@ import {
   installAllProject,
   detectToolSources,
   stableBinPath,
+  discoverProjects,
   errorMessage,
   ToolSource,
+  type DiscoveredProject,
 } from "../api";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 
@@ -98,6 +100,10 @@ export default function ProjectsView() {
   const [bindOpen, setBindOpen] = useState(false);
   const [bindSources, setBindSources] = useState<ToolSource[]>([]);
   const [bindBusy, setBindBusy] = useState<string | null>(null);
+
+  // 项目发现：扫描常用目录，点击即载入编辑流程
+  const [discovered, setDiscovered] = useState<DiscoveredProject[] | null>(null);
+  const [scanning, setScanning] = useState(false);
 
   function openBindDialog() {
     detectToolSources()
@@ -206,11 +212,16 @@ export default function ProjectsView() {
       setLoaded(false);
       return;
     }
+    await loadProjectAt(path.trim());
+  }
+
+  /** 按给定路径读取配置（发现列表与手动输入共用） */
+  async function loadProjectAt(p: string) {
     setLoading(true);
     setError(null);
     setNotice(null);
     try {
-      const c = await readProjectConfig(path.trim());
+      const c = await readProjectConfig(p);
       setContent(c);
       setLoaded(true);
       setNotice("已加载配置（若为只读展示，可编辑后保存）");
@@ -221,6 +232,19 @@ export default function ProjectsView() {
       setLoading(false);
     }
   }
+
+  /** 扫描常用目录发现项目（只读） */
+  function rescan() {
+    setScanning(true);
+    discoverProjects()
+      .then(setDiscovered)
+      .catch((e) => setError(errorMessage(e)))
+      .finally(() => setScanning(false));
+  }
+
+  // 进入页面即自动扫描一次
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(rescan, []);
 
   async function handlePickDir() {
     const selected = await open({
@@ -305,6 +329,57 @@ export default function ProjectsView() {
           </div>
         </div>
       )}
+
+      <section className="panel" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <h2 className="panel-title" style={{ margin: 0 }}>
+            发现的项目
+          </h2>
+          <span className="pill muted">{discovered ? discovered.length : "…"} 个</span>
+          <span style={{ flex: 1 }} />
+          <button className="btn" onClick={rescan} disabled={scanning}>
+            {scanning ? "扫描中…" : "重新扫描"}
+          </button>
+        </div>
+        {discovered && discovered.length === 0 && (
+          <div className="empty small" style={{ marginTop: 8 }}>
+            常用目录下没有发现项目（识别 .git / package.json / mise.toml 等指纹）。
+          </div>
+        )}
+        <div className="setting-list" style={{ marginTop: 10 }}>
+          {(discovered ?? []).slice(0, 50).map((p) => (
+            <div key={p.path} className="setting-row" style={{ cursor: "default" }}>
+              <span className="setting-info" style={{ flex: 1, minWidth: 0 }}>
+                <span
+                  className="setting-name"
+                  style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}
+                >
+                  {p.name}
+                  {p.hasMiseToml ? (
+                    <span className="pill active">已配置 mise</span>
+                  ) : (
+                    <span className="pill muted">未配置</span>
+                  )}
+                  {p.missingTools.length > 0 && (
+                    <span
+                      className="pill muted"
+                      style={{ color: "var(--warning)", borderColor: "var(--warning)" }}
+                    >
+                      缺 {p.missingTools.join("、")}
+                    </span>
+                  )}
+                </span>
+                <span className="setting-desc" style={{ wordBreak: "break-all" }}>
+                  {p.path}
+                </span>
+              </span>
+              <button className="btn" onClick={() => loadProjectAt(p.path)}>
+                载入
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="project-form">
         <div className="form-row">
