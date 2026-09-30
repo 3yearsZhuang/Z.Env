@@ -133,31 +133,39 @@
 
 ## P3 — 发布闭环（最高优先：先证明管线，再打磨功能）
 
-### 17. 签名 Secret + 首个 tag v0.7.0 → 三平台打包
-- **Secret**：`TAURI_SIGNING_PRIVATE_KEY` 注入本地 `~/.tauri/zenv.key` 内容；密码 Secret 留空即可（未配置的 Secret 在 Actions 中解析为空串，密钥本身无密码）。
+### 🚧 17. 签名 Secret + 首个 tag v0.7.0 → 三平台打包
+- **Secret**：`TAURI_SIGNING_PRIVATE_KEY` 已注入本地 `~/.tauri/zenv.key` 内容；密码 Secret 留空（未配置的 Secret 在 Actions 中解析为空串，密钥本身无密码）。
 - **版本**：三处 0.6.7 → 0.7.0（`check:version` 校验），推送 tag 触发 release.yml。
-- **验证**：草稿 Release（`releaseDraft: true`，确认后才公开）含 `latest.json` + macOS dmg（双架构）/ Windows msi+nsis / Linux appimage+deb。
-- **遗留到 0.7.1 验证**：应用内更新端到端（旧版收提示 → 下载 → 签名校验 → 自动重启）需要线上存在两个带 updater 的版本。
+- **实战踩坑（三连，均已修复）**：
+  1. **Tauri npm 包与 Rust crate 版本错位直接 fail**——`@tauri-apps/api` 2.12.0 vs Rust `tauri` 2.11.5 等 4 对，npm 锁文件先行升级而 Cargo.lock 停留旧版。修复：双侧对齐同 minor（tauri 2.12.0 / process 2.4.0 / autostart 2.6.0 / updater 2.13.1，连带 window-vibrancy 0.8.1、wry 0.57）。后续升级 Tauri 必须**两侧同步**。
+  2. **仓库 Actions 默认 workflow 权限为 read**——GITHUB_TOKEN 无权 create-release，报 "Resource not accessible by integration"（八月 v0.6.6/0.6.7 能建草稿，是权限块加入 P2 之前、且当时默认值为 write）。修复：仓库设置默认 workflow 权限改回 write。
+  3. **Tauri 2 默认不产出更新器工件**——需在 `tauri.conf.json` 显式 `bundle.createUpdaterArtifacts: true`，否则无 `.app.tar.gz/.sig`，tauri-action 报 "Signature not found for the updater JSON" 跳过 `latest.json`，应用内更新无元数据。
+- **验证**（待 run4 产物落地后补记）：草稿 Release 含 `latest.json` + 三平台安装包与 `.sig` 更新工件。
+- **遗留**：① release.yml macOS matrix 安装了 x86_64 target 但构建未使用，产物只有 aarch64——Intel Mac 覆盖为既有缺口，后续加 `--target` 或 universal；② 应用内更新端到端待 0.7.1 发布时验证；③ macOS arm64 runner 曾排队 24h（v0.6.7 run 超时取消），发布窗口留意。
 
 ## P4 — 工程欠账（18 → 19 → 20，21 按需）
 
-### 18. env.rs 错误模型二期
+### ✅ 18. env.rs 错误模型二期
 - `detect_system_installed` / `detect_system_versions` / `uninstall_system_package` / `install_system_package` 及私有 `run_limited`：`Result<_, String>` → `Result<_, AppError>`。
-- 变体映射：不支持的包管理器 → `Unsupported`（可单测）、spawn/等待失败 → `Io`、命令执行失败/超时 → `Other`；command 边界仍经 `From<AppError> for String`，前端 wire 格式不变。
+- 变体映射：不支持的包管理器 → `Unsupported`、spawn/等待失败 → `Io`、执行失败/超时 → `Other`；command 边界仍经 `From<AppError> for String`，前端 wire 格式不变。
+- 新增 Unsupported 映射单测。
 
-### 19. Prettier 门禁
-- 全库格式化作为**独立提交**先行（`npm run format`），随后 `format:check` 脚本接入 CI frontend job，避免后续混入排版噪音。
+### ✅ 19. Prettier 门禁
+- 全库格式化独立提交（14 文件）先行，随后 `format:check` 脚本接入 CI frontend job。
 
-### 20. bundle 代码分割
-- CodeMirror（@uiw/react-codemirror + TOML mode）仅 ProjectsView 使用：动态 import 拆 chunk，主 bundle 从 >500kB 回落；build 产物体积写入验证记录。
+### ✅ 20. bundle 代码分割
+- CodeMirror（@uiw/react-codemirror + StreamLanguage + TOML mode）抽为 `TomlEditor.tsx` 独立模块，React.lazy + Suspense 懒加载，整体落入异步 chunk。
+- **验证**：主 bundle 741kB → 328kB（-55%），编辑器 chunk 396kB，生产构建不再触发 500kB 告警。
 
 ### 21. shadcn/ui 阶段二（⬜ 按需）
 - 各视图与弹窗逐个迁移到真组件（Dialog 无障碍优先）。令牌化后纯迁移视觉收益有限，穿插在功能迭代里做，不单独立项推进。
 
 ## P5 — 产品纵深（已选定先做 22）
 
-### 22. 环境体检 doctor
-- **定位**：把托管接入的"被动对账自愈"升级为"主动巡检 + 报告"。检查项：PATH 重复/冲突、mise 设置健康、悬空链接与农场 `~/.zenv/managed` 健康、shell 配置关键项；每项给可执行修复建议，可修的一键修。
-- **入口**：设置页独立区块（或概览页告警卡片），后端 `doctor_*` command 按检查项拆分以便测试。
+### ✅ 22. 环境体检 doctor（v1 已落地）
+- **后端 `doctor.rs`** 五项只读检查：mise 可用性（缺失记 Fail）、PATH 重复条目、PATH 失效目录、shell 集成（activate 钩子或 mise shims 二选一，pyenv 同名结构不误判；Windows 跳过）、托管接入健康度（指引到运行时页对账自愈）。只报告不动状态，每项给修复建议。
+- **前端**：设置页「环境体检」面板，语义色圆点分级（success/warning/destructive）。
+- **测试**：PATH 解析/重复/失效、shell 集成判定 4 个纯函数单测，后端合计 18 passed。
+- **后续**：实机视觉验证；可修复项的一键修复动作（v1 有意不做）；磁盘体积类检查（`~/.zenv` 农场大小）。
 - **备选**（22 之后按反馈排序）：项目发现（扫描常用目录识别技术栈并提示补齐）、本地开发服务管理（brew services 等）、缓存治理（brew/mise/各语言缓存体积与清理）。
 - **i18n 维持暂缓**：面向国际用户时再引入 react-i18next（沿用 P2 判定）。
