@@ -243,7 +243,6 @@ export default function ProjectsView() {
   }
 
   // 进入页面即自动扫描一次
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(rescan, []);
 
   async function handlePickDir() {
