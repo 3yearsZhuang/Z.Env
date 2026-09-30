@@ -20,6 +20,8 @@ jobs:
         run: npm run check:version
       - name: Lint (eslint)
         run: npm run lint
+      - name: Format check (prettier)
+        run: npm run format:check
       - name: Unit tests (vitest)
         run: npm test
       - name: Type-check & build
