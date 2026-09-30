@@ -1,4 +1,5 @@
 mod cache;
+mod doctor;
 mod env;
 mod error;
 mod managed;
@@ -255,6 +256,12 @@ fn managed_list() -> Vec<managed::ManagedEntryHealthy> {
     managed::list()
 }
 
+/// 环境体检：全量巡检整机环境健康度，返回各项结果与修复建议（只读，不做修复动作）
+#[tauri::command(async)]
+fn doctor_run() -> Vec<doctor::DoctorCheck> {
+    doctor::run()
+}
+
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
 #[tauri::command(async)]
 fn stable_bin_path(manager: String, name: String, path: String) -> Result<String, String> {
@@ -364,6 +371,7 @@ pub fn run() {
             managed_unadopt,
             managed_reconcile,
             managed_list,
+            doctor_run,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

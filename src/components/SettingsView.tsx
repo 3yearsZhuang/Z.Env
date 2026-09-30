@@ -7,11 +7,11 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
-import { errorMessage } from "../api";
+import { errorMessage, doctorRun, DoctorCheck } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "跨平台 mise 图形化管理器";
-const FALLBACK_VERSION = "0.6.7";
+const FALLBACK_VERSION = "0.7.0";
 
 const STACK = [
   "Tauri 2",
@@ -50,6 +50,11 @@ export default function SettingsView({ onEaster }: Props) {
 
   // 开机自启
   const [autoStart, setAutoStart] = useState(false);
+
+  // 环境体检
+  const [doctor, setDoctor] = useState<DoctorCheck[] | null>(null);
+  const [doctorRunning, setDoctorRunning] = useState(false);
+  const [doctorMsg, setDoctorMsg] = useState("");
 
   useEffect(() => {
     getVersion()
@@ -129,6 +134,18 @@ export default function SettingsView({ onEaster }: Props) {
     }
   }
 
+  async function handleDoctor() {
+    setDoctorRunning(true);
+    setDoctorMsg("");
+    try {
+      setDoctor(await doctorRun());
+    } catch (e) {
+      setDoctorMsg(`体检失败：${errorMessage(e)}`);
+    } finally {
+      setDoctorRunning(false);
+    }
+  }
+
   return (
     <div className="view">
       <div className="view-head">
@@ -178,6 +195,50 @@ export default function SettingsView({ onEaster }: Props) {
             </span>
           </button>
         </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">环境体检</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <button className="btn primary" onClick={handleDoctor} disabled={doctorRunning}>
+            {doctorRunning ? "巡检中…" : "开始体检"}
+          </button>
+          {doctorMsg && <span className="setting-desc">{doctorMsg}</span>}
+        </div>
+        {doctor && (
+          <div className="setting-list" style={{ marginTop: 12 }}>
+            {doctor.map((c) => (
+              <div key={c.id} className="setting-row" style={{ cursor: "default" }}>
+                <span className="setting-info" style={{ flex: 1 }}>
+                  <span
+                    className="setting-name"
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        background:
+                          c.level === "ok"
+                            ? "var(--success)"
+                            : c.level === "warn"
+                              ? "var(--warning)"
+                              : "var(--destructive)",
+                      }}
+                    />
+                    {c.title}
+                  </span>
+                  <span className="setting-desc">
+                    {c.detail}
+                    {c.hint ? ` · 建议：${c.hint}` : ""}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel">

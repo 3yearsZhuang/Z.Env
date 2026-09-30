@@ -289,6 +289,22 @@ export function stableBinPath(manager: string, name: string, path: string): Prom
   return invoke("stable_bin_path", { manager, name, path });
 }
 
+// ---------- 环境体检（doctor） ----------
+
+/** 单项体检结果：level 为结论等级，detail 描述现状，hint 给出修复建议 */
+export interface DoctorCheck {
+  id: string;
+  title: string;
+  level: "ok" | "warn" | "fail";
+  detail: string;
+  hint: string;
+}
+
+/** 环境体检：全量巡检整机环境健康度（只读，不做修复动作） */
+export function doctorRun(): Promise<DoctorCheck[]> {
+  return invoke("doctor_run");
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
