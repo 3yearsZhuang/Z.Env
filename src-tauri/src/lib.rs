@@ -86,7 +86,7 @@ async fn install_system_package(
     .map_err(|e| e.to_string())?;
     // 安装结束后（无论成败）失效该管理器的探测缓存，下次探测拿到真实状态
     syscache::invalidate(&mgr);
-    r
+    r.map_err(String::from)
 }
 
 /// 探测指定系统包管理器当前已安装的软件名列表。
@@ -118,7 +118,7 @@ fn uninstall_system_package(manager: String, name: String) -> Result<String, Str
     let r = env::uninstall_system_package(&manager, &name);
     // 卸载结束后失效该管理器的探测缓存
     syscache::invalidate(&manager);
-    r
+    r.map_err(String::from)
 }
 
 /// 扫描其他工具托管（nvm/pyenv/asdf/sdkman/rvm 等）的运行时。

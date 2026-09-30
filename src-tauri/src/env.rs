@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::Serialize;
 use std::io::Read;
 use std::process::{Command, Stdio};
@@ -126,20 +127,29 @@ pub fn collect_env_info() -> EnvInfo {
 }
 
 /// 在子线程运行命令并带超时返回输出，避免 winget/apt 等首启过慢导致界面卡顿。
-fn run_limited(prog: &str, argv: Vec<String>, label: &str) -> Result<std::process::Output, String> {
+fn run_limited(
+    prog: &str,
+    argv: Vec<String>,
+    label: &str,
+) -> Result<std::process::Output, AppError> {
     let (prog2, argv2) = (prog.to_string(), argv);
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let _ = tx.send(Command::new(&prog2).args(&argv2).output());
     });
     rx.recv_timeout(std::time::Duration::from_secs(15))
-        .map_err(|_| format!("{} 执行超时（可能环境未就绪）", label))?
-        .map_err(|e| format!("无法执行 {}: {}", prog, e))
+        .map_err(|_| AppError::Other(format!("{} 执行超时（可能环境未就绪）", label)))?
+        .map_err(|e| AppError::Io(format!("无法执行 {}: {}", prog, e)))
+}
+
+/// 包管理器名不在支持列表时的统一错误。
+fn unsupported_manager(manager: &str) -> AppError {
+    AppError::Unsupported(format!("不支持的包管理器: {}", manager))
 }
 
 /// 探测各系统包管理器当前已安装的软件列表（用于跨启动持久展示“已安装”状态）。
 /// brew 用 `brew list --formula`；winget/apt/pacman 尽力解析首列名称。
-pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, String> {
+pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, AppError> {
     let (prog, argv): (String, Vec<String>) = match manager {
         "brew" => (
             "brew".to_string(),
@@ -156,11 +166,11 @@ pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, String> {
             ["list", "--installed"].map(String::from).to_vec(),
         ),
         "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
-        _ => return Err(format!("不支持的包管理器: {}", manager)),
+        _ => return Err(unsupported_manager(manager)),
     };
     let output = run_limited(&prog, argv, manager)?;
     if !output.status.success() {
-        return Err(format!("{} 查询已安装列表失败", manager));
+        return Err(AppError::Other(format!("{} 查询已安装列表失败", manager)));
     }
     let out = String::from_utf8_lossy(&output.stdout);
     let mut names: Vec<String> = Vec::new();
@@ -202,7 +212,7 @@ pub struct SystemPkg {
 
 /// 探测各系统包管理器已装软件及其版本（供运行时页列出“其他渠道”的版本）。
 /// brew 用 `brew list --versions`；winget/apt/pacman 尽力解析名称与版本列。
-pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, String> {
+pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, AppError> {
     let (prog, argv): (String, Vec<String>) = match manager {
         "brew" => (
             "brew".to_string(),
@@ -219,11 +229,11 @@ pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, String> {
             ["list", "--installed"].map(String::from).to_vec(),
         ),
         "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
-        _ => return Err(format!("不支持的包管理器: {}", manager)),
+        _ => return Err(unsupported_manager(manager)),
     };
     let output = run_limited(&prog, argv, manager)?;
     if !output.status.success() {
-        return Err(format!("{} 查询已装版本失败", manager));
+        return Err(AppError::Other(format!("{} 查询已装版本失败", manager)));
     }
     let out = String::from_utf8_lossy(&output.stdout);
     let mut pkgs: Vec<SystemPkg> = Vec::new();
@@ -264,7 +274,7 @@ pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, String> {
 }
 
 /// 原生卸载系统软件包（brew/winget/apt/pacman），用于管理其他渠道安装的环境。
-pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, String> {
+pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, AppError> {
     let mut prog = manager.to_string();
     let mut argv: Vec<String> = Vec::new();
     match manager {
@@ -278,17 +288,17 @@ pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, Str
             argv.extend(["-R", "--noconfirm", name].map(String::from));
             prog = "sudo".into();
         }
-        _ => return Err(format!("不支持的包管理器: {}", manager)),
+        _ => return Err(unsupported_manager(manager)),
     }
     let output = run_limited(&prog, argv, &format!("{manager} uninstall"))?;
     if output.status.success() {
         Ok(format!("{} 已卸载", name))
     } else {
-        Err(format!(
+        Err(AppError::Other(format!(
             "{} 卸载失败：{}",
             name,
             String::from_utf8_lossy(&output.stderr).trim()
-        ))
+        )))
     }
 }
 
@@ -314,7 +324,7 @@ pub fn install_system_package(
     app: &AppHandle,
     manager: &str,
     name: &str,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let mut prog = manager.to_string();
     let mut argv: Vec<String> = Vec::new();
     match manager {
@@ -336,7 +346,7 @@ pub fn install_system_package(
             argv.extend(["-S", "--noconfirm", name].map(String::from));
             prog = "sudo".into();
         }
-        _ => return Err(format!("不支持的包管理器: {}", manager)),
+        _ => return Err(unsupported_manager(manager)),
     }
 
     let mut command = Command::new(&prog);
@@ -349,7 +359,7 @@ pub fn install_system_package(
     }
     let mut child = command
         .spawn()
-        .map_err(|e| format!("无法启动 {} 安装: {}", prog, e))?;
+        .map_err(|e| AppError::Io(format!("无法启动 {} 安装: {}", prog, e)))?;
 
     let stdout = child.stdout.take().expect("stdout pipe");
     let stderr = child.stderr.take().expect("stderr pipe");
@@ -368,14 +378,17 @@ pub fn install_system_package(
 
     let status = child
         .wait()
-        .map_err(|e| format!("等待 {} 进程失败: {}", prog, e))?;
+        .map_err(|e| AppError::Io(format!("等待 {} 进程失败: {}", prog, e)))?;
     let _ = t_out.join();
     let _ = t_err.join();
 
     if status.success() {
         Ok(format!("{} install {}", manager, name))
     } else {
-        Err(format!("{} install {} 失败", manager, name))
+        Err(AppError::Other(format!(
+            "{} install {} 失败",
+            manager, name
+        )))
     }
 }
 
@@ -411,4 +424,29 @@ fn pump_sys_stream<R: Read>(mut reader: R, app: &AppHandle, manager: &str, name:
         }
     }
     flush(&mut line);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 不支持的包管理器在 spawn 任何进程之前就报 Unsupported（install 需要
+    /// AppHandle 不好构造，但与 detect/uninstall 走同一 `unsupported_manager` 分支）。
+    #[test]
+    fn unsupported_manager_maps_to_unsupported_variant() {
+        for m in ["npm", "yarn", ""] {
+            assert!(matches!(
+                detect_system_installed(m),
+                Err(AppError::Unsupported(_))
+            ));
+            assert!(matches!(
+                detect_system_versions(m),
+                Err(AppError::Unsupported(_))
+            ));
+            assert!(matches!(
+                uninstall_system_package(m, "foo"),
+                Err(AppError::Unsupported(_))
+            ));
+        }
+    }
 }
