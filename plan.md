@@ -179,28 +179,34 @@
 
 ## P6 — 整机环境管理中心：最小闭环（23 → 24 → 25）
 
-### 23. 整机环境变量中心
+### ✅ 23. 整机环境变量中心
 - **全局 env 管理**：全局 mise config（`MISE_GLOBAL_CONFIG_FILE` > `MISE_CONFIG_DIR` > `~/.config/mise/config.toml`，
   Windows `%APPDATA%\mise\config.toml`）的 `[env]` 段增删改；**文本手术式编辑**——只重写 `[env]` 段内目标行，
   保留用户其余内容与注释，零新依赖（不引 toml crate）；表/数组等复杂值只读展示并提示手动编辑。
 - **冲突检测**：系统/用户级 env（进程环境）与全局 mise env 同名且值不同者列出（PATH 除外），说明生效条件取决于 shell 接入。
 - **入口**：新视图「环境变量」。段解析/编辑为纯函数，单测覆盖。
+- **验证**：`env_center.rs` 9 个纯函数单测（段界/转义/替换/追加段/复杂值跨行/roundtrip）；后端 34 passed；
+  浏览器实测新视图渲染（表单、空态、错误路径、系统 env 搜索面板）。
 
-### 24. doctor 接修复动作（化验单 → 处方）
-- `DoctorCheck` 增加 `fixable`；新增 `doctor_fix` command：
+### ✅ 24. doctor 接修复动作（化验单 → 处方）
+- `DoctorCheck` 增加 `fixable`；`doctor_fix` command：
   - `managed-health` → 复用 `managed::reconcile()` 对账自愈，返回事件摘要；
   - `shell-integration` → 按 `$SHELL` 把 `mise activate` 行**追加**到对应 rc（zsh/bash/fish；写前复检，绝不改写既有内容）；
   - 其余项返回"暂不支持自动修复"并保留 hint（PATH 类问题不动用户配置）。
 - **前端**：warn/fail 且 fixable 项显示「一键修复」，成功后自动重跑体检刷新结果。
+- **验证**：fix 路由拒绝只读项、shell 映射（zsh/bash/fish/未知）2 个新单测；后端 29 passed（该轮）。
 
-### 25. 项目发现
+### ✅ 25. 项目发现
 - **后端 `discover.rs`**：扫描常用根目录（存在者：~/Documents ~/Desktop ~/Projects ~/Code ~/code ~/Dev ~/dev ~/work ~/repos，各深 3 层；家目录本身 1 层），
   跳过隐藏目录与 node_modules/target/vendor 等重目录，目录预算 4000、结果上限 200；
   识别 `.git` 与技术栈指纹（package.json/.nvmrc/pyproject.toml/requirements.txt/.python-version/go.mod/Gemfile/composer.json/pom.xml/build.gradle/.tool-versions）；
-  `mise.toml` 解析 `[tools]` 键、`.tool-versions` 解析工具名。
+  `mise.toml` 解析 `[tools]` 键（含带引号键）、`.tool-versions` 解析工具名。
 - **输出**：名称/路径/是否已有 mise.toml/工具清单/**缺失工具**（对照 `mise ls` 已装）。
-- **前端**：ProjectsView 顶部「发现的项目」区（自动扫描 + 重新扫描），点击载入既有编辑器流程，缺失工具走既有"保存并一键安装"。
-- **达成判定**：23–25 落地后裸机测试应从"否"变为"基本是"，届时 tagline 可升级为"整机环境管理中心"。
+- **前端**：ProjectsView 顶部「发现的项目」区（进页自动扫描 + 重新扫描），点击载入既有编辑器流程，缺失工具走既有"保存并一键安装"。
+- **验证**：5 个单测（指纹识别、node_modules/隐藏目录跳过、预算耗尽、引号键、缺失对比）；后端 34 passed；
+  浏览器实测发现区渲染（计数、重新扫描、扫描失败错误路径）。
+- **达成判定**：23–25 落地后裸机测试从"否"变为"基本是"（装软件 ✓ / shell 接入 ✓ 一键 / env ✓ 中心化 /
+  项目 ✓ 自动发现）；本地服务与迁移仍在第二、三梯队，全部完成后 tagline 升级为"整机环境管理中心"。
 
 ### ⬜ 第二梯队（25 之后按反馈排序）
 - 本地开发服务管理（brew services / systemd user units / Windows 服务只读）；开发缓存治理（体积展示 + 一键清理）；操作历史面板。
