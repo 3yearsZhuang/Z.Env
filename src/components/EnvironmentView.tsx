@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   detectSystemVersions,
   detectToolSources,
+  envCenterList,
   errorMessage,
   getEnvInfo,
   listTools,
@@ -13,8 +14,10 @@ import {
   SystemPkg,
   ToolSource,
   ToolInfo,
+  type EnvCenterSnapshot,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import EnvPanel from "./EnvPanel";
 import { ChannelDialog } from "./SoftwareView";
 import {
   CAT_KEYS_ALL,
@@ -47,7 +50,7 @@ function ToolBadge({ name }: { name: string }) {
   return <span className="tool-badge">{name.slice(0, 2).toUpperCase()}</span>;
 }
 
-export default function ToolsView() {
+export default function EnvironmentView() {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +70,14 @@ export default function ToolsView() {
   } | null>(null);
   // 托管接入对账事件：brew 升级/卸载后自动重连或移除的提示
   const [reconcile, setReconcile] = useState<ReconcileEvent[]>([]);
+  // 全局环境变量快照：顶部摘要条与底部变量区同源
+  const [envSnap, setEnvSnap] = useState<EnvCenterSnapshot | null>(null);
+
+  const loadEnvSnap = useCallback(() => {
+    envCenterList()
+      .then(setEnvSnap)
+      .catch(() => {});
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -115,6 +126,10 @@ export default function ToolsView() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    loadEnvSnap();
+  }, [loadEnvSnap]);
 
   async function handleActivate(tool: string, version: string, global: boolean) {
     setBusy(`${tool}@${version}`);
@@ -224,15 +239,30 @@ export default function ToolsView() {
     <div className="view">
       <div className="view-head">
         <div>
-          <h1>运行时工具</h1>
+          <h1>环境</h1>
           <p className="view-sub">
-            本机环境一览：可由 mise 安装，或已通过其他渠道（nvm/pyenv/asdf、brew 等）托管
+            运行时与全局环境变量：可由 mise 安装，或已通过其他渠道（nvm/pyenv/asdf、brew 等）托管
           </p>
         </div>
         <button className="btn-ghost" onClick={() => setCompact((c) => !c)} title="切换紧凑模式">
           {compact ? "▦ 列表" : "▣ 紧凑"}
         </button>
       </div>
+
+      {envSnap && (
+        <div
+          className={`banner ${envSnap.conflicts.length > 0 ? "warn" : "info"}`}
+          style={{ cursor: "pointer" }}
+          onClick={() =>
+            document.getElementById("env-panel")?.scrollIntoView({ behavior: "smooth" })
+          }
+        >
+          全局环境变量：{envSnap.entries.length} 个
+          {envSnap.conflicts.length > 0
+            ? ` · ${envSnap.conflicts.length} 个同名冲突 · 点击查看`
+            : " · 点击管理"}
+        </div>
+      )}
 
       <div className="toolbar">
         <div className="filter-chips">
@@ -449,6 +479,9 @@ export default function ToolsView() {
           </div>
         </>
       )}
+
+      {/* 环境变量区块：与运行时同属"环境"配置域，共用一页 */}
+      <EnvPanel snap={envSnap} reload={loadEnvSnap} />
 
       {installFor && (
         <InstallDialog
