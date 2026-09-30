@@ -124,7 +124,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <span className="brand-title">Z.Env</span>
-            <span className="brand-sub">运行时管理</span>
+            <span className="brand-sub">环境管理</span>
           </div>
         </div>
 

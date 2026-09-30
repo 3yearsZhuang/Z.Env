@@ -208,8 +208,34 @@
 - **达成判定**：23–25 落地后裸机测试从"否"变为"基本是"（装软件 ✓ / shell 接入 ✓ 一键 / env ✓ 中心化 /
   项目 ✓ 自动发现）；本地服务与迁移仍在第二、三梯队，全部完成后 tagline 升级为"整机环境管理中心"。
 
-### ⬜ 第二梯队（25 之后按反馈排序）
-- 本地开发服务管理（brew services / systemd user units / Windows 服务只读）；开发缓存治理（体积展示 + 一键清理）；操作历史面板。
+### ✅ 26. 本地开发服务管理
+- **范围**：brew services（macOS / Linuxbrew，`brew services list --json` 防御式解析，兼容 running(bool) 与旧版
+  state 字段，start/stop/restart）；systemd 用户级服务（Linux，`list-unit-files` 仅取 `.service`，单元名白名单校验
+  防注入）；Windows 服务暂缺实机，列表处显式说明。
+- **入口**：新视图「服务与缓存」。解析为纯函数单测（5 个）。
 
-### ⬜ 第三梯队（称号杀手锏）
-- 环境快照与迁移：导出整机环境清单（软件 + mise 配置 + 全局 env），换机一键重建。
+### ✅ 27. 开发缓存治理
+- **展示**：brew --cache / mise / npm / yarn / pip / uv / GOCACHE / cargo registry 八类，递归计体积带 20 万条目
+  预算，超限返回下限值并标记 ≥；符号链接不跟随。
+- **清理**：只用官方命令（`brew cleanup -s`、`mise cache clear`、`npm cache clean --force`、`yarn cache clean`、
+  `pip cache purge`、`uv cache clean`、`go clean -cache`，10 分钟超时）；cargo registry 无标准命令只展示。
+- **验证**：dir_size 预算/符号链接/清理路由 3 个单测。
+
+### ✅ 28. 操作历史
+- **记录**：`~/.zenv/history.jsonl` 追加式 JSONL（unix 秒 + kind + detail），覆盖安装/卸载（mise 与系统包）、
+  切换、托管接入/解除、对账自愈、体检修复、env 写入/删除、服务操作、缓存清理、快照导出/重建；
+  成功与失败都留痕（失败详情随行），记录失败静默忽略。
+- **展示**：设置页「操作历史」面板，中文类别标签 + 时间，最新在前上限 200。
+- **验证**：JSONL 解析（损坏行跳过）/追加/反转截断 3 个单测。
+
+### ✅ 29. 环境快照与迁移（第三梯队）
+- **导出**：mise 已激活工具 + 全局 [env]（simple 条目）+ brew 已装清单 → 单个 TOML（引号键 + 基本字符串，
+  复用 env_center 转义），保存对话框选路径。
+- **重建（v1 安全边界）**：全局 env 直接写入（复用 env_center）；mise 工具逐个 `mise install`（失败不阻断、
+  逐条报告）；brew 清单生成 `~/.zenv/Brewfile.snapshot` **不自动执行**，提示 `brew bundle --file` 一条命令。
+  执行前前端二次确认，结果多行报告 + 操作历史留痕。
+- **实现要点**：快照解析器逐字符扫描基本字符串（`trim_matches('"')` 会误剥值内转义引号——单测抓出后修复）。
+- **验证**：段解析/转义还原 roundtrip/Brewfile 行 3 个单测；后端合计 48 passed。
+- **达成判定**：23–29 全部落地——新机不打开终端：装软件（brew bundle 一条命令）✓ shell 接入（24 一键）✓
+  env（23 中心化 + 快照还原）✓ 项目环境（25 发现 + 一键安装）✓。tagline 已按约定升级为"整机环境管理中心"。
+  Windows 服务列表与 Intel Mac 产物为两个已知平台缺口（17 遗留）。

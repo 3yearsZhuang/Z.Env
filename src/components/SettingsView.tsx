@@ -20,7 +20,7 @@ import {
 } from "../api";
 
 const APP_NAME = "Z.Env";
-const APP_TAGLINE = "跨平台 mise 图形化管理器";
+const APP_TAGLINE = "整机环境管理中心";
 const FALLBACK_VERSION = "0.7.0";
 
 /** 操作历史 kind → 中文标签 */
