@@ -126,3 +126,38 @@
 - Rust：clippy `-D warnings` 清零 · `cargo test` 10 passed · fmt 干净；dev 热重编译（39.11s，444 构建单元，含 4 个新插件）并重启。
 - 前端：build 通过（CodeMirror 后 bundle >500kB，代码分割列为后续优化项）· eslint 清零 · vitest 6 passed · `check:version` 通过。
 - 浏览器实测：Radix Dialog 渠道弹窗正常（遮罩/居中/标题/关闭）、明暗两套主题正常。
+
+---
+
+> 2026-10-01 规划：P0–P2 已收口，以下为后续三个阶段，按序号落地（P5 在 P4 后择一推进）。
+
+## P3 — 发布闭环（最高优先：先证明管线，再打磨功能）
+
+### 17. 签名 Secret + 首个 tag v0.7.0 → 三平台打包
+- **Secret**：`TAURI_SIGNING_PRIVATE_KEY` 注入本地 `~/.tauri/zenv.key` 内容；密码 Secret 留空即可（未配置的 Secret 在 Actions 中解析为空串，密钥本身无密码）。
+- **版本**：三处 0.6.7 → 0.7.0（`check:version` 校验），推送 tag 触发 release.yml。
+- **验证**：草稿 Release（`releaseDraft: true`，确认后才公开）含 `latest.json` + macOS dmg（双架构）/ Windows msi+nsis / Linux appimage+deb。
+- **遗留到 0.7.1 验证**：应用内更新端到端（旧版收提示 → 下载 → 签名校验 → 自动重启）需要线上存在两个带 updater 的版本。
+
+## P4 — 工程欠账（18 → 19 → 20，21 按需）
+
+### 18. env.rs 错误模型二期
+- `detect_system_installed` / `detect_system_versions` / `uninstall_system_package` / `install_system_package` 及私有 `run_limited`：`Result<_, String>` → `Result<_, AppError>`。
+- 变体映射：不支持的包管理器 → `Unsupported`（可单测）、spawn/等待失败 → `Io`、命令执行失败/超时 → `Other`；command 边界仍经 `From<AppError> for String`，前端 wire 格式不变。
+
+### 19. Prettier 门禁
+- 全库格式化作为**独立提交**先行（`npm run format`），随后 `format:check` 脚本接入 CI frontend job，避免后续混入排版噪音。
+
+### 20. bundle 代码分割
+- CodeMirror（@uiw/react-codemirror + TOML mode）仅 ProjectsView 使用：动态 import 拆 chunk，主 bundle 从 >500kB 回落；build 产物体积写入验证记录。
+
+### 21. shadcn/ui 阶段二（⬜ 按需）
+- 各视图与弹窗逐个迁移到真组件（Dialog 无障碍优先）。令牌化后纯迁移视觉收益有限，穿插在功能迭代里做，不单独立项推进。
+
+## P5 — 产品纵深（已选定先做 22）
+
+### 22. 环境体检 doctor
+- **定位**：把托管接入的"被动对账自愈"升级为"主动巡检 + 报告"。检查项：PATH 重复/冲突、mise 设置健康、悬空链接与农场 `~/.zenv/managed` 健康、shell 配置关键项；每项给可执行修复建议，可修的一键修。
+- **入口**：设置页独立区块（或概览页告警卡片），后端 `doctor_*` command 按检查项拆分以便测试。
+- **备选**（22 之后按反馈排序）：项目发现（扫描常用目录识别技术栈并提示补齐）、本地开发服务管理（brew services 等）、缓存治理（brew/mise/各语言缓存体积与清理）。
+- **i18n 维持暂缓**：面向国际用户时再引入 react-i18next（沿用 P2 判定）。
