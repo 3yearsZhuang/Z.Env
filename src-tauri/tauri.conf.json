@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Z.Env",
-  "version": "0.6.7",
+  "version": "0.7.0",
   "identifier": "com.yearszhuang.zenv",
   "build": {
     "beforeDevCommand": "npm run dev",

@@ -2186,7 +2186,7 @@ dependencies = [
 
 [[package]]
 name = "mise-gui"
-version = "0.6.7"
+version = "0.7.0"
 dependencies = [
  "serde",
  "serde_json",
