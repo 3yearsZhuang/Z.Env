@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { serviceList, serviceAction, errorMessage, type ServiceOverview } from "../api";
+import {
+  serviceList,
+  serviceAction,
+  cacheList,
+  cacheClean,
+  errorMessage,
+  type ServiceOverview,
+  type CacheInfo,
+} from "../api";
 
 /** 服务状态 → 展示文案与语义色 */
 function stateView(state: string): { label: string; color?: string } {
@@ -15,11 +23,21 @@ function stateView(state: string): { label: string; color?: string } {
   }
 }
 
+/** 字节数 → 人类可读体积 */
+function humanSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
 export default function ServicesCachesView() {
   const [overview, setOverview] = useState<ServiceOverview | null>(null);
+  const [caches, setCaches] = useState<CacheInfo[] | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [cleanBusy, setCleanBusy] = useState<string | null>(null);
 
   function reload() {
     serviceList()
@@ -27,7 +45,16 @@ export default function ServicesCachesView() {
       .catch((e) => setError(errorMessage(e)));
   }
 
-  useEffect(reload, []);
+  function reloadCaches() {
+    cacheList()
+      .then(setCaches)
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    reload();
+    reloadCaches();
+  }, []);
 
   async function handleAction(manager: string, name: string, act: string) {
     setBusy(`${manager}::${name}`);
@@ -40,6 +67,23 @@ export default function ServicesCachesView() {
       setError(errorMessage(e));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function handleClean(c: CacheInfo) {
+    if (!window.confirm(`确认清理 ${c.name} 缓存？将执行官方清理命令，大缓存可能需要几分钟。`)) {
+      return;
+    }
+    setCleanBusy(c.id);
+    setError("");
+    setNotice("");
+    try {
+      setNotice(await cacheClean(c.id));
+      reloadCaches();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setCleanBusy(null);
     }
   }
 
@@ -136,6 +180,48 @@ export default function ServicesCachesView() {
             );
           })}
         </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">开发缓存</h2>
+        {caches && caches.length === 0 && (
+          <div className="empty small">
+            没有探测到常见的开发缓存（brew / mise / npm / pip 等）。
+          </div>
+        )}
+        <div className="setting-list">
+          {(caches ?? []).map((c) => (
+            <div key={c.id} className="setting-row" style={{ cursor: "default" }}>
+              <span className="setting-info" style={{ flex: 1, minWidth: 0 }}>
+                <span
+                  className="setting-name"
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  {c.name}
+                  <span className="pill muted">
+                    {c.exists ? `${c.approx ? "≥ " : ""}${humanSize(c.sizeBytes)}` : "未生成"}
+                  </span>
+                </span>
+                <span className="setting-desc" style={{ wordBreak: "break-all" }}>
+                  {c.path}
+                </span>
+              </span>
+              {c.cleanable && c.exists && (
+                <button
+                  className="btn"
+                  disabled={cleanBusy !== null}
+                  onClick={() => handleClean(c)}
+                >
+                  {cleanBusy === c.id ? "清理中…" : "清理"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="setting-desc" style={{ marginTop: 8 }}>
+          清理只使用各工具的官方命令（如 brew cleanup / npm cache clean）；cargo registry
+          无官方一键清理，故只展示体积。
+        </p>
       </section>
     </div>
   );

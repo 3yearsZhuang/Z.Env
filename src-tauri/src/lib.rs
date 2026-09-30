@@ -1,4 +1,5 @@
 mod cache;
+mod caches;
 mod discover;
 mod doctor;
 mod env;
@@ -307,6 +308,18 @@ fn service_action(manager: String, name: String, act: String) -> Result<String, 
     services::action(&manager, &name, &act).map_err(String::from)
 }
 
+/// 开发缓存列表：常见缓存目录与体积（探测到哪个列哪个）
+#[tauri::command(async)]
+fn cache_list() -> Vec<caches::CacheInfo> {
+    caches::list()
+}
+
+/// 用官方命令清理指定开发缓存
+#[tauri::command(async)]
+fn cache_clean(id: String) -> Result<String, String> {
+    caches::clean(&id).map_err(String::from)
+}
+
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
 #[tauri::command(async)]
 fn stable_bin_path(manager: String, name: String, path: String) -> Result<String, String> {
@@ -424,6 +437,8 @@ pub fn run() {
             discover_projects,
             service_list,
             service_action,
+            cache_list,
+            cache_clean,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

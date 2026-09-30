@@ -400,6 +400,29 @@ export function serviceAction(manager: string, name: string, act: string): Promi
   return invoke("service_action", { manager, name, act });
 }
 
+// ---------- 开发缓存 ----------
+
+/** 单个缓存项：approx 表示体积因预算截断为下限值 */
+export interface CacheInfo {
+  id: string;
+  name: string;
+  path: string;
+  exists: boolean;
+  sizeBytes: number;
+  approx: boolean;
+  cleanable: boolean;
+}
+
+/** 开发缓存列表（探测到哪个列哪个） */
+export function cacheList(): Promise<CacheInfo[]> {
+  return invoke("cache_list");
+}
+
+/** 用官方命令清理指定开发缓存 */
+export function cacheClean(id: string): Promise<string> {
+  return invoke("cache_clean", { id });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
