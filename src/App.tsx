@@ -1,16 +1,27 @@
 import { useEffect, useState, type ComponentType } from "react";
-import { Blocks, FolderKanban, Gauge, Monitor, Moon, Settings, Sun, Wrench } from "lucide-react";
+import {
+  Blocks,
+  FolderKanban,
+  Gauge,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  Wrench,
+  Variable,
+} from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import ToolsView from "./components/ToolsView";
 import ProjectsView from "./components/ProjectsView";
 import SettingsView from "./components/SettingsView";
 import SoftwareView from "./components/SoftwareView";
+import EnvView from "./components/EnvView";
 import EasterEgg from "./components/EasterEgg";
 import { initLogger, logInfo } from "./logger";
 import "./index.css";
 import "./styles.css";
 
-type Tab = "dashboard" | "tools" | "projects" | "settings" | "software";
+type Tab = "dashboard" | "tools" | "projects" | "env" | "settings" | "software";
 type Theme = "auto" | "light" | "dark";
 const THEME_NEXT: Record<Theme, Theme> = {
   auto: "light",
@@ -39,6 +50,7 @@ const NAV: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[]
   { key: "software", label: "支持列表", icon: Blocks },
   { key: "tools", label: "运行时工具", icon: Wrench },
   { key: "projects", label: "项目配置", icon: FolderKanban },
+  { key: "env", label: "环境变量", icon: Variable },
   { key: "settings", label: "设置", icon: Settings },
 ];
 
@@ -147,6 +159,7 @@ export default function App() {
         {tab === "dashboard" && <Dashboard />}
         {tab === "tools" && <ToolsView />}
         {tab === "projects" && <ProjectsView />}
+        {tab === "env" && <EnvView />}
         {tab === "settings" && <SettingsView onEaster={() => setEaster(true)} />}
         {tab === "software" && <SoftwareView />}
       </main>

@@ -1,6 +1,7 @@
 mod cache;
 mod doctor;
 mod env;
+mod env_center;
 mod error;
 mod managed;
 mod mise;
@@ -262,6 +263,24 @@ fn doctor_run() -> Vec<doctor::DoctorCheck> {
     doctor::run()
 }
 
+/// 环境变量中心：全局 mise config 的 [env] 列表 + 系统 env 冲突检测
+#[tauri::command(async)]
+fn env_center_list() -> env_center::EnvCenterSnapshot {
+    env_center::list()
+}
+
+/// 设置一个全局 env（写入全局 mise config 的 [env] 段，文本手术保留其余内容）
+#[tauri::command(async)]
+fn env_center_set(key: String, value: String) -> Result<String, String> {
+    env_center::set(&key, &value).map_err(String::from)
+}
+
+/// 移除一个全局 env
+#[tauri::command(async)]
+fn env_center_remove(key: String) -> Result<String, String> {
+    env_center::remove(&key).map_err(String::from)
+}
+
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
 #[tauri::command(async)]
 fn stable_bin_path(manager: String, name: String, path: String) -> Result<String, String> {
@@ -372,6 +391,9 @@ pub fn run() {
             managed_reconcile,
             managed_list,
             doctor_run,
+            env_center_list,
+            env_center_set,
+            env_center_remove,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

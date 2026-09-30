@@ -305,6 +305,52 @@ export function doctorRun(): Promise<DoctorCheck[]> {
   return invoke("doctor_run");
 }
 
+// ---------- 环境变量中心 ----------
+
+/** 全局 [env] 单条：kind = simple（标量，可编辑）| complex（表/数组等高级值，只读） */
+export interface GlobalEnvEntry {
+  key: string;
+  value: string;
+  kind: string;
+}
+
+/** 同名冲突：系统 env 与全局 mise env 同键不同值 */
+export interface EnvConflict {
+  key: string;
+  miseValue: string;
+  systemValue: string;
+}
+
+/** 系统/用户级 env 单条（只读展示） */
+export interface SystemEnvVar {
+  key: string;
+  value: string;
+}
+
+/** 环境变量中心快照 */
+export interface EnvCenterSnapshot {
+  configPath: string;
+  exists: boolean;
+  entries: GlobalEnvEntry[];
+  conflicts: EnvConflict[];
+  systemEnv: SystemEnvVar[];
+}
+
+/** 读取环境变量中心快照 */
+export function envCenterList(): Promise<EnvCenterSnapshot> {
+  return invoke("env_center_list");
+}
+
+/** 设置一个全局 env（写入全局 mise config 的 [env] 段） */
+export function envCenterSet(key: string, value: string): Promise<string> {
+  return invoke("env_center_set", { key, value });
+}
+
+/** 移除一个全局 env */
+export function envCenterRemove(key: string): Promise<string> {
+  return invoke("env_center_remove", { key });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
