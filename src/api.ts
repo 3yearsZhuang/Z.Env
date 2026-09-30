@@ -153,45 +153,29 @@ export interface InstallProgressPayload {
 }
 
 /** 以流式方式安装，安装期间通过事件实时推送进度 */
-export function installVersionStreaming(
-  tool: string,
-  version: string
-): Promise<string> {
+export function installVersionStreaming(tool: string, version: string): Promise<string> {
   return invoke("install_version_streaming", { tool, version });
 }
 
 /** 订阅安装进度事件，返回取消监听的函数 */
 export function onInstallProgress(
-  cb: (payload: InstallProgressPayload) => void
+  cb: (payload: InstallProgressPayload) => void,
 ): Promise<UnlistenFn> {
-  return listen<InstallProgressPayload>("mise:install-progress", (e) =>
-    cb(e.payload)
-  );
+  return listen<InstallProgressPayload>("mise:install-progress", (e) => cb(e.payload));
 }
 
 /** 卸载指定版本 */
-export function uninstallVersion(
-  tool: string,
-  version: string
-): Promise<string> {
+export function uninstallVersion(tool: string, version: string): Promise<string> {
   return invoke("uninstall_version", { tool, version });
 }
 
 /** 切换版本（global 控制是否写入全局配置） */
-export function useVersion(
-  tool: string,
-  version: string,
-  global: boolean
-): Promise<string> {
+export function useVersion(tool: string, version: string, global: boolean): Promise<string> {
   return invoke("use_version", { tool, version, global });
 }
 
 /** 接管：把已存在的外部环境目录链接为 mise 版本（不重新下载） */
-export function linkVersion(
-  tool: string,
-  version: string,
-  path: string
-): Promise<string> {
+export function linkVersion(tool: string, version: string, path: string): Promise<string> {
   return invoke("link_version", { tool, version, path });
 }
 
@@ -206,26 +190,17 @@ export function readProjectConfig(path: string): Promise<string> {
 }
 
 /** 写入项目配置 */
-export function writeProjectConfig(
-  path: string,
-  content: string
-): Promise<string> {
+export function writeProjectConfig(path: string, content: string): Promise<string> {
   return invoke("write_project_config", { path, content });
 }
 
 /** 写入配置并在项目内一键安装全套环境 */
-export function installAllProject(
-  path: string,
-  content: string
-): Promise<string> {
+export function installAllProject(path: string, content: string): Promise<string> {
   return invoke("install_all_project", { path, content });
 }
 
 /** 通过系统包管理器（brew/winget/apt/pacman）原生安装指定软件 */
-export function installSystemPackage(
-  manager: string,
-  name: string
-): Promise<string> {
+export function installSystemPackage(manager: string, name: string): Promise<string> {
   return invoke("install_system_package", { manager, name });
 }
 
@@ -246,10 +221,7 @@ export function detectSystemVersions(manager: string): Promise<SystemPkg[]> {
 }
 
 /** 原生卸载系统软件包（brew/winget/apt/pacman） */
-export function uninstallSystemPackage(
-  manager: string,
-  name: string
-): Promise<string> {
+export function uninstallSystemPackage(manager: string, name: string): Promise<string> {
   return invoke("uninstall_system_package", { manager, name });
 }
 
@@ -262,11 +234,9 @@ export interface SysInstallProgressPayload {
 
 /** 订阅系统包管理器安装进度事件，返回取消监听的函数 */
 export function onSysInstallProgress(
-  cb: (payload: SysInstallProgressPayload) => void
+  cb: (payload: SysInstallProgressPayload) => void,
 ): Promise<UnlistenFn> {
-  return listen<SysInstallProgressPayload>("sys:install-progress", (e) =>
-    cb(e.payload)
-  );
+  return listen<SysInstallProgressPayload>("sys:install-progress", (e) => cb(e.payload));
 }
 
 // ---------- 托管接入（整机运行时 → mise） ----------
@@ -294,7 +264,7 @@ export function managedAdopt(
   tool: string,
   version: string,
   manager: string,
-  path: string
+  path: string,
 ): Promise<string> {
   return invoke("managed_adopt", { tool, version, manager, path });
 }
@@ -315,11 +285,7 @@ export function managedList(): Promise<ManagedEntry[]> {
 }
 
 /** 策略 C：包管理器自维护的稳定 bin 路径（写入项目 mise.toml 的 env._path） */
-export function stableBinPath(
-  manager: string,
-  name: string,
-  path: string
-): Promise<string> {
+export function stableBinPath(manager: string, name: string, path: string): Promise<string> {
   return invoke("stable_bin_path", { manager, name, path });
 }
 

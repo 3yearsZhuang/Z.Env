@@ -180,12 +180,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
   }
 
   /** 接管：把已托管的外部环境链接为 mise 版本（brew 走托管模式），不重新下载 */
-  async function handleAdopt(
-    version: string,
-    path: string,
-    key: string,
-    manager: string
-  ) {
+  async function handleAdopt(version: string, path: string, key: string, manager: string) {
     setBusy(true);
     setAdopting(`${tool.name}@${version}`);
     setError(null);
@@ -228,7 +223,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     path: string,
     key: string,
     isDone: boolean,
-    manager: string
+    manager: string,
   ) {
     setConfirm(
       isDone
@@ -239,7 +234,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
         : {
             msg: `确认将 ${tool.name}@${version} 接管到 mise 管理吗？`,
             onOk: () => handleAdopt(version, path, key, manager),
-          }
+          },
     );
   }
 
@@ -312,13 +307,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
 
               {external && external.length > 0 && (
                 <>
-                  <label className="field-label">
-                    接管已存在环境（无需重新下载）
-                  </label>
+                  <label className="field-label">接管已存在环境（无需重新下载）</label>
                   <div className="dialog-tip">
                     nvm / pyenv / asdf 等用户级目录直连接管；brew 安装的版本走
-                    <strong>托管模式</strong>（应用维护软链并在 brew 升级后自动重连）。
-                    仅<strong>系统</strong>组件（/usr/bin、Xcode CLT 等）无法接管。
+                    <strong>托管模式</strong>（应用维护软链并在 brew 升级后自动重连）。 仅
+                    <strong>系统</strong>组件（/usr/bin、Xcode CLT 等）无法接管。
                   </div>
                   <div className="adopt-list">
                     {external.map((s, i) => {
@@ -336,9 +329,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                             <button
                               className={`btn xs ${done ? "" : "primary"}`}
                               disabled={busy}
-                              onClick={() =>
-                                requestAdopt(s.version, s.path, key, done, s.manager)
-                              }
+                              onClick={() => requestAdopt(s.version, s.path, key, done, s.manager)}
                               title={
                                 done
                                   ? "已接入 mise · 点击解除接管"
@@ -350,9 +341,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                               {done ? "已接管 · 点击解除" : "接管"}
                             </button>
                           ) : (
-                            <span className="pill muted small">
-                              系统组件 · 不可接管
-                            </span>
+                            <span className="pill muted small">系统组件 · 不可接管</span>
                           )}
                         </div>
                       );
@@ -370,8 +359,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
               />
 
               <div className="dialog-tip">
-                支持输入任意 mise 识别的版本表达式，如 <code>latest</code>、{" "}
-                <code>22.23.2</code>。
+                支持输入任意 mise 识别的版本表达式，如 <code>latest</code>、 <code>22.23.2</code>。
               </div>
             </>
           )}
@@ -379,26 +367,18 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
           {busy && (
             <div className="install-area">
               <div className="install-title">
-                {adopting
-                  ? `正在接管 ${adopting}…`
-                  : `正在安装 ${tool.name}@${versionToInstall}`}
+                {adopting ? `正在接管 ${adopting}…` : `正在安装 ${tool.name}@${versionToInstall}`}
                 {finished && <span className="pill active small">完成</span>}
               </div>
               <div className="progress-track">
                 <div className="progress-fill" />
               </div>
-              <button
-                type="button"
-                className="cli-toggle"
-                onClick={() => setShowCli((c) => !c)}
-              >
+              <button type="button" className="cli-toggle" onClick={() => setShowCli((c) => !c)}>
                 {showCli ? "收起 CLI 输出 ▴" : "展开 CLI 输出 ▾"}
               </button>
               {showCli && (
                 <pre className="terminal" ref={progressRef}>
-                  {adopting
-                    ? "正在把外部环境链接为 mise 版本…"
-                    : progress || "开始下载…"}
+                  {adopting ? "正在把外部环境链接为 mise 版本…" : progress || "开始下载…"}
                 </pre>
               )}
             </div>
@@ -410,11 +390,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
             {busy ? "安装中…" : "取消"}
           </button>
           {!busy && (
-            <button
-              className="btn primary"
-              onClick={handleInstall}
-              disabled={!versionToInstall}
-            >
+            <button className="btn primary" onClick={handleInstall} disabled={!versionToInstall}>
               安装 {versionToInstall}
             </button>
           )}
@@ -425,11 +401,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
             <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
               <p>{confirm.msg}</p>
               <div className="confirm-actions">
-                <button
-                  className="btn"
-                  disabled={busy}
-                  onClick={() => setConfirm(null)}
-                >
+                <button className="btn" disabled={busy} onClick={() => setConfirm(null)}>
                   取消
                 </button>
                 <button

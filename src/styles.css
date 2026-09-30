@@ -22,8 +22,9 @@
   --red: var(--destructive);
   --red-soft: color-mix(in srgb, var(--destructive) 12%, transparent);
   --radius: 10px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei",
+    sans-serif;
 }
 
 html,
@@ -214,7 +215,9 @@ body.glass .input {
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .nav-item:hover {
   background: var(--bg-card);
@@ -250,7 +253,9 @@ body.glass .input {
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
   width: 100%;
   text-align: left;
   display: flex;
@@ -501,7 +506,9 @@ body.glass .input {
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 .btn:hover:not(:disabled) {
   border-color: var(--accent);
@@ -745,8 +752,12 @@ body.glass .input {
   animation: prog-indet 1.2s infinite ease-in-out;
 }
 @keyframes prog-indet {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
 }
 .cli-toggle {
   align-self: flex-start;
@@ -857,7 +868,9 @@ body.glass .input {
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.1s;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
 }
 .preset-card:hover {
   border-color: var(--accent);
@@ -917,8 +930,12 @@ body.glass .input {
   animation: easter-fade 0.22s ease;
 }
 @keyframes easter-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .easter {
   width: min(680px, 96vw);
@@ -934,8 +951,14 @@ body.glass .input {
   transform-origin: center;
 }
 @keyframes easter-in {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .easter,
@@ -989,10 +1012,18 @@ body.glass .input {
   text-transform: uppercase;
   font-weight: 600;
 }
-.log-level.info { color: var(--accent); }
-.log-level.debug { color: var(--text-dim); }
-.log-level.warn { color: #e0b45a; }
-.log-level.error { color: var(--red); }
+.log-level.info {
+  color: var(--accent);
+}
+.log-level.debug {
+  color: var(--text-dim);
+}
+.log-level.warn {
+  color: #e0b45a;
+}
+.log-level.error {
+  color: var(--red);
+}
 .log-time {
   flex-shrink: 0;
   color: var(--text-dim);
@@ -1271,7 +1302,9 @@ button.soft-install {
   color: var(--text);
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.1s;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
 }
 .soft-card:hover {
   border-color: var(--accent);
@@ -1336,7 +1369,9 @@ button.soft-install {
   border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .channel-row:hover {
   border-color: var(--accent);
@@ -1788,7 +1823,9 @@ button.soft-install {
   padding: 5px 12px;
   border-radius: 20px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 .chip:hover {
   color: var(--text);
@@ -1872,7 +1909,9 @@ button.soft-install {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform 0.1s, border-color 0.15s;
+  transition:
+    transform 0.1s,
+    border-color 0.15s;
 }
 .tc-chip:hover {
   transform: translateY(-2px);
@@ -2085,7 +2124,9 @@ button.soft-install {
   text-align: left;
   cursor: pointer;
   font: inherit;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .setting-row:hover {
   border-color: var(--accent);

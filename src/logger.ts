@@ -10,7 +10,7 @@ const MAX = 300;
 
 function safeString(v: unknown): string {
   try {
-    return typeof v === "string" ? v : JSON.stringify(v) ?? String(v);
+    return typeof v === "string" ? v : (JSON.stringify(v) ?? String(v));
   } catch {
     return String(v);
   }

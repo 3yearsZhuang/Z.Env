@@ -10,8 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground font-semibold hover:brightness-110",
-        secondary:
-          "border border-border bg-muted text-foreground hover:border-primary/60",
+        secondary: "border border-border bg-muted text-foreground hover:border-primary/60",
         ghost:
           "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-primary/60",
         destructive:
@@ -38,8 +37,7 @@ function Button({
   size,
   asChild = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+}: React.ComponentProps<"button"> & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
   return (
     <Comp

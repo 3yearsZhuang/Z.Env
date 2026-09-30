@@ -68,9 +68,7 @@ function presetToToml(tools: Record<string, string>): string {
 
 /** 监听 <html>.dark 类变化，让编辑器主题跟随应用明暗切换 */
 function useDarkMode(): boolean {
-  const [dark, setDark] = useState(() =>
-    document.documentElement.classList.contains("dark"),
-  );
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   useEffect(() => {
     const ob = new MutationObserver(() =>
       setDark(document.documentElement.classList.contains("dark")),
@@ -103,9 +101,7 @@ export default function ProjectsView() {
 
   function openBindDialog() {
     detectToolSources()
-      .then((all) =>
-        setBindSources(all.filter((s) => ["brew", "scoop"].includes(s.manager))),
-      )
+      .then((all) => setBindSources(all.filter((s) => ["brew", "scoop"].includes(s.manager))))
       .catch(() => setBindSources([]));
     setBindOpen(true);
   }
@@ -125,9 +121,7 @@ export default function ProjectsView() {
         }
         return `${prev.trimEnd()}\n\n[env]\n${pathLine}\n`;
       });
-      setNotice(
-        `已把 ${s.tool}（${s.manager}）以 PATH 方式绑定进当前配置，保存后生效`,
-      );
+      setNotice(`已把 ${s.tool}（${s.manager}）以 PATH 方式绑定进当前配置，保存后生效`);
       setBindOpen(false);
     } catch (e) {
       setError(errorMessage(e));
@@ -280,18 +274,10 @@ export default function ProjectsView() {
         <p className="preset-hint">选择技术栈，一键生成并安装全套运行环境</p>
         <div className="preset-grid">
           {PRESETS.map((p) => (
-            <button
-              key={p.id}
-              className="preset-card"
-              onClick={() => applyPreset(p.tools, p.name)}
-            >
+            <button key={p.id} className="preset-card" onClick={() => applyPreset(p.tools, p.name)}>
               <span className="preset-name">{p.name}</span>
               <span className="preset-desc">{p.desc}</span>
-              <span className="preset-tools">
-                {Object.keys(p.tools)
-                  .slice(0, 4)
-                  .join(" · ")}
-              </span>
+              <span className="preset-tools">{Object.keys(p.tools).slice(0, 4).join(" · ")}</span>
             </button>
           ))}
         </div>
@@ -303,10 +289,7 @@ export default function ProjectsView() {
           <div className="preset-grid">
             {userPresets.map((up) => (
               <div className="preset-card-wrap" key={up.name}>
-                <button
-                  className="preset-card"
-                  onClick={() => loadUserPreset(up.name)}
-                >
+                <button className="preset-card" onClick={() => loadUserPreset(up.name)}>
                   <span className="preset-name">{up.name}</span>
                   <span className="preset-tools">点击载入 · 可再一键安装</span>
                 </button>
@@ -374,18 +357,10 @@ export default function ProjectsView() {
               >
                 保存为用户预设
               </button>
-              <button
-                className="btn"
-                onClick={handleSave}
-                disabled={saving}
-              >
+              <button className="btn" onClick={handleSave} disabled={saving}>
                 {saving ? "保存中…" : "保存配置"}
               </button>
-              <button
-                className="btn primary"
-                onClick={handleInstallAll}
-                disabled={installing}
-              >
+              <button className="btn primary" onClick={handleInstallAll} disabled={installing}>
                 {installing ? "正在安装…" : "保存并一键安装"}
               </button>
             </div>
@@ -409,8 +384,7 @@ export default function ProjectsView() {
           <div className="dialog-body">
             <div className="dialog-tip">
               不建立任何软链：把包管理器维护的稳定 bin 路径写入当前 mise.toml 的
-              <code>[env] _.path</code>，项目激活时自动可用。适用于 brew / scoop
-              安装的运行时。
+              <code>[env] _.path</code>，项目激活时自动可用。适用于 brew / scoop 安装的运行时。
             </div>
             {bindSources.length === 0 && (
               <div className="empty small">未发现可通过稳定路径绑定的运行时</div>

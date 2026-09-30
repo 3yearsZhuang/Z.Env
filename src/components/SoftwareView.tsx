@@ -35,7 +35,13 @@ export function ChannelDialog({
         <div className="dialog-body">
           {desc && <p className="dialog-tip">{desc}</p>}
           {url && (
-            <a className="btn" style={{ display: "inline-flex", marginBottom: 12 }} href={url} target="_blank" rel="noreferrer">
+            <a
+              className="btn"
+              style={{ display: "inline-flex", marginBottom: 12 }}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+            >
               前往官方下载 →
             </a>
           )}
@@ -59,7 +65,9 @@ export function ChannelDialog({
           </div>
         </div>
         <div className="dialog-foot">
-          <button className="btn-ghost" onClick={onClose}>关闭</button>
+          <button className="btn-ghost" onClick={onClose}>
+            关闭
+          </button>
         </div>
       </DialogContent>
     </Dialog>
@@ -145,8 +153,8 @@ export default function SoftwareView() {
       setSysJob((prev) =>
         prev && prev.manager === p.manager && prev.name === p.name
           ? { ...prev, line: p.line }
-          : prev
-      )
+          : prev,
+      ),
     ).then((fn) => {
       un = fn;
     });
@@ -194,7 +202,7 @@ export default function SoftwareView() {
             } catch {
               rec[pm] = new Set();
             }
-          })
+          }),
         );
         if (mounted) setSysInstalled(rec);
       })
@@ -220,7 +228,13 @@ export default function SoftwareView() {
       arr.push({ name, kind: "runtime", cat: categoryOf(name) });
     }
     for (const s of SOFTWARE) {
-      arr.push({ name: s.name, kind: "download", cat: softwareCat(s.name), url: s.url, desc: s.desc });
+      arr.push({
+        name: s.name,
+        kind: "download",
+        cat: softwareCat(s.name),
+        url: s.url,
+        desc: s.desc,
+      });
     }
     return arr;
   }, []);
@@ -229,7 +243,8 @@ export default function SoftwareView() {
     if (cat !== "全部" && it.cat !== cat) return false;
     if (query) {
       const q = query.toLowerCase();
-      if (!it.name.toLowerCase().includes(q) && !(it.desc || "").toLowerCase().includes(q)) return false;
+      if (!it.name.toLowerCase().includes(q) && !(it.desc || "").toLowerCase().includes(q))
+        return false;
     }
     return true;
   });
@@ -255,11 +270,7 @@ export default function SoftwareView() {
       </div>
       <div className="filter-chips support-chips">
         {["全部", ...CAT_KEYS_ALL].map((c) => (
-          <button
-            key={c}
-            className={`chip ${cat === c ? "active" : ""}`}
-            onClick={() => setCat(c)}
-          >
+          <button key={c} className={`chip ${cat === c ? "active" : ""}`} onClick={() => setCat(c)}>
             {c}
           </button>
         ))}
@@ -270,10 +281,17 @@ export default function SoftwareView() {
           // 各可用包管理器芯片：点击直接原生安装，右键或悬停的复制钮可复制命令
           const chips = PKG_MANAGERS.filter((pm) => available.has(pm)).map((pm) => {
             const cmd = pkgCommand(pm, it.name);
-            const st = sysJob && sysJob.manager === pm && sysJob.name === it.name ? sysJob.status : null;
+            const st =
+              sysJob && sysJob.manager === pm && sysJob.name === it.name ? sysJob.status : null;
             const isHere = !!sysInstalled[pm]?.has(it.name);
             const stateCls =
-              st === "run" ? " working" : isHere || st === "ok" ? " ok" : st === "err" ? " err" : "";
+              st === "run"
+                ? " working"
+                : isHere || st === "ok"
+                  ? " ok"
+                  : st === "err"
+                    ? " err"
+                    : "";
             return (
               <span
                 key={pm}
@@ -316,7 +334,10 @@ export default function SoftwareView() {
           });
           // 包管理器行：下载类无 mise 徽标；运行时类在行首放“已安装/可安装”徽标
           const pkgRow = (lead?: ReactNode) => (
-            <span className="pkg-row">{lead}{chips}</span>
+            <span className="pkg-row">
+              {lead}
+              {chips}
+            </span>
           );
 
           if (it.kind === "download") {
@@ -343,9 +364,7 @@ export default function SoftwareView() {
             <button
               className="soft-card soft-install"
               key={it.name}
-              onClick={() =>
-                setInstallFor({ name: it.name, versions: [], active_versions: [] })
-              }
+              onClick={() => setInstallFor({ name: it.name, versions: [], active_versions: [] })}
               title={isInstalled ? "查看已安装版本" : "用 mise 安装"}
             >
               <SoftIcon name={it.name} />
@@ -355,24 +374,28 @@ export default function SoftwareView() {
                 {pkgRow(
                   <span className={"inst-badge" + (isInstalled ? " yes" : "")}>
                     {isInstalled ? "已安装" : "可安装"}
-                  </span>
+                  </span>,
                 )}
               </div>
               <span className="soft-link">{isInstalled ? "管理" : "安装 +"}</span>
             </button>
           );
         })}
-        {filtered.length === 0 && (
-          <div className="empty small">没有匹配的项目</div>
-        )}
+        {filtered.length === 0 && <div className="empty small">没有匹配的项目</div>}
       </div>
 
       {sysJob && (
         <div className="sys-job">
           <span className={"sys-dot " + sysJob.status} />
-          <b>{sysJob.manager} · {sysJob.name}</b>
-          <code className="sys-line">{sysJob.line || (sysJob.status === "run" ? "正在执行安装…" : "")}</code>
-          <button className="btn-ghost icon-only" onClick={() => setSysJob(null)} title="关闭">×</button>
+          <b>
+            {sysJob.manager} · {sysJob.name}
+          </b>
+          <code className="sys-line">
+            {sysJob.line || (sysJob.status === "run" ? "正在执行安装…" : "")}
+          </code>
+          <button className="btn-ghost icon-only" onClick={() => setSysJob(null)} title="关闭">
+            ×
+          </button>
         </div>
       )}
 

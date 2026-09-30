@@ -45,10 +45,7 @@ function DialogContent({
   );
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
       className={cn("text-[15px] font-semibold leading-none", className)}
@@ -69,11 +66,4 @@ function DialogDescription({
   );
 }
 
-export {
-  Dialog,
-  DialogTrigger,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-};
+export { Dialog, DialogTrigger, DialogClose, DialogContent, DialogTitle, DialogDescription };

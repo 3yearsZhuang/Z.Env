@@ -13,15 +13,7 @@ import {
 const MAX_HISTORY = 60;
 
 /** 环形使用率指示器（SVG） */
-function Ring({
-  percent,
-  color,
-  size = 110,
-}: {
-  percent: number;
-  color: string;
-  size?: number;
-}) {
+function Ring({ percent, color, size = 110 }: { percent: number; color: string; size?: number }) {
   const r = 42;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(100, Math.max(0, percent));
@@ -51,8 +43,7 @@ function UsageChart({ data, color }: { data: number[]; color: string }) {
   const N = Math.max(2, data.length);
 
   const toX = (i: number) => PAD + (i / (N - 1)) * (W - PAD * 2);
-  const toY = (v: number) =>
-    H - PAD - (Math.min(100, Math.max(0, v)) / 100) * (H - PAD * 2);
+  const toY = (v: number) => H - PAD - (Math.min(100, Math.max(0, v)) / 100) * (H - PAD * 2);
 
   const line = data
     .map((v, i) => `${i === 0 ? "M" : "L"} ${toX(i).toFixed(1)} ${toY(v).toFixed(1)}`)
@@ -88,8 +79,7 @@ function NetChart({ rx, tx }: { rx: number[]; tx: number[] }) {
   const maxVal = Math.max(1, ...base, ...other);
 
   const toX = (i: number) => PAD + (i / (N - 1)) * (W - PAD * 2);
-  const toY = (v: number) =>
-    H - PAD - (Math.min(maxVal, Math.max(0, v)) / maxVal) * (H - PAD * 2);
+  const toY = (v: number) => H - PAD - (Math.min(maxVal, Math.max(0, v)) / maxVal) * (H - PAD * 2);
 
   const rxLine = base
     .map((v, i) => `${i === 0 ? "M" : "L"} ${toX(i).toFixed(1)} ${toY(v).toFixed(1)}`)
@@ -199,7 +189,11 @@ function Card({
         </div>
       </div>
       <div className="usage-body">{body}</div>
-      {model && <div className="usage-model" title={model}>{model}</div>}
+      {model && (
+        <div className="usage-model" title={model}>
+          {model}
+        </div>
+      )}
     </section>
   );
 }
@@ -280,8 +274,8 @@ export default function Dashboard() {
           <h1>系统概览</h1>
           <p className="view-sub">
             {stats?.hostName || ""}
-            {stats?.osName ? ` · ${stats.osName}` : ""}
-            {" "}实时资源占用{refreshMs > 0 ? `（每 ${refreshMs / 1000} 秒刷新）` : "（已暂停自动刷新）"}
+            {stats?.osName ? ` · ${stats.osName}` : ""} 实时资源占用
+            {refreshMs > 0 ? `（每 ${refreshMs / 1000} 秒刷新）` : "（已暂停自动刷新）"}
           </p>
         </div>
         <div className="head-tools">
@@ -311,13 +305,14 @@ export default function Dashboard() {
       {env && (
         <div className="banner info top-banner" title="环境信息">
           <span className="banner-icon">◆</span>
-          <span className="top-item">系统 · {env.os.name} {env.os.version}（{env.os.arch}）</span>
+          <span className="top-item">
+            系统 · {env.os.name} {env.os.version}（{env.os.arch}）
+          </span>
           {env.pkg
             .filter((p) => p.available)
             .map((p) => (
               <span className="top-item" key={p.name}>
-                {p.name} ·{" "}
-                <b>{p.version ? p.version.split(/\s+/, 2).join(" ") : "未安装"}</b>
+                {p.name} · <b>{p.version ? p.version.split(/\s+/, 2).join(" ") : "未安装"}</b>
               </span>
             ))}
         </div>
@@ -326,7 +321,8 @@ export default function Dashboard() {
       {mise && mise.installed && (
         <div className="banner info">
           <span className="banner-icon">◆</span>
-          已接入 <strong>mise</strong> {mise.version ? `· ${mise.version}` : ""}，运行时工具页可管理版本
+          已接入 <strong>mise</strong> {mise.version ? `· ${mise.version}` : ""}
+          ，运行时工具页可管理版本
         </div>
       )}
       {mise && !mise.installed && (
@@ -367,11 +363,7 @@ export default function Dashboard() {
           <Card
             title="内存"
             meta={`${stats.memoryUsedGb.toFixed(1)} / ${stats.memoryTotalGb.toFixed(0)} GB 已用`}
-            model={
-              stats.memories
-                .map((m) => `${m.title} · ${m.size}`)
-                .join(" / ") || undefined
-            }
+            model={stats.memories.map((m) => `${m.title} · ${m.size}`).join(" / ") || undefined}
             display={<Ring percent={stats.memoryPercent} color="#3fb97f" size={64} />}
             body={
               memoryHistory.length < 2 ? (
@@ -399,11 +391,7 @@ export default function Dashboard() {
           <Card
             title="磁盘"
             meta={`${diskUsed.toFixed(0)} / ${diskTotal.toFixed(0)} GB 已用`}
-            model={
-              stats.storage
-                .map((s) => `${s.title} · ${s.size}`)
-                .join(" / ") || undefined
-            }
+            model={stats.storage.map((s) => `${s.title} · ${s.size}`).join(" / ") || undefined}
             display={<Ring percent={diskPercent} color="#e0b45a" size={64} />}
             body={
               diskHistory.length < 2 ? (
@@ -434,24 +422,17 @@ export default function Dashboard() {
 
           <Card
             title="GPU"
-            meta={
-              stats.gpus.length > 0
-                ? `${stats.gpus.length} 个图形处理器`
-                : "未检测到 GPU"
-            }
+            meta={stats.gpus.length > 0 ? `${stats.gpus.length} 个图形处理器` : "未检测到 GPU"}
             model={
-              stats.gpus
-                .map((g) => (g.vram ? `${g.name} · ${g.vram}` : g.name))
-                .join(" / ") || undefined
+              stats.gpus.map((g) => (g.vram ? `${g.name} · ${g.vram}` : g.name)).join(" / ") ||
+              undefined
             }
             display={<Ring percent={0} color="#3a4150" size={64} />}
             body={
               stats.gpus.length > 0 ? (
                 <div className="space-fill">
                   <span className="gpu-vram">
-                    {stats.gpus
-                      .map((g) => g.vram || "显存未知")
-                      .join(" / ")}
+                    {stats.gpus.map((g) => g.vram || "显存未知").join(" / ")}
                   </span>
                 </div>
               ) : (

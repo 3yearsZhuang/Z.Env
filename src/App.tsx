@@ -1,14 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
-import {
-  Blocks,
-  FolderKanban,
-  Gauge,
-  Monitor,
-  Moon,
-  Settings,
-  Sun,
-  Wrench,
-} from "lucide-react";
+import { Blocks, FolderKanban, Gauge, Monitor, Moon, Settings, Sun, Wrench } from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import ToolsView from "./components/ToolsView";
 import ProjectsView from "./components/ProjectsView";
@@ -40,19 +31,16 @@ const THEME_ICON: Record<Theme, ComponentType<{ size?: number }>> = {
 /** 解析生效主题：auto 跟随系统，其余用所选值 */
 function resolveTheme(t: Theme): "light" | "dark" {
   if (t !== "auto") return t;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-const NAV: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[] =
-  [
-    { key: "dashboard", label: "系统概览", icon: Gauge },
-    { key: "software", label: "支持列表", icon: Blocks },
-    { key: "tools", label: "运行时工具", icon: Wrench },
-    { key: "projects", label: "项目配置", icon: FolderKanban },
-    { key: "settings", label: "设置", icon: Settings },
-  ];
+const NAV: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[] = [
+  { key: "dashboard", label: "系统概览", icon: Gauge },
+  { key: "software", label: "支持列表", icon: Blocks },
+  { key: "tools", label: "运行时工具", icon: Wrench },
+  { key: "projects", label: "项目配置", icon: FolderKanban },
+  { key: "settings", label: "设置", icon: Settings },
+];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -111,7 +99,11 @@ export default function App() {
   return (
     <div className="app">
       <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
-        <div className="brand clickable" onClick={() => setCollapsed((c) => !c)} title={collapsed ? "展开侧边栏" : "收起侧边栏"}>
+        <div
+          className="brand clickable"
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "展开侧边栏" : "收起侧边栏"}
+        >
           <div className="brand-mark">
             <img src="/zenv-icon.svg" alt="Z.Env" draggable={false} />
           </div>

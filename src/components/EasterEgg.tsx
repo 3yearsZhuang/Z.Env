@@ -33,11 +33,7 @@ function makeGrid(seed: number, size = 25): boolean[][] {
     x >= fx && x < fx + 7 && y >= fy && y < fy + 7;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      if (
-        inFinder(0, 0, x, y) ||
-        inFinder(size - 7, 0, x, y) ||
-        inFinder(0, size - 7, x, y)
-      ) {
+      if (inFinder(0, 0, x, y) || inFinder(size - 7, 0, x, y) || inFinder(0, size - 7, x, y)) {
         continue;
       }
       g[y][x] = rnd() < 0.48;
@@ -53,13 +49,7 @@ function Finder({ x, y, cw }: { x: number; y: number; cw: number }) {
     <g>
       <rect x={x} y={y} width={cw * 7} height={cw * 7} fill="#111" />
       <rect x={x + cw} y={y + cw} width={cw * 5} height={cw * 5} fill="#fff" />
-      <rect
-        x={x + cw * 2}
-        y={y + cw * 2}
-        width={inner}
-        height={inner}
-        fill="#111"
-      />
+      <rect x={x + cw * 2} y={y + cw * 2} width={inner} height={inner} fill="#111" />
     </g>
   );
 }
@@ -78,30 +68,16 @@ function PayQr({ seed, mark, tint }: { seed: number; mark: string; tint: string 
       {grid.map((row, y) =>
         row.map((on, x) =>
           on ? (
-            <rect
-              key={`${x}-${y}`}
-              x={x * cw}
-              y={y * cw}
-              width={cw}
-              height={cw}
-              fill="#111"
-            />
-          ) : null
-        )
+            <rect key={`${x}-${y}`} x={x * cw} y={y * cw} width={cw} height={cw} fill="#111" />
+          ) : null,
+        ),
       )}
       <Finder x={0} y={0} cw={cw} />
       <Finder x={(size - 7) * cw} y={0} cw={cw} />
       <Finder x={0} y={(size - 7) * cw} cw={cw} />
       {/* 中央 logo 占位 */}
       <rect x={l} y={l} width={w} height={w} fill="#fff" stroke={tint} strokeWidth="1.5" rx="4" />
-      <text
-        x="50"
-        y="56"
-        textAnchor="middle"
-        fontSize="18"
-        fontWeight="800"
-        fill={tint}
-      >
+      <text x="50" y="56" textAnchor="middle" fontSize="18" fontWeight="800" fill={tint}>
         {mark}
       </text>
     </svg>
@@ -109,13 +85,7 @@ function PayQr({ seed, mark, tint }: { seed: number; mark: string; tint: string 
 }
 
 /** 打赏图：优先显示真实收款码图片，加载失败则回退占位假码 */
-function DonateImg({
-  src,
-  fallback,
-}: {
-  src: string;
-  fallback: ReactNode;
-}) {
+function DonateImg({ src, fallback }: { src: string; fallback: ReactNode }) {
   const [fail, setFail] = useState(false);
   if (!fail) {
     return (
@@ -182,8 +152,7 @@ export default function EasterEgg({ onClose }: { onClose: () => void }) {
               <div className="selfcheck-head">
                 <span className="pill muted small">自检</span>
                 <span className="selfcheck-text">
-                  已收录 <strong>{coveredCount}</strong>/{registry.length} 个
-                  mise 支持的运行时
+                  已收录 <strong>{coveredCount}</strong>/{registry.length} 个 mise 支持的运行时
                   {missing.length ? `，未覆盖 ${missing.length} 个` : "，完整覆盖"}
                 </span>
               </div>
@@ -220,9 +189,7 @@ export default function EasterEgg({ onClose }: { onClose: () => void }) {
           {/* 3. 打赏（占位图片） */}
           <section className="panel">
             <h2 className="panel-title">打赏支持</h2>
-            <p className="setting-note">
-              如果 Z.Env 帮到了你，欢迎打赏支持。
-            </p>
+            <p className="setting-note">如果 Z.Env 帮到了你，欢迎打赏支持。</p>
             <div className="donate-grid">
               <div className="donate-card">
                 <span className="donate-label">微信 · 赞赏</span>
