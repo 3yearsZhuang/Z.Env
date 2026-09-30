@@ -7,6 +7,7 @@ mod error;
 mod managed;
 mod mise;
 mod net;
+mod services;
 mod sources;
 mod syscache;
 mod system;
@@ -294,6 +295,18 @@ fn discover_projects() -> Vec<discover::DiscoveredProject> {
     discover::run()
 }
 
+/// 本地服务列表：brew services 与 systemd 用户级服务（缺哪个跳哪个）
+#[tauri::command(async)]
+fn service_list() -> services::ServiceOverview {
+    services::list()
+}
+
+/// 对本地服务执行操作（start / stop / restart）
+#[tauri::command(async)]
+fn service_action(manager: String, name: String, act: String) -> Result<String, String> {
+    services::action(&manager, &name, &act).map_err(String::from)
+}
+
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
 #[tauri::command(async)]
 fn stable_bin_path(manager: String, name: String, path: String) -> Result<String, String> {
@@ -409,6 +422,8 @@ pub fn run() {
             env_center_set,
             env_center_remove,
             discover_projects,
+            service_list,
+            service_action,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

@@ -5,6 +5,7 @@ import {
   Gauge,
   Monitor,
   Moon,
+  Server,
   Settings,
   Sun,
   Wrench,
@@ -16,12 +17,13 @@ import ProjectsView from "./components/ProjectsView";
 import SettingsView from "./components/SettingsView";
 import SoftwareView from "./components/SoftwareView";
 import EnvView from "./components/EnvView";
+import ServicesCachesView from "./components/ServicesCachesView";
 import EasterEgg from "./components/EasterEgg";
 import { initLogger, logInfo } from "./logger";
 import "./index.css";
 import "./styles.css";
 
-type Tab = "dashboard" | "tools" | "projects" | "env" | "settings" | "software";
+type Tab = "dashboard" | "tools" | "projects" | "env" | "ops" | "settings" | "software";
 type Theme = "auto" | "light" | "dark";
 const THEME_NEXT: Record<Theme, Theme> = {
   auto: "light",
@@ -51,6 +53,7 @@ const NAV: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[]
   { key: "tools", label: "运行时工具", icon: Wrench },
   { key: "projects", label: "项目配置", icon: FolderKanban },
   { key: "env", label: "环境变量", icon: Variable },
+  { key: "ops", label: "服务与缓存", icon: Server },
   { key: "settings", label: "设置", icon: Settings },
 ];
 
@@ -160,6 +163,7 @@ export default function App() {
         {tab === "tools" && <ToolsView />}
         {tab === "projects" && <ProjectsView />}
         {tab === "env" && <EnvView />}
+        {tab === "ops" && <ServicesCachesView />}
         {tab === "settings" && <SettingsView onEaster={() => setEaster(true)} />}
         {tab === "software" && <SoftwareView />}
       </main>

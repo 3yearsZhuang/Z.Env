@@ -373,6 +373,33 @@ export function discoverProjects(): Promise<DiscoveredProject[]> {
   return invoke("discover_projects");
 }
 
+// ---------- 本地服务 ----------
+
+/** 单个服务：state 为 started/stopped/error 或 systemd 的 enabled/disabled 等 */
+export interface ServiceInfo {
+  name: string;
+  state: string;
+  /** 管理来源：brew | systemd */
+  manager: string;
+  pid: number | null;
+}
+
+/** 服务总览：列表 + 平台说明 */
+export interface ServiceOverview {
+  services: ServiceInfo[];
+  notes: string[];
+}
+
+/** 本地服务列表（brew services / systemd 用户级） */
+export function serviceList(): Promise<ServiceOverview> {
+  return invoke("service_list");
+}
+
+/** 对本地服务执行操作（start / stop / restart） */
+export function serviceAction(manager: string, name: string, act: string): Promise<string> {
+  return invoke("service_action", { manager, name, act });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
