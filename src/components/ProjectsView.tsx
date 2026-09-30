@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import CodeMirror from "@uiw/react-codemirror";
-import { StreamLanguage } from "@codemirror/language";
-import { toml } from "@codemirror/legacy-modes/mode/toml";
 import {
   readProjectConfig,
   writeProjectConfig,
@@ -13,6 +10,9 @@ import {
   ToolSource,
 } from "../api";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+
+// 编辑器整体懒加载：CodeMirror 及其 TOML 语言包只在首次进入项目配置页时拉取
+const TomlEditor = lazy(() => import("./TomlEditor"));
 
 /** 常见技术栈环境预设：一键生成全套运行环境 */
 const PRESETS: {
@@ -333,15 +333,9 @@ export default function ProjectsView() {
                 overflow: "hidden",
               }}
             >
-              <CodeMirror
-                value={content}
-                height="380px"
-                theme={dark ? "dark" : "light"}
-                extensions={[StreamLanguage.define(toml)]}
-                basicSetup={{ foldGutter: false, searchKeymap: false }}
-                onChange={(v) => setContent(v)}
-                style={{ fontSize: 13 }}
-              />
+              <Suspense fallback={<div className="empty small">编辑器加载中…</div>}>
+                <TomlEditor value={content} dark={dark} onChange={setContent} />
+              </Suspense>
             </div>
             <div className="form-actions">
               <button className="btn" onClick={openBindDialog} disabled={!loaded}>
