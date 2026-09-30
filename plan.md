@@ -133,15 +133,15 @@
 
 ## P3 — 发布闭环（最高优先：先证明管线，再打磨功能）
 
-### 🚧 17. 签名 Secret + 首个 tag v0.7.0 → 三平台打包
+### ✅ 17. 签名 Secret + 首个 tag v0.7.0 → 三平台打包
 - **Secret**：`TAURI_SIGNING_PRIVATE_KEY` 已注入本地 `~/.tauri/zenv.key` 内容；密码 Secret 留空（未配置的 Secret 在 Actions 中解析为空串，密钥本身无密码）。
 - **版本**：三处 0.6.7 → 0.7.0（`check:version` 校验），推送 tag 触发 release.yml。
 - **实战踩坑（三连，均已修复）**：
   1. **Tauri npm 包与 Rust crate 版本错位直接 fail**——`@tauri-apps/api` 2.12.0 vs Rust `tauri` 2.11.5 等 4 对，npm 锁文件先行升级而 Cargo.lock 停留旧版。修复：双侧对齐同 minor（tauri 2.12.0 / process 2.4.0 / autostart 2.6.0 / updater 2.13.1，连带 window-vibrancy 0.8.1、wry 0.57）。后续升级 Tauri 必须**两侧同步**。
   2. **仓库 Actions 默认 workflow 权限为 read**——GITHUB_TOKEN 无权 create-release，报 "Resource not accessible by integration"（八月 v0.6.6/0.6.7 能建草稿，是权限块加入 P2 之前、且当时默认值为 write）。修复：仓库设置默认 workflow 权限改回 write。
   3. **Tauri 2 默认不产出更新器工件**——需在 `tauri.conf.json` 显式 `bundle.createUpdaterArtifacts: true`，否则无 `.app.tar.gz/.sig`，tauri-action 报 "Signature not found for the updater JSON" 跳过 `latest.json`，应用内更新无元数据。
-- **验证**（待 run4 产物落地后补记）：草稿 Release 含 `latest.json` + 三平台安装包与 `.sig` 更新工件。
-- **遗留**：① release.yml macOS matrix 安装了 x86_64 target 但构建未使用，产物只有 aarch64——Intel Mac 覆盖为既有缺口，后续加 `--target` 或 universal；② 应用内更新端到端待 0.7.1 发布时验证；③ macOS arm64 runner 曾排队 24h（v0.6.7 run 超时取消），发布窗口留意。
+- **验证记录**（run 36753147265，completed success）：草稿 Release 共 14 个资产——macOS aarch64 dmg + `.app.tar.gz(+.sig)`、Windows nsis/msi（各带 `.sig`）、Linux AppImage/deb/rpm（各带 `.sig`）、`latest.json` 含 9 个平台条目（darwin-aarch64 / windows-x86_64 / linux-x86_64 及安装器变体），签名全部就位。CI（含新 prettier 门禁）在 main 全绿。
+- **遗留**：① release.yml macOS matrix 安装了 x86_64 target 但构建未使用，产物只有 aarch64——Intel Mac 覆盖为既有缺口，后续加 `--target` 或 universal；② 应用内更新端到端待 0.7.1 发布时验证；③ macOS arm64 runner 曾排队 24h（v0.6.7 run 超时取消），发布窗口留意；④ 草稿 Release 待用户审阅后手动 Publish。
 
 ## P4 — 工程欠账（18 → 19 → 20，21 按需）
 
