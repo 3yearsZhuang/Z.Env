@@ -364,8 +364,8 @@ pub fn parse_env_section(content: &str) -> Vec<GlobalEnvEntry> {
     out
 }
 
-/// TOML 基本字符串转义：反斜杠与双引号。
-fn escape_basic(value: &str) -> String {
+/// TOML 基本字符串转义：反斜杠与双引号（快照导出同样复用）。
+pub(crate) fn escape_basic(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 

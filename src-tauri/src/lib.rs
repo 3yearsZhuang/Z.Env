@@ -10,6 +10,7 @@ mod managed;
 mod mise;
 mod net;
 mod services;
+mod snapshot;
 mod sources;
 mod syscache;
 mod system;
@@ -344,6 +345,31 @@ fn history_list() -> Vec<history::HistoryEntry> {
     history::list(200)
 }
 
+/// 环境快照：导出整机环境清单（mise 工具 + 全局 env + brew 清单）为 TOML
+#[tauri::command(async)]
+fn snapshot_export(path: String) -> Result<snapshot::SnapshotSummary, String> {
+    let r = snapshot::export(&path);
+    match &r {
+        Ok(s) => history::record(
+            "snapshot-export",
+            format!(
+                "{}（工具 {}、env {}、brew {}）",
+                path, s.tools, s.env_vars, s.brew_packages
+            ),
+        ),
+        Err(e) => history::record("snapshot-export", format!("{path} 失败：{e}")),
+    }
+    r.map_err(String::from)
+}
+
+/// 环境快照：重建（全局 env 写入 + mise 工具逐个安装 + brew 清单生成 Brewfile）
+#[tauri::command(async)]
+fn snapshot_restore(path: String) -> Result<String, String> {
+    let r = snapshot::restore(&path).map_err(String::from);
+    traced("snapshot-restore", path.clone(), &r);
+    r
+}
+
 /// 项目发现：扫描常用目录，识别 .git / 技术栈指纹 / mise.toml，对照已装工具给出缺失清单
 #[tauri::command(async)]
 fn discover_projects() -> Vec<discover::DiscoveredProject> {
@@ -498,6 +524,8 @@ pub fn run() {
             cache_list,
             cache_clean,
             history_list,
+            snapshot_export,
+            snapshot_restore,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

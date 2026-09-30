@@ -437,6 +437,26 @@ export function historyList(): Promise<HistoryEntry[]> {
   return invoke("history_list");
 }
 
+// ---------- 环境快照 ----------
+
+/** 快照导出摘要 */
+export interface SnapshotSummary {
+  tools: number;
+  envVars: number;
+  brewPackages: number;
+  path: string;
+}
+
+/** 导出环境快照（mise 工具 + 全局 env + brew 清单）为 TOML */
+export function snapshotExport(path: string): Promise<SnapshotSummary> {
+  return invoke("snapshot_export", { path });
+}
+
+/** 从快照重建：写入全局 env + 逐个安装 mise 工具 + 生成 Brewfile（brew 不自动执行） */
+export function snapshotRestore(path: string): Promise<string> {
+  return invoke("snapshot_restore", { path });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
