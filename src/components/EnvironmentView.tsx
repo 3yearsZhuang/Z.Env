@@ -18,6 +18,7 @@ import {
   type EnvCenterSnapshot,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import DoctorPanel from "./DoctorPanel";
 import EnvPanel from "./EnvPanel";
 import { KNOWN_RUNTIMES, TOOL_ICON_PATHS } from "../data/catalog";
 
@@ -231,6 +232,9 @@ export default function EnvironmentView() {
             : ""}
         </div>
       )}
+
+      {/* 环境健康：装好 ≠ 生效——mise 可用性/shell 接入/PATH/托管在此巡检并可就地修复 */}
+      <DoctorPanel />
 
       {error && (
         <div className="banner error" onClick={() => setError(null)}>

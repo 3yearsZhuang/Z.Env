@@ -8,16 +8,7 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
-import {
-  errorMessage,
-  doctorRun,
-  doctorFix,
-  historyList,
-  snapshotExport,
-  snapshotRestore,
-  DoctorCheck,
-  HistoryEntry,
-} from "../api";
+import { errorMessage, historyList, snapshotExport, snapshotRestore, HistoryEntry } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "整机环境管理中心";
@@ -80,12 +71,6 @@ export default function SettingsView({ onEaster }: Props) {
 
   // 开机自启
   const [autoStart, setAutoStart] = useState(false);
-
-  // 环境体检
-  const [doctor, setDoctor] = useState<DoctorCheck[] | null>(null);
-  const [doctorRunning, setDoctorRunning] = useState(false);
-  const [doctorMsg, setDoctorMsg] = useState("");
-  const [fixingId, setFixingId] = useState<string | null>(null);
 
   // 操作历史
   const [history, setHistory] = useState<HistoryEntry[] | null>(null);
@@ -227,32 +212,6 @@ export default function SettingsView({ onEaster }: Props) {
     }
   }
 
-  async function handleDoctor() {
-    setDoctorRunning(true);
-    setDoctorMsg("");
-    try {
-      setDoctor(await doctorRun());
-    } catch (e) {
-      setDoctorMsg(`体检失败：${errorMessage(e)}`);
-    } finally {
-      setDoctorRunning(false);
-    }
-  }
-
-  async function handleDoctorFix(id: string) {
-    setFixingId(id);
-    setDoctorMsg("");
-    try {
-      setDoctorMsg(await doctorFix(id));
-      // 修复后自动重跑体检，让结果即时反映修复效果
-      setDoctor(await doctorRun());
-    } catch (e) {
-      setDoctorMsg(`修复失败：${errorMessage(e)}`);
-    } finally {
-      setFixingId(null);
-    }
-  }
-
   return (
     <div className="view">
       <div className="view-head">
@@ -302,59 +261,6 @@ export default function SettingsView({ onEaster }: Props) {
             </span>
           </button>
         </div>
-      </section>
-
-      <section className="panel">
-        <h2 className="panel-title">环境体检</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
-          <button className="btn primary" onClick={handleDoctor} disabled={doctorRunning}>
-            {doctorRunning ? "巡检中…" : "开始体检"}
-          </button>
-          {doctorMsg && <span className="setting-desc">{doctorMsg}</span>}
-        </div>
-        {doctor && (
-          <div className="setting-list" style={{ marginTop: 12 }}>
-            {doctor.map((c) => (
-              <div key={c.id} className="setting-row" style={{ cursor: "default" }}>
-                <span className="setting-info" style={{ flex: 1 }}>
-                  <span
-                    className="setting-name"
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        flexShrink: 0,
-                        background:
-                          c.level === "ok"
-                            ? "var(--success)"
-                            : c.level === "warn"
-                              ? "var(--warning)"
-                              : "var(--destructive)",
-                      }}
-                    />
-                    {c.title}
-                  </span>
-                  <span className="setting-desc">
-                    {c.detail}
-                    {c.hint ? ` · 建议：${c.hint}` : ""}
-                  </span>
-                </span>
-                {c.fixable && c.level !== "ok" && (
-                  <button
-                    className="btn"
-                    disabled={fixingId !== null}
-                    onClick={() => handleDoctorFix(c.id)}
-                  >
-                    {fixingId === c.id ? "修复中…" : "一键修复"}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="panel">
