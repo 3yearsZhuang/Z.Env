@@ -169,3 +169,41 @@
 - **后续**：实机视觉验证；可修复项的一键修复动作（v1 有意不做）；磁盘体积类检查（`~/.zenv` 农场大小）。
 - **备选**（22 之后按反馈排序）：项目发现（扫描常用目录识别技术栈并提示补齐）、本地开发服务管理（brew services 等）、缓存治理（brew/mise/各语言缓存体积与清理）。
 - **i18n 维持暂缓**：面向国际用户时再引入 react-i18next（沿用 P2 判定）。
+
+---
+
+> 2026-10-01 追加：**定位自检**——对照"整机环境管理中心"，现状=「跨平台 mise 图形化管理器 + 托管接入层（起步）」。
+> 强项：运行时管理、软件安装、项目级配置已中心化；缺位：整机环境变量、本地服务、项目发现、缓存治理、
+> shell/PATH 只能看不能修、无操作审计/迁移。**判定标准（裸机测试）**：新机装好 Z.Env + mise 后不打开终端，
+> 能否装齐软件、配好 shell 接入、跑起项目环境——当前答案为否。以下 P6 最小闭环即冲此判定。
+
+## P6 — 整机环境管理中心：最小闭环（23 → 24 → 25）
+
+### 23. 整机环境变量中心
+- **全局 env 管理**：全局 mise config（`MISE_GLOBAL_CONFIG_FILE` > `MISE_CONFIG_DIR` > `~/.config/mise/config.toml`，
+  Windows `%APPDATA%\mise\config.toml`）的 `[env]` 段增删改；**文本手术式编辑**——只重写 `[env]` 段内目标行，
+  保留用户其余内容与注释，零新依赖（不引 toml crate）；表/数组等复杂值只读展示并提示手动编辑。
+- **冲突检测**：系统/用户级 env（进程环境）与全局 mise env 同名且值不同者列出（PATH 除外），说明生效条件取决于 shell 接入。
+- **入口**：新视图「环境变量」。段解析/编辑为纯函数，单测覆盖。
+
+### 24. doctor 接修复动作（化验单 → 处方）
+- `DoctorCheck` 增加 `fixable`；新增 `doctor_fix` command：
+  - `managed-health` → 复用 `managed::reconcile()` 对账自愈，返回事件摘要；
+  - `shell-integration` → 按 `$SHELL` 把 `mise activate` 行**追加**到对应 rc（zsh/bash/fish；写前复检，绝不改写既有内容）；
+  - 其余项返回"暂不支持自动修复"并保留 hint（PATH 类问题不动用户配置）。
+- **前端**：warn/fail 且 fixable 项显示「一键修复」，成功后自动重跑体检刷新结果。
+
+### 25. 项目发现
+- **后端 `discover.rs`**：扫描常用根目录（存在者：~/Documents ~/Desktop ~/Projects ~/Code ~/code ~/Dev ~/dev ~/work ~/repos，各深 3 层；家目录本身 1 层），
+  跳过隐藏目录与 node_modules/target/vendor 等重目录，目录预算 4000、结果上限 200；
+  识别 `.git` 与技术栈指纹（package.json/.nvmrc/pyproject.toml/requirements.txt/.python-version/go.mod/Gemfile/composer.json/pom.xml/build.gradle/.tool-versions）；
+  `mise.toml` 解析 `[tools]` 键、`.tool-versions` 解析工具名。
+- **输出**：名称/路径/是否已有 mise.toml/工具清单/**缺失工具**（对照 `mise ls` 已装）。
+- **前端**：ProjectsView 顶部「发现的项目」区（自动扫描 + 重新扫描），点击载入既有编辑器流程，缺失工具走既有"保存并一键安装"。
+- **达成判定**：23–25 落地后裸机测试应从"否"变为"基本是"，届时 tagline 可升级为"整机环境管理中心"。
+
+### ⬜ 第二梯队（25 之后按反馈排序）
+- 本地开发服务管理（brew services / systemd user units / Windows 服务只读）；开发缓存治理（体积展示 + 一键清理）；操作历史面板。
+
+### ⬜ 第三梯队（称号杀手锏）
+- 环境快照与迁移：导出整机环境清单（软件 + mise 配置 + 全局 env），换机一键重建。
