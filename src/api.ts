@@ -291,18 +291,24 @@ export function stableBinPath(manager: string, name: string, path: string): Prom
 
 // ---------- 环境体检（doctor） ----------
 
-/** 单项体检结果：level 为结论等级，detail 描述现状，hint 给出修复建议 */
+/** 单项体检结果：level 为结论等级，detail 描述现状，hint 给出修复建议；fixable 表示可一键修复 */
 export interface DoctorCheck {
   id: string;
   title: string;
   level: "ok" | "warn" | "fail";
   detail: string;
   hint: string;
+  fixable: boolean;
 }
 
 /** 环境体检：全量巡检整机环境健康度（只读，不做修复动作） */
 export function doctorRun(): Promise<DoctorCheck[]> {
   return invoke("doctor_run");
+}
+
+/** 环境体检修复：执行一个检查项的修复动作（托管对账 / shell 集成追加） */
+export function doctorFix(id: string): Promise<string> {
+  return invoke("doctor_fix", { id });
 }
 
 // ---------- 环境变量中心 ----------

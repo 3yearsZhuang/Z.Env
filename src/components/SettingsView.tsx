@@ -7,7 +7,7 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
-import { errorMessage, doctorRun, DoctorCheck } from "../api";
+import { errorMessage, doctorRun, doctorFix, DoctorCheck } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "跨平台 mise 图形化管理器";
@@ -55,6 +55,7 @@ export default function SettingsView({ onEaster }: Props) {
   const [doctor, setDoctor] = useState<DoctorCheck[] | null>(null);
   const [doctorRunning, setDoctorRunning] = useState(false);
   const [doctorMsg, setDoctorMsg] = useState("");
+  const [fixingId, setFixingId] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion()
@@ -143,6 +144,20 @@ export default function SettingsView({ onEaster }: Props) {
       setDoctorMsg(`体检失败：${errorMessage(e)}`);
     } finally {
       setDoctorRunning(false);
+    }
+  }
+
+  async function handleDoctorFix(id: string) {
+    setFixingId(id);
+    setDoctorMsg("");
+    try {
+      setDoctorMsg(await doctorFix(id));
+      // 修复后自动重跑体检，让结果即时反映修复效果
+      setDoctor(await doctorRun());
+    } catch (e) {
+      setDoctorMsg(`修复失败：${errorMessage(e)}`);
+    } finally {
+      setFixingId(null);
     }
   }
 
@@ -235,6 +250,15 @@ export default function SettingsView({ onEaster }: Props) {
                     {c.hint ? ` · 建议：${c.hint}` : ""}
                   </span>
                 </span>
+                {c.fixable && c.level !== "ok" && (
+                  <button
+                    className="btn"
+                    disabled={fixingId !== null}
+                    onClick={() => handleDoctorFix(c.id)}
+                  >
+                    {fixingId === c.id ? "修复中…" : "一键修复"}
+                  </button>
+                )}
               </div>
             ))}
           </div>

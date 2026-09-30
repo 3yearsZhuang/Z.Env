@@ -263,6 +263,12 @@ fn doctor_run() -> Vec<doctor::DoctorCheck> {
     doctor::run()
 }
 
+/// 环境体检修复：执行一个检查项的修复动作（托管对账 / shell 集成追加）
+#[tauri::command(async)]
+fn doctor_fix(id: String) -> Result<String, String> {
+    doctor::fix(&id).map_err(String::from)
+}
+
 /// 环境变量中心：全局 mise config 的 [env] 列表 + 系统 env 冲突检测
 #[tauri::command(async)]
 fn env_center_list() -> env_center::EnvCenterSnapshot {
@@ -391,6 +397,7 @@ pub fn run() {
             managed_reconcile,
             managed_list,
             doctor_run,
+            doctor_fix,
             env_center_list,
             env_center_set,
             env_center_remove,
