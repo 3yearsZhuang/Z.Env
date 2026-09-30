@@ -7,11 +7,31 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
-import { errorMessage, doctorRun, doctorFix, DoctorCheck } from "../api";
+import { errorMessage, doctorRun, doctorFix, historyList, DoctorCheck, HistoryEntry } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "跨平台 mise 图形化管理器";
 const FALLBACK_VERSION = "0.7.0";
+
+/** 操作历史 kind → 中文标签 */
+const OP_KINDS: Record<string, string> = {
+  install: "安装",
+  "install-all": "项目安装",
+  uninstall: "卸载",
+  use: "切换",
+  adopt: "接入",
+  unadopt: "解除接入",
+  reconcile: "对账自愈",
+  "doctor-fix": "体检修复",
+  "env-set": "环境写入",
+  "env-remove": "环境移除",
+  "sys-install": "软件安装",
+  "sys-uninstall": "软件卸载",
+  service: "服务操作",
+  "cache-clean": "缓存清理",
+  "snapshot-export": "快照导出",
+  "snapshot-restore": "快照重建",
+};
 
 const STACK = [
   "Tauri 2",
@@ -57,6 +77,15 @@ export default function SettingsView({ onEaster }: Props) {
   const [doctorMsg, setDoctorMsg] = useState("");
   const [fixingId, setFixingId] = useState<string | null>(null);
 
+  // 操作历史
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null);
+
+  function loadHistory() {
+    historyList()
+      .then(setHistory)
+      .catch(() => {});
+  }
+
   useEffect(() => {
     getVersion()
       .then(setVersion)
@@ -64,6 +93,7 @@ export default function SettingsView({ onEaster }: Props) {
     isAutostartEnabled()
       .then(setAutoStart)
       .catch(() => {});
+    loadHistory();
   }, []);
 
   const handleVersionClick = () => {
@@ -286,6 +316,40 @@ export default function SettingsView({ onEaster }: Props) {
               下载并安装
             </button>
           )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">操作历史</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span className="setting-desc">本机管理动作留痕（~/.zenv/history.jsonl，不上传）</span>
+          <span style={{ flex: 1 }} />
+          <button className="btn" onClick={loadHistory}>
+            刷新
+          </button>
+        </div>
+        {history && history.length === 0 && (
+          <div className="empty small">
+            还没有管理动作记录。安装、接入、修复等操作都会留痕于此。
+          </div>
+        )}
+        <div className="setting-list">
+          {(history ?? []).slice(0, 50).map((h, i) => (
+            <div key={`${h.time}-${i}`} className="setting-row" style={{ cursor: "default" }}>
+              <span className="setting-info" style={{ flex: 1, minWidth: 0 }}>
+                <span
+                  className="setting-name"
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <span className="pill muted">{OP_KINDS[h.kind] ?? h.kind}</span>
+                  <span className="setting-desc">{new Date(h.time * 1000).toLocaleString()}</span>
+                </span>
+                <span className="setting-desc" style={{ wordBreak: "break-all" }}>
+                  {h.detail}
+                </span>
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 

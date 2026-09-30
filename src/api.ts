@@ -423,6 +423,20 @@ export function cacheClean(id: string): Promise<string> {
   return invoke("cache_clean", { id });
 }
 
+// ---------- 操作历史 ----------
+
+/** 单条操作记录：time 为 unix 秒，kind 为操作类别（前端映射中文标签） */
+export interface HistoryEntry {
+  time: number;
+  kind: string;
+  detail: string;
+}
+
+/** 操作历史：最近 200 条管理动作（新 → 旧） */
+export function historyList(): Promise<HistoryEntry[]> {
+  return invoke("history_list");
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;

@@ -5,6 +5,7 @@ mod doctor;
 mod env;
 mod env_center;
 mod error;
+mod history;
 mod managed;
 mod mise;
 mod net;
@@ -20,6 +21,14 @@ use tauri::{
     Manager,
 };
 use tauri_plugin_autostart::MacosLauncher;
+
+/// 记录一条操作历史；失败详情一并留痕，记录本身不影响业务结果。
+fn traced<E: std::fmt::Display>(kind: &str, detail: String, r: &Result<String, E>) {
+    match r {
+        Ok(_) => history::record(kind, detail),
+        Err(e) => history::record(kind, format!("{detail} 失败：{e}")),
+    }
+}
 
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
@@ -84,14 +93,16 @@ async fn install_system_package(
     name: String,
 ) -> Result<String, String> {
     let mgr = manager.clone();
-    let r = tauri::async_runtime::spawn_blocking(move || {
-        env::install_system_package(&app, &manager, &name)
-    })
-    .await
-    .map_err(|e| e.to_string())?;
+    let (m2, n2) = (manager.clone(), name.clone());
+    let r =
+        tauri::async_runtime::spawn_blocking(move || env::install_system_package(&app, &m2, &n2))
+            .await
+            .map_err(|e| e.to_string())?;
     // 安装结束后（无论成败）失效该管理器的探测缓存，下次探测拿到真实状态
     syscache::invalidate(&mgr);
-    r.map_err(String::from)
+    let r = r.map_err(String::from);
+    traced("sys-install", format!("{manager} install {name}"), &r);
+    r
 }
 
 /// 探测指定系统包管理器当前已安装的软件名列表。
@@ -123,7 +134,9 @@ fn uninstall_system_package(manager: String, name: String) -> Result<String, Str
     let r = env::uninstall_system_package(&manager, &name);
     // 卸载结束后失效该管理器的探测缓存
     syscache::invalidate(&manager);
-    r.map_err(String::from)
+    let r = r.map_err(String::from);
+    traced("sys-uninstall", format!("{manager} uninstall {name}"), &r);
+    r
 }
 
 /// 扫描其他工具托管（nvm/pyenv/asdf/sdkman/rvm 等）的运行时。
@@ -171,7 +184,9 @@ fn list_registry() -> Result<Vec<String>, String> {
 /// 安装指定工具版本。
 #[tauri::command(async)]
 fn install_version(tool: String, version: String) -> Result<String, String> {
-    Ok(mise::install_version(&tool, &version)?)
+    let r = mise::install_version(&tool, &version);
+    traced("install", format!("mise {tool}@{version}"), &r);
+    Ok(r?)
 }
 
 /// 流式安装指定工具版本，实时推送进度事件到前端。
@@ -181,36 +196,47 @@ async fn install_version_streaming(
     tool: String,
     version: String,
 ) -> Result<String, String> {
-    // 第一个 ? 处理 JoinError，第二个 ? 经 From<AppError> for String 转换内部错误
-    Ok(tauri::async_runtime::spawn_blocking(move || {
-        mise::install_version_streaming(&app, &tool, &version)
+    let (t2, v2) = (tool.clone(), version.clone());
+    let inner = tauri::async_runtime::spawn_blocking(move || {
+        mise::install_version_streaming(&app, &t2, &v2)
     })
     .await
-    .map_err(|e| e.to_string())??)
+    .map_err(|e| e.to_string())?;
+    let r = inner.map_err(String::from);
+    traced("install", format!("mise {tool}@{version}"), &r);
+    r
 }
 
 /// 卸载指定工具版本。
 #[tauri::command(async)]
 fn uninstall_version(tool: String, version: String) -> Result<String, String> {
-    Ok(mise::uninstall_version(&tool, &version)?)
+    let r = mise::uninstall_version(&tool, &version);
+    traced("uninstall", format!("mise {tool}@{version}"), &r);
+    Ok(r?)
 }
 
 /// 切换（激活）某个工具版本。global 决定是否写入全局配置。
 #[tauri::command(async)]
 fn use_version(tool: String, version: String, global: bool) -> Result<String, String> {
-    Ok(mise::use_version(&tool, &version, global)?)
+    let r = mise::use_version(&tool, &version, global);
+    traced("use", format!("{tool} → {version}（global={global}）"), &r);
+    Ok(r?)
 }
 
 /// 接管：把已存在的外部环境目录链接为 mise 管理版本。
 #[tauri::command(async)]
 fn link_version(tool: String, version: String, path: String) -> Result<String, String> {
-    Ok(mise::link_version(&tool, &version, &path)?)
+    let r = mise::link_version(&tool, &version, &path);
+    traced("adopt", format!("mise link {tool}@{version} ← {path}"), &r);
+    Ok(r?)
 }
 
 /// 解除接管：移除某版本与外部目录的链接。
 #[tauri::command(async)]
 fn unlink_version(tool: String, version: String) -> Result<String, String> {
-    Ok(mise::unlink_version(&tool, &version)?)
+    let r = mise::unlink_version(&tool, &version);
+    traced("unadopt", format!("mise unlink {tool}@{version}"), &r);
+    Ok(r?)
 }
 
 /// 读取项目根目录的 mise 配置文件内容。
@@ -228,7 +254,9 @@ fn write_project_config(path: String, content: String) -> Result<String, String>
 /// 写入配置并在项目内一键安装全套环境。
 #[tauri::command(async)]
 fn install_all_project(path: String, content: String) -> Result<String, String> {
-    Ok(mise::install_all_project(&path, &content)?)
+    let r = mise::install_all_project(&path, &content);
+    traced("install-all", format!("项目一键安装 {path}"), &r);
+    Ok(r?)
 }
 
 /// 托管接入：按来源自动选策略（用户级目录直连 / brew 走托管软链），接入后校验 mise 注册结果
@@ -239,19 +267,33 @@ fn managed_adopt(
     manager: String,
     path: String,
 ) -> Result<String, String> {
-    Ok(managed::adopt(&tool, &version, &manager, &path)?)
+    let r = managed::adopt(&tool, &version, &manager, &path);
+    traced("adopt", format!("{tool}@{version} ← {manager}:{path}"), &r);
+    Ok(r?)
 }
 
 /// 解除托管接入（移除 mise 链接与农场记录）
 #[tauri::command(async)]
 fn managed_unadopt(tool: String, version: String) -> Result<String, String> {
-    Ok(managed::unadopt(&tool, &version)?)
+    let r = managed::unadopt(&tool, &version);
+    traced("unadopt", format!("{tool}@{version}"), &r);
+    Ok(r?)
 }
 
 /// 对账：brew 升级/卸载导致的失效接入自动重连到新版本或移除，返回事件供前端展示
 #[tauri::command(async)]
 fn managed_reconcile() -> Vec<managed::ReconcileEvent> {
-    managed::reconcile()
+    let events = managed::reconcile();
+    if !events.is_empty() {
+        let rel = events.iter().filter(|e| e.action == "relinked").count();
+        let rem = events.iter().filter(|e| e.action == "removed").count();
+        let fail = events.iter().filter(|e| e.action == "failed").count();
+        history::record(
+            "reconcile",
+            format!("对账自愈：重连 {rel}、移除 {rem}、失败 {fail}"),
+        );
+    }
+    events
 }
 
 /// 托管接入清单与健康状态
@@ -269,7 +311,9 @@ fn doctor_run() -> Vec<doctor::DoctorCheck> {
 /// 环境体检修复：执行一个检查项的修复动作（托管对账 / shell 集成追加）
 #[tauri::command(async)]
 fn doctor_fix(id: String) -> Result<String, String> {
-    doctor::fix(&id).map_err(String::from)
+    let r = doctor::fix(&id).map_err(String::from);
+    traced("doctor-fix", format!("体检修复 {id}"), &r);
+    r
 }
 
 /// 环境变量中心：全局 mise config 的 [env] 列表 + 系统 env 冲突检测
@@ -281,13 +325,23 @@ fn env_center_list() -> env_center::EnvCenterSnapshot {
 /// 设置一个全局 env（写入全局 mise config 的 [env] 段，文本手术保留其余内容）
 #[tauri::command(async)]
 fn env_center_set(key: String, value: String) -> Result<String, String> {
-    env_center::set(&key, &value).map_err(String::from)
+    let r = env_center::set(&key, &value).map_err(String::from);
+    traced("env-set", format!("{key}={value}"), &r);
+    r
 }
 
 /// 移除一个全局 env
 #[tauri::command(async)]
 fn env_center_remove(key: String) -> Result<String, String> {
-    env_center::remove(&key).map_err(String::from)
+    let r = env_center::remove(&key).map_err(String::from);
+    traced("env-remove", key.clone(), &r);
+    r
+}
+
+/// 操作历史：最近 200 条管理动作（新 → 旧）
+#[tauri::command(async)]
+fn history_list() -> Vec<history::HistoryEntry> {
+    history::list(200)
 }
 
 /// 项目发现：扫描常用目录，识别 .git / 技术栈指纹 / mise.toml，对照已装工具给出缺失清单
@@ -305,7 +359,9 @@ fn service_list() -> services::ServiceOverview {
 /// 对本地服务执行操作（start / stop / restart）
 #[tauri::command(async)]
 fn service_action(manager: String, name: String, act: String) -> Result<String, String> {
-    services::action(&manager, &name, &act).map_err(String::from)
+    let r = services::action(&manager, &name, &act).map_err(String::from);
+    traced("service", format!("{manager} {act} {name}"), &r);
+    r
 }
 
 /// 开发缓存列表：常见缓存目录与体积（探测到哪个列哪个）
@@ -317,7 +373,9 @@ fn cache_list() -> Vec<caches::CacheInfo> {
 /// 用官方命令清理指定开发缓存
 #[tauri::command(async)]
 fn cache_clean(id: String) -> Result<String, String> {
-    caches::clean(&id).map_err(String::from)
+    let r = caches::clean(&id).map_err(String::from);
+    traced("cache-clean", id.clone(), &r);
+    r
 }
 
 /// 策略 C：包管理器自维护的稳定 bin 路径（供项目 mise.toml 的 env._path 绑定）
@@ -439,6 +497,7 @@ pub fn run() {
             service_action,
             cache_list,
             cache_clean,
+            history_list,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())
