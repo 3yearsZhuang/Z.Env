@@ -488,6 +488,11 @@ export function presetImport(path: string): Promise<PresetFile> {
   return invoke("preset_import", { path });
 }
 
+/** 从 mise.toml 风格文本提取工具清单（用于把用户预设装到整机） */
+export function presetParseTools(toml: string): Promise<PresetTool[]> {
+  return invoke("preset_parse_tools", { toml });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;

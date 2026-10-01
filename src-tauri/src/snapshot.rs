@@ -3,6 +3,7 @@
 // Brewfile 交由用户执行 `brew bundle --file`（不静默批量装软件）。
 use crate::error::AppError;
 use serde::Serialize;
+use tauri::AppHandle;
 
 /// 导出摘要。
 #[derive(Debug, Serialize)]
@@ -80,7 +81,10 @@ pub fn export(path: &str) -> Result<SnapshotSummary, AppError> {
 
 /// 从快照重建（v1 安全边界）：全局 env 直接写入；mise 工具逐个安装（耗时可能较长）；
 /// brew 清单写入 ~/.zenv/Brewfile.snapshot，由用户执行 brew bundle 安装。返回多行报告。
-pub fn restore(path: &str) -> Result<String, AppError> {
+///
+/// 工具安装复用 `install_version_streaming`，与「全局环境」页的预设整机安装走同一条通道：
+/// 都有实时进度事件（`mise:install-progress`），都逐个容错、单个失败不中断。
+pub fn restore(app: &AppHandle, path: &str) -> Result<String, AppError> {
     let content =
         std::fs::read_to_string(path).map_err(|e| AppError::Io(format!("读取快照失败: {e}")))?;
     let tools = parse_section(&content, "[tools]");
@@ -99,10 +103,10 @@ pub fn restore(path: &str) -> Result<String, AppError> {
     }
     report.push(format!("全局 env：写入 {env_ok}/{}", envs.len()));
 
-    // 2) mise 工具（逐个安装，失败不阻断后续）
+    // 2) mise 工具（逐个流式安装，失败不阻断后续）
     let mut tool_ok = 0usize;
     for (name, version) in &tools {
-        match crate::mise::install_version(name, version) {
+        match crate::mise::install_version_streaming(app, name, version) {
             Ok(_) => {
                 tool_ok += 1;
                 report.push(format!("mise {name}@{version} 安装完成"));

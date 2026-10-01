@@ -20,6 +20,9 @@ import {
 import InstallDialog from "./InstallDialog";
 import DoctorPanel from "./DoctorPanel";
 import EnvPanel from "./EnvPanel";
+import MachinePresetSection from "./MachinePresetSection";
+import SnapshotPanel from "./SnapshotPanel";
+import type { Navigate } from "../lib/nav";
 import { KNOWN_RUNTIMES, TOOL_ICON_PATHS } from "../data/catalog";
 
 /** 工具徽标：先走显式映射，再按 /tools/{name}.svg 通用查找，都没有则回退名称缩写 */
@@ -50,7 +53,12 @@ function adoptable(s: ToolSource): boolean {
   return Boolean(s.path) && s.manager !== "system";
 }
 
-export default function EnvironmentView() {
+interface Props {
+  /** 切到别的 tab（预设区块里给出「装到某个项目」的出口） */
+  onNavigate?: Navigate;
+}
+
+export default function EnvironmentView({ onNavigate }: Props) {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +69,10 @@ export default function EnvironmentView() {
   const [installFor, setInstallFor] = useState<ToolInfo | null>(null);
   // 托管接入对账事件：brew 升级/卸载后自动重连或移除的提示
   const [reconcile, setReconcile] = useState<ReconcileEvent[]>([]);
-  // 全局环境变量快照：顶部摘要条与底部变量区同源
+  // 全局环境变量快照：供环境变量区块使用；快照重建会改写 [env]，需重新加载
   const [envSnap, setEnvSnap] = useState<EnvCenterSnapshot | null>(null);
+  // 顶部区块切换：三块常驻挂载、按需显隐，避免切换时丢掉进行中的安装日志与流式进度
+  const [pane, setPane] = useState<"runtime" | "vars" | "preset">("runtime");
 
   const loadEnvSnap = useCallback(() => {
     envCenterList()
@@ -213,245 +223,279 @@ export default function EnvironmentView() {
         <div>
           <h1>环境</h1>
           <p className="view-sub">
-            已安装的运行时与全局环境变量；新环境在「支持列表」安装后自动出现在这里
+            整机环境一站式：已装运行时、全局环境变量、用预设装到整机、整机快照备份。
+            新运行时在「支持列表」安装后自动出现在这里；单个项目要装什么，在「项目配置」里改它的
+            mise.toml。
           </p>
         </div>
       </div>
 
-      {envSnap && (
-        <div
-          className={`banner ${envSnap.conflicts.length > 0 ? "warn" : "info"}`}
-          style={{ cursor: "pointer" }}
-          onClick={() =>
-            document.getElementById("env-panel")?.scrollIntoView({ behavior: "smooth" })
-          }
-        >
-          全局环境：{cards.length} 个运行时 · {envSnap.entries.length} 个环境变量
-          {envSnap.conflicts.length > 0
-            ? ` · ${envSnap.conflicts.length} 个同名冲突 · 点击查看`
-            : ""}
-        </div>
-      )}
+      {/* 顶部切换：三个区块互斥显示，切换时互不干扰 */}
+      <div className="tab-bar" role="tablist" aria-label="环境页区块">
+        {(
+          [
+            ["runtime", "运行时"],
+            ["vars", "环境变量"],
+            ["preset", "环境预设"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            className={`tab-btn${pane === key ? " active" : ""}`}
+            role="tab"
+            aria-selected={pane === key}
+            onClick={() => setPane(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {/* 环境健康：装好 ≠ 生效——mise 可用性/shell 接入/PATH/托管在此巡检并可就地修复 */}
-      <DoctorPanel />
+      {/* 运行时：摘要 + 环境健康 + 已装清单。三块都常驻挂载、按需显隐——
+          条件渲染会在切换时卸载组件，进行中的预设安装日志与流式进度会一起丢掉 */}
+      <div style={{ display: pane === "runtime" ? undefined : "none" }}>
+        {cards.length > 0 && (
+          <div
+            className={`banner ${envSnap && envSnap.conflicts.length > 0 ? "warn" : "info"}`}
+            style={{ cursor: envSnap && envSnap.conflicts.length > 0 ? "pointer" : "default" }}
+            onClick={() => envSnap && envSnap.conflicts.length > 0 && setPane("vars")}
+          >
+            本机已装 {cards.length} 个运行时
+            {envSnap && envSnap.conflicts.length > 0
+              ? ` · ${envSnap.conflicts.length} 个环境变量同名冲突 · 点击查看`
+              : ""}
+          </div>
+        )}
 
-      {error && (
-        <div className="banner error" onClick={() => setError(null)}>
-          ⚠ {error}
-        </div>
-      )}
-      {reconcile.length > 0 && (
-        <div className="banner info" onClick={() => setReconcile([])}>
-          {reconcile.map((e, i) => (
-            <div key={i}>{e.message}</div>
-          ))}
-        </div>
-      )}
-      {notice && (
-        <div className="banner success" onClick={() => setNotice(null)}>
-          ✓ {notice}
-        </div>
-      )}
+        {/* 环境健康：装好 ≠ 生效——mise 可用性/shell 接入/PATH/托管在此巡检并可就地修复 */}
+        <DoctorPanel />
 
-      {loading && cards.length === 0 ? (
-        <div className="empty">正在读取环境…</div>
-      ) : cards.length === 0 ? (
-        <div className="empty">
-          本机还没有已安装的运行时。前往「支持列表」选择安装，装好后会自动出现在这里。
-        </div>
-      ) : (
-        <div className="tool-grid">
-          {cards.map((tool) => {
-            const isOpen = expanded === tool.name;
-            const activeSet = new Set(tool.active_versions);
-            const ext = externalByTool.get(tool.name) ?? [];
-            const adoptableExt = ext.filter(adoptable);
-            const isInstalled = tool.versions.length > 0;
-            const isManaged = !isInstalled && ext.length > 0;
-            // 头部快捷能力：单版本未设全局 → 设为全局；唯一可接管来源 → 一键接管
-            const quickSetGlobal = tool.versions.length === 1 && tool.active_versions.length === 0;
-            const quickAdopt = !isInstalled && adoptableExt.length === 1;
-            return (
-              <div className={`tool-card ${isOpen ? "open" : ""}`} key={tool.name}>
-                <div style={{ display: "flex", alignItems: "stretch" }}>
-                  <button
-                    className="tool-card-head"
-                    style={{ flex: 1, minWidth: 0 }}
-                    onClick={() => setExpanded(isOpen ? null : tool.name)}
-                  >
-                    <ToolBadge name={tool.name} />
-                    <span className="tool-name">{tool.name}</span>
-                    <span
-                      className={`pill state ${isInstalled ? "active" : isManaged ? "managed" : "uninstalled"}`}
-                    >
-                      {isInstalled ? "已安装" : isManaged ? "仅托管" : "未安装"}
-                    </span>
-                    {tool.active_versions.length > 0 && (
-                      <span className="pill active">▲ {tool.active_versions.join(", ")}</span>
-                    )}
-                    <span className="tool-count">{tool.versions.length} 个版本</span>
-                    <span className="chevron">{isOpen ? "▾" : "▸"}</span>
-                  </button>
-                  {quickSetGlobal && (
+        {error && (
+          <div className="banner error" onClick={() => setError(null)}>
+            ⚠ {error}
+          </div>
+        )}
+        {reconcile.length > 0 && (
+          <div className="banner info" onClick={() => setReconcile([])}>
+            {reconcile.map((e, i) => (
+              <div key={i}>{e.message}</div>
+            ))}
+          </div>
+        )}
+        {notice && (
+          <div className="banner success" onClick={() => setNotice(null)}>
+            ✓ {notice}
+          </div>
+        )}
+
+        {loading && cards.length === 0 ? (
+          <div className="empty">正在读取环境…</div>
+        ) : cards.length === 0 ? (
+          <div className="empty">
+            本机还没有已安装的运行时。前往「支持列表」选择安装，装好后会自动出现在这里。
+          </div>
+        ) : (
+          <div className="tool-grid">
+            {cards.map((tool) => {
+              const isOpen = expanded === tool.name;
+              const activeSet = new Set(tool.active_versions);
+              const ext = externalByTool.get(tool.name) ?? [];
+              const adoptableExt = ext.filter(adoptable);
+              const isInstalled = tool.versions.length > 0;
+              const isManaged = !isInstalled && ext.length > 0;
+              // 头部快捷能力：单版本未设全局 → 设为全局；唯一可接管来源 → 一键接管
+              const quickSetGlobal =
+                tool.versions.length === 1 && tool.active_versions.length === 0;
+              const quickAdopt = !isInstalled && adoptableExt.length === 1;
+              return (
+                <div className={`tool-card ${isOpen ? "open" : ""}`} key={tool.name}>
+                  <div style={{ display: "flex", alignItems: "stretch" }}>
                     <button
-                      className="btn xs primary"
-                      style={{ margin: "auto 8px" }}
-                      disabled={busy === `${tool.name}@${tool.versions[0].version}`}
-                      onClick={() => handleActivate(tool.name, tool.versions[0].version, true)}
-                      title="把唯一已装版本设为全局默认"
+                      className="tool-card-head"
+                      style={{ flex: 1, minWidth: 0 }}
+                      onClick={() => setExpanded(isOpen ? null : tool.name)}
                     >
-                      设为全局
-                    </button>
-                  )}
-                  {quickAdopt && (
-                    <button
-                      className="btn xs"
-                      style={{ margin: "auto 8px" }}
-                      disabled={busy === `${tool.name}@${adoptableExt[0].version}`}
-                      onClick={() => handleAdopt(adoptableExt[0])}
-                      title={`${adoptableExt[0].manager} 的 ${tool.name}@${adoptableExt[0].version} 接入 mise`}
-                    >
-                      一键接管
-                    </button>
-                  )}
-                </div>
-
-                {isOpen && (
-                  <div className="tool-card-body">
-                    <div className="version-list">
-                      {tool.versions.length === 0 && (
-                        <div className="empty small">
-                          {ext.length
-                            ? `由 ${[...new Set(ext.map((s) => s.manager))].join(", ")} 托管 · ${
-                                KNOWN_RUNTIMES.includes(tool.name)
-                                  ? "尚未用 mise 安装"
-                                  : "无法用 mise 安装"
-                              }`
-                            : "尚未安装版本"}
-                        </div>
+                      <ToolBadge name={tool.name} />
+                      <span className="tool-name">{tool.name}</span>
+                      <span
+                        className={`pill state ${isInstalled ? "active" : isManaged ? "managed" : "uninstalled"}`}
+                      >
+                        {isInstalled ? "已安装" : isManaged ? "仅托管" : "未安装"}
+                      </span>
+                      {tool.active_versions.length > 0 && (
+                        <span className="pill active">▲ {tool.active_versions.join(", ")}</span>
                       )}
-                      {tool.versions.map((v) => {
-                        const isActive = activeSet.has(v.version);
-                        const busyKey = `${tool.name}@${v.version}`;
-                        return (
-                          <div className="version-row" key={v.version}>
-                            <div className="version-info">
-                              <span className="version-no">{v.version}</span>
-                              {isActive && <span className="pill active small">当前</span>}
-                              {v.requested_version && v.requested_version !== v.version && (
-                                <span className="pill muted small">{v.requested_version}</span>
-                              )}
-                            </div>
-                            <div className="version-actions">
-                              <button
-                                className={`btn xs ${!isActive ? "primary" : ""}`}
-                                disabled={busy === busyKey}
-                                onClick={() => handleActivate(tool.name, v.version, true)}
-                                title={isActive ? "此版本已是全局默认" : "设为全局默认版本"}
-                              >
-                                {isActive ? "全局" : "设为全局"}
-                              </button>
-                              <button
-                                className="btn xs danger"
-                                disabled={busy === busyKey && tool.versions.length === 1}
-                                onClick={() => handleUninstall(tool.name, v.version)}
-                              >
-                                卸载
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {/* 其他渠道已装版本：按版本去重展示；可接管的给一键接管，卸载按钮按管理器去重 */}
-                      {[
-                        ...(() => {
-                          const by = new Map<string, ToolSource[]>();
-                          ext.forEach((s) => {
-                            const k = s.version;
-                            const arr = by.get(k) || [];
-                            arr.push(s);
-                            by.set(k, arr);
-                          });
-                          return by;
-                        })().entries(),
-                      ].map(([version, list]) => {
-                        const adoptTargets = list.filter(adoptable);
-                        const busyKey = `${tool.name}@${version}`;
-                        const uniqUninstall = [
-                          ...new Map(
-                            list
-                              .filter((s) =>
-                                ["brew", "winget", "apt", "pacman"].includes(s.manager),
-                              )
-                              .map((s) => [s.manager, s]),
-                          ).values(),
-                        ];
-                        return (
-                          <div className="version-row" key={`${version}-ext`}>
-                            <div className="version-info">
-                              <span className="version-no">{version || "?"}</span>
-                              {[...new Set(list.map((s) => s.manager))].map((mgr) => (
-                                <span className="pill channel small" key={mgr}>
-                                  {mgr}
-                                </span>
-                              ))}
-                              <span className="pill muted small">其他渠道</span>
-                            </div>
-                            <div className="version-actions">
-                              {adoptTargets.map((s) => (
-                                <button
-                                  className="btn xs"
-                                  key={`adopt-${s.manager}`}
-                                  disabled={busy === busyKey}
-                                  onClick={() => handleAdopt(s)}
-                                  title={`把 ${s.manager} 的该版本接入 mise（自动选策略并校验）`}
-                                >
-                                  一键接管
-                                </button>
-                              ))}
-                              {uniqUninstall.map((s) => {
-                                const ukey = `${s.manager}::${tool.name}::${s.version}`;
-                                return (
-                                  <button
-                                    className="btn xs danger"
-                                    key={s.manager}
-                                    disabled={busy === busyKey}
-                                    onClick={() => uninstallExternal(tool.name, s)}
-                                    title={
-                                      confirmUninstall === ukey
-                                        ? "再次点击确认卸载"
-                                        : `通过 ${s.manager} 卸载`
-                                    }
-                                  >
-                                    {confirmUninstall === ukey
-                                      ? "确认卸载？"
-                                      : s.manager === "brew"
-                                        ? "卸载"
-                                        : `卸载(${s.manager})`}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {KNOWN_RUNTIMES.includes(tool.name) && (
-                      <button className="btn add" onClick={() => setInstallFor(tool)}>
-                        + 安装其他版本
+                      <span className="tool-count">{tool.versions.length} 个版本</span>
+                      <span className="chevron">{isOpen ? "▾" : "▸"}</span>
+                    </button>
+                    {quickSetGlobal && (
+                      <button
+                        className="btn xs primary"
+                        style={{ margin: "auto 8px" }}
+                        disabled={busy === `${tool.name}@${tool.versions[0].version}`}
+                        onClick={() => handleActivate(tool.name, tool.versions[0].version, true)}
+                        title="把唯一已装版本设为全局默认"
+                      >
+                        设为全局
+                      </button>
+                    )}
+                    {quickAdopt && (
+                      <button
+                        className="btn xs"
+                        style={{ margin: "auto 8px" }}
+                        disabled={busy === `${tool.name}@${adoptableExt[0].version}`}
+                        onClick={() => handleAdopt(adoptableExt[0])}
+                        title={`${adoptableExt[0].manager} 的 ${tool.name}@${adoptableExt[0].version} 接入 mise`}
+                      >
+                        一键接管
                       </button>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* 环境变量区块：与运行时同属"环境"配置域，共用一页 */}
-      <EnvPanel snap={envSnap} reload={loadEnvSnap} />
+                  {isOpen && (
+                    <div className="tool-card-body">
+                      <div className="version-list">
+                        {tool.versions.length === 0 && (
+                          <div className="empty small">
+                            {ext.length
+                              ? `由 ${[...new Set(ext.map((s) => s.manager))].join(", ")} 托管 · ${
+                                  KNOWN_RUNTIMES.includes(tool.name)
+                                    ? "尚未用 mise 安装"
+                                    : "无法用 mise 安装"
+                                }`
+                              : "尚未安装版本"}
+                          </div>
+                        )}
+                        {tool.versions.map((v) => {
+                          const isActive = activeSet.has(v.version);
+                          const busyKey = `${tool.name}@${v.version}`;
+                          return (
+                            <div className="version-row" key={v.version}>
+                              <div className="version-info">
+                                <span className="version-no">{v.version}</span>
+                                {isActive && <span className="pill active small">当前</span>}
+                                {v.requested_version && v.requested_version !== v.version && (
+                                  <span className="pill muted small">{v.requested_version}</span>
+                                )}
+                              </div>
+                              <div className="version-actions">
+                                <button
+                                  className={`btn xs ${!isActive ? "primary" : ""}`}
+                                  disabled={busy === busyKey}
+                                  onClick={() => handleActivate(tool.name, v.version, true)}
+                                  title={isActive ? "此版本已是全局默认" : "设为全局默认版本"}
+                                >
+                                  {isActive ? "全局" : "设为全局"}
+                                </button>
+                                <button
+                                  className="btn xs danger"
+                                  disabled={busy === busyKey && tool.versions.length === 1}
+                                  onClick={() => handleUninstall(tool.name, v.version)}
+                                >
+                                  卸载
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {/* 其他渠道已装版本：按版本去重展示；可接管的给一键接管，卸载按钮按管理器去重 */}
+                        {[
+                          ...(() => {
+                            const by = new Map<string, ToolSource[]>();
+                            ext.forEach((s) => {
+                              const k = s.version;
+                              const arr = by.get(k) || [];
+                              arr.push(s);
+                              by.set(k, arr);
+                            });
+                            return by;
+                          })().entries(),
+                        ].map(([version, list]) => {
+                          const adoptTargets = list.filter(adoptable);
+                          const busyKey = `${tool.name}@${version}`;
+                          const uniqUninstall = [
+                            ...new Map(
+                              list
+                                .filter((s) =>
+                                  ["brew", "winget", "apt", "pacman"].includes(s.manager),
+                                )
+                                .map((s) => [s.manager, s]),
+                            ).values(),
+                          ];
+                          return (
+                            <div className="version-row" key={`${version}-ext`}>
+                              <div className="version-info">
+                                <span className="version-no">{version || "?"}</span>
+                                {[...new Set(list.map((s) => s.manager))].map((mgr) => (
+                                  <span className="pill channel small" key={mgr}>
+                                    {mgr}
+                                  </span>
+                                ))}
+                                <span className="pill muted small">其他渠道</span>
+                              </div>
+                              <div className="version-actions">
+                                {adoptTargets.map((s) => (
+                                  <button
+                                    className="btn xs"
+                                    key={`adopt-${s.manager}`}
+                                    disabled={busy === busyKey}
+                                    onClick={() => handleAdopt(s)}
+                                    title={`把 ${s.manager} 的该版本接入 mise（自动选策略并校验）`}
+                                  >
+                                    一键接管
+                                  </button>
+                                ))}
+                                {uniqUninstall.map((s) => {
+                                  const ukey = `${s.manager}::${tool.name}::${s.version}`;
+                                  return (
+                                    <button
+                                      className="btn xs danger"
+                                      key={s.manager}
+                                      disabled={busy === busyKey}
+                                      onClick={() => uninstallExternal(tool.name, s)}
+                                      title={
+                                        confirmUninstall === ukey
+                                          ? "再次点击确认卸载"
+                                          : `通过 ${s.manager} 卸载`
+                                      }
+                                    >
+                                      {confirmUninstall === ukey
+                                        ? "确认卸载？"
+                                        : s.manager === "brew"
+                                          ? "卸载"
+                                          : `卸载(${s.manager})`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {KNOWN_RUNTIMES.includes(tool.name) && (
+                        <button className="btn add" onClick={() => setInstallFor(tool)}>
+                          + 安装其他版本
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: pane === "vars" ? undefined : "none" }}>
+        <EnvPanel snap={envSnap} reload={loadEnvSnap} />
+      </div>
+
+      <div style={{ display: pane === "preset" ? undefined : "none" }}>
+        {/* 整机搭建：选一套配方装到整机，不依赖任何项目 */}
+        <MachinePresetSection onNavigate={onNavigate} />
+        {/* 整机迁移：本机现状的打包与还原（含全局 env 与 brew 清单） */}
+        <SnapshotPanel onRestored={loadEnvSnap} />
+      </div>
 
       {installFor && (
         <InstallDialog

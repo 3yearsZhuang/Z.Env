@@ -12,7 +12,8 @@
   --bg-soft: var(--secondary);
   --bg-card: var(--card);
   --bg-hover: var(--muted);
-  --border: var(--border);
+  /* 注意：--border 由 index.css 按明/暗主题定义，这里不要再写 `--border: var(--border)`。
+     自引用会形成 CSS 自定义属性循环 → 变量计算值失效 → 全站 var(--border) 边框全部消失。 */
   --text: var(--foreground);
   --text-dim: var(--muted-foreground);
   --accent: var(--primary);
@@ -309,7 +310,7 @@ body.glass .input {
 
 /* ---------- 横幅 ---------- */
 .banner {
-  padding: 10px 14px;
+  padding: 10px 18px;
   border-radius: 8px;
   margin-bottom: 14px;
   font-size: 13px;
@@ -844,13 +845,16 @@ body.glass .input {
 }
 
 /* ---------- 环境预设 ---------- */
-.preset-section {
-  margin-bottom: 18px;
+/* 环境预设区块（与其他区块同为 .panel，标题用 .panel-title / 说明用 .setting-desc） */
+.preset-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.preset-hint {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-bottom: 10px;
+.preset-head .panel-title {
+  margin-bottom: 4px;
 }
 .preset-grid {
   display: grid;
@@ -862,7 +866,8 @@ body.glass .input {
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  background: var(--bg-card);
+  /* 卡片嵌在 .panel 里，用比 panel 略深的底才能看出边界（panel 用的是 --bg-card） */
+  background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
@@ -952,6 +957,70 @@ body.glass .input {
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
+}
+
+/* 行内跳转按钮：看起来像链接，实际切 tab 或页内滚动 */
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link-btn:hover {
+  opacity: 0.8;
+}
+
+/* 页面分工提示条：说明当前页负责哪一层，以及另一层去哪。
+   配色复用 .banner.info（见 JSX 的 className="banner info scope-note"），
+   这里只留与 banner 不同的两点——不可点击、且是整句长文本。
+   注意用普通行内流排版——若改成 flex，行内文本与 <strong>/按钮 会各自成为
+   flex 项，gap 会在每个片段之间插出空隙，中文标点会被拆开 */
+.scope-note {
+  cursor: default;
+  line-height: 1.7;
+}
+.scope-note strong {
+  color: inherit;
+  font-weight: 600;
+}
+/* 同色底上的行内链接：靠字重 + 下划线区分，否则与正文同色看不出可点 */
+.scope-note .link-btn {
+  color: inherit;
+  font-weight: 600;
+  text-decoration-thickness: 1.5px;
+}
+
+/* 「环境」页配置区切换（分段按钮） */
+.tab-bar {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--bg-soft);
+}
+.tab-btn {
+  border: none;
+  background: none;
+  padding: 6px 15px;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.tab-btn:hover {
+  color: var(--text);
+}
+.tab-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ---------- 彩蛋 ---------- */
@@ -1995,11 +2064,6 @@ button.soft-install {
 /* ---------- 其他支持的工具 ---------- */
 .other-tools {
   margin-top: 26px;
-}
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 12px;
 }
 .tool-card.other {
   flex-direction: column;

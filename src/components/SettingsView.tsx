@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   enable as enableAutostart,
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
-import { errorMessage, historyList, snapshotExport, snapshotRestore, HistoryEntry } from "../api";
+import { errorMessage, historyList, HistoryEntry } from "../api";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "整机环境管理中心";
@@ -77,62 +76,10 @@ export default function SettingsView({ onEaster }: Props) {
   // 操作历史
   const [history, setHistory] = useState<HistoryEntry[] | null>(null);
 
-  // 环境快照
-  const [snapBusy, setSnapBusy] = useState(false);
-  const [snapMsg, setSnapMsg] = useState("");
-
   function loadHistory() {
     historyList()
       .then(setHistory)
       .catch(() => {});
-  }
-
-  async function handleSnapshotExport() {
-    const p = await save({
-      title: "保存环境快照",
-      defaultPath: "zenv-snapshot.toml",
-      filters: [{ name: "TOML", extensions: ["toml"] }],
-    });
-    if (!p) return;
-    setSnapBusy(true);
-    setSnapMsg("正在导出…");
-    try {
-      const s = await snapshotExport(p);
-      setSnapMsg(
-        `已导出 ${s.path}\n mise 工具 ${s.tools} 个 · 全局 env ${s.envVars} 个 · brew 软件 ${s.brewPackages} 个`,
-      );
-      loadHistory();
-    } catch (e) {
-      setSnapMsg(`导出失败：${errorMessage(e)}`);
-    } finally {
-      setSnapBusy(false);
-    }
-  }
-
-  async function handleSnapshotRestore() {
-    const p = await open({
-      multiple: false,
-      title: "选择环境快照",
-      filters: [{ name: "TOML", extensions: ["toml"] }],
-    });
-    if (!p || typeof p !== "string") return;
-    if (
-      !window.confirm(
-        "重建将：写入快照中的全局 env、逐个安装 mise 工具（耗时可能较长）、生成 Brewfile（brew 软件需你执行一条 brew bundle 命令安装，不会自动装）。继续？",
-      )
-    ) {
-      return;
-    }
-    setSnapBusy(true);
-    setSnapMsg("重建中，安装工具可能需要几分钟…");
-    try {
-      setSnapMsg(await snapshotRestore(p));
-      loadHistory();
-    } catch (e) {
-      setSnapMsg(`重建失败：${errorMessage(e)}`);
-    } finally {
-      setSnapBusy(false);
-    }
   }
 
   useEffect(() => {
@@ -287,27 +234,6 @@ export default function SettingsView({ onEaster }: Props) {
             </button>
           )}
         </div>
-      </section>
-
-      <section className="panel">
-        <h2 className="panel-title">环境快照与迁移</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
-          <button className="btn primary" onClick={handleSnapshotExport} disabled={snapBusy}>
-            {snapBusy ? "处理中…" : "导出快照"}
-          </button>
-          <button className="btn" onClick={handleSnapshotRestore} disabled={snapBusy}>
-            从快照重建
-          </button>
-        </div>
-        {snapMsg && (
-          <p className="setting-desc" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>
-            {snapMsg}
-          </p>
-        )}
-        <p className="setting-desc" style={{ marginTop: 8 }}>
-          导出 mise 已激活工具、全局 [env] 与 brew 软件清单为单个 TOML；新机上重建时 env
-          直接写入、mise 工具自动安装，brew 软件生成 Brewfile 后执行一条 brew bundle 即可。
-        </p>
       </section>
 
       <section className="panel">
