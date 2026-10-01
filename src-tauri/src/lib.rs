@@ -385,14 +385,8 @@ fn preset_export(
     description: String,
     toml: String,
 ) -> Result<String, String> {
-    let r = preset::export(
-        &path,
-        &name,
-        &description,
-        &toml,
-        env!("CARGO_PKG_VERSION"),
-    )
-    .map(|n| format!("已导出 {n} 个工具到 {path}"));
+    let r = preset::export(&path, &name, &description, &toml, env!("CARGO_PKG_VERSION"))
+        .map(|n| format!("已导出 {n} 个工具到 {path}"));
     traced("preset-export", format!("环境预设「{name}」→ {path}"), &r);
     r.map_err(String::from)
 }

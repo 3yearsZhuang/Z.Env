@@ -164,7 +164,8 @@ mod tests {
     use super::*;
 
     /// 混合裸键与含冒号引号键的工具集，覆盖导出与解析两侧
-    const MIXED: &str = "[tools]\nnode = \"20\"\n\"npm:prettier\" = \"3\"\ntypescript = \"latest\"\n";
+    const MIXED: &str =
+        "[tools]\nnode = \"20\"\n\"npm:prettier\" = \"3\"\ntypescript = \"latest\"\n";
 
     #[test]
     fn parse_tools_accepts_bare_and_quoted_keys() {
@@ -289,11 +290,7 @@ mod tests {
     fn import_rejects_newer_format_version() {
         let tmp = tempfile::tempdir().unwrap();
         let file = tmp.path().join("future.toml");
-        std::fs::write(
-            &file,
-            "# Z.Env 环境预设 v2\n\n[tools]\nnode = \"20\"\n",
-        )
-        .unwrap();
+        std::fs::write(&file, "# Z.Env 环境预设 v2\n\n[tools]\nnode = \"20\"\n").unwrap();
         let err = import(file.to_str().unwrap()).unwrap_err().to_string();
         assert!(err.contains("v2"), "错误信息应点明版本：{err}");
     }

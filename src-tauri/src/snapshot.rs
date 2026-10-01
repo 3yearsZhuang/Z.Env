@@ -192,7 +192,11 @@ pub(crate) fn parse_key(raw: &str) -> Option<String> {
     if raw.starts_with('"') {
         return parse_basic_value(raw);
     }
-    if !raw.is_empty() && raw.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+    if !raw.is_empty()
+        && raw
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
         return Some(raw.to_string());
     }
     None
