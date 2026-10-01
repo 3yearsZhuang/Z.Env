@@ -856,6 +856,44 @@ body.glass .input {
 .preset-head .panel-title {
   margin-bottom: 4px;
 }
+/* 标题右侧的按钮组（新建 / 导入） */
+.preset-head-acts {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+/* 预设编辑器：工具行（工具名 + 版本 + 移除） */
+.preset-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.preset-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.preset-edit-row .input:first-child {
+  flex: 1.4;
+}
+.preset-edit-row .input:nth-child(2) {
+  flex: 1;
+}
+.preset-edit-row .preset-act {
+  flex-shrink: 0;
+}
+/* 表单里的字段标签 */
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 12px 0 6px;
+}
+.field-label:first-child {
+  margin-top: 0;
+}
 .preset-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

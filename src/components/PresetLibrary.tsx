@@ -1,11 +1,13 @@
-// 环境预设库区块：内置技术栈卡片 + 我的预设卡片 + 导入按钮。
+// 环境预设库区块：内置技术栈卡片 + 我的预设卡片 + 新建 / 导入 / 编辑 / 导出。
 // 「项目配置」页用它把预设载入项目，「环境」页用它把预设装到整机；
 // 两页共用同一个 localStorage 预设库（经 useUserPresets）。
+import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { errorMessage, presetImport, type PresetFile } from "../api";
+import { errorMessage, presetImport, presetParseTools, type PresetFile } from "../api";
 import { PRESETS } from "../data/presets";
-import { presetToToml } from "../lib/preset";
+import { hasOtherSections, presetToToml, replaceToolsSection, toolsOf } from "../lib/preset";
 import type { UserPresetsApi } from "../lib/useUserPresets";
+import PresetEditorDialog, { type PresetDraft } from "./PresetEditorDialog";
 
 /** 卡片被点击后交给页面的载荷：toml 为 mise.toml 文本，工具清单由页面按需解析 */
 export interface PresetChoice {
@@ -36,7 +38,10 @@ export default function PresetLibrary({
   onImported,
   onError,
 }: Props) {
-  const { userPresets, remove, remember } = presets;
+  const { userPresets, persist, remove, remember } = presets;
+
+  // 编辑器草稿：null = 关闭；isNew 区分新建与修改
+  const [draft, setDraft] = useState<PresetDraft | null>(null);
 
   async function handleImport() {
     const picked = await open({
@@ -54,6 +59,68 @@ export default function PresetLibrary({
     }
   }
 
+  /** 新建：从一份空白草稿开始 */
+  function openCreate() {
+    setDraft({ isNew: true, name: "", description: "", tools: [{ name: "", version: "" }] });
+  }
+
+  /** 以某份预设为模板另存（内置卡片点「编辑」走这里） */
+  function openCopyAs(
+    name: string,
+    description: string,
+    tools: { name: string; version: string }[],
+  ) {
+    setDraft({
+      isNew: true,
+      name: `${name} 副本`,
+      description,
+      tools: tools.length > 0 ? tools : [{ name: "", version: "" }],
+    });
+  }
+
+  /** 修改已有预设：先把它的 [tools] 解析出来填进表单 */
+  async function openEdit(name: string, content: string, description: string) {
+    try {
+      const tools = await presetParseTools(content);
+      setDraft({
+        isNew: false,
+        name,
+        description,
+        tools: tools.length > 0 ? tools : [{ name: "", version: "" }],
+        originalContent: content,
+        originalName: name,
+      });
+    } catch (e) {
+      onError(errorMessage(e));
+    }
+  }
+
+  /**
+   * 落库。三种情况一次写入，避免 save/remove 连调时各自基于同一份过期快照互相覆盖：
+   * 新建 / 同名覆盖 / 改名（删掉旧名条目）。
+   */
+  function handleEditorSave(values: {
+    name: string;
+    description: string;
+    tools: { name: string; version: string }[];
+  }) {
+    if (!draft) return;
+    const { name, description, tools } = values;
+    const clash = userPresets.find((p) => p.name === name && p.name !== draft.originalName);
+    if (clash && !window.confirm(`已存在同名预设「${name}」，覆盖它吗？`)) return;
+
+    // 修改时只替换 [tools] 段，保住 [env] 之类的既有配置；新建则直接生成
+    const content = draft.originalContent
+      ? replaceToolsSection(draft.originalContent, toolsOf(tools))
+      : presetToToml(toolsOf(tools));
+
+    persist([
+      ...userPresets.filter((p) => p.name !== name && p.name !== draft.originalName),
+      { name, content, ...(description ? { description } : {}) },
+    ]);
+    setDraft(null);
+  }
+
   return (
     <>
       <section className="panel">
@@ -62,9 +129,14 @@ export default function PresetLibrary({
             <h2 className="panel-title">环境预设</h2>
             <p className="setting-desc">选择技术栈一键生成全套环境，也可导入他人分享的预设文件</p>
           </div>
-          <button className="btn" onClick={handleImport}>
-            导入预设
-          </button>
+          <div className="preset-head-acts">
+            <button className="btn" onClick={openCreate}>
+              新建预设
+            </button>
+            <button className="btn" onClick={handleImport}>
+              导入预设
+            </button>
+          </div>
         </div>
         <div className="preset-grid">
           {PRESETS.map((p) => {
@@ -83,6 +155,19 @@ export default function PresetLibrary({
                   </span>
                 </button>
                 <div className="preset-acts">
+                  <button
+                    className="preset-act"
+                    title="以这份预设为模板新建一份"
+                    onClick={() =>
+                      openCopyAs(
+                        p.name,
+                        p.desc,
+                        Object.entries(p.tools).map(([name, version]) => ({ name, version })),
+                      )
+                    }
+                  >
+                    ✎
+                  </button>
                   <button
                     className="preset-act"
                     title="导出为可分享的预设文件"
@@ -116,6 +201,13 @@ export default function PresetLibrary({
                   <div className="preset-acts">
                     <button
                       className="preset-act"
+                      title="修改这份预设"
+                      onClick={() => void openEdit(up.name, up.content, up.description ?? "")}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="preset-act"
                       title="导出为可分享的预设文件"
                       onClick={() => onExport(choice)}
                     >
@@ -135,6 +227,13 @@ export default function PresetLibrary({
           </div>
         </section>
       )}
+
+      <PresetEditorDialog
+        draft={draft}
+        hasExtraSections={draft?.originalContent ? hasOtherSections(draft.originalContent) : false}
+        onClose={() => setDraft(null)}
+        onSave={handleEditorSave}
+      />
     </>
   );
 }
