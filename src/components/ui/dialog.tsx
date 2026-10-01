@@ -25,7 +25,8 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none",
-          "max-h-[88vh] w-[420px] max-w-[92vw] overflow-y-auto rounded-xl",
+          // 头尾固定、只滚内容区：整窗 overflow-y-auto 会把「取消/保存」一起滚出视野
+          "flex max-h-[88vh] w-[420px] max-w-[92vw] flex-col overflow-hidden rounded-xl",
           "border border-border bg-popover text-popover-foreground shadow-2xl",
           className,
         )}

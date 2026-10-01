@@ -645,10 +645,14 @@ body.glass .input {
 }
 .dialog-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
+  /* 标题与描述要竖排：横排（原 space-between）会把描述挤到标题右边、并压住关闭按钮 */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  /* 右侧留出关闭按钮的位置（按钮是 absolute right-3 top-3） */
+  padding: 14px 48px 14px 16px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .dialog-head h3 {
   font-size: 15px;
@@ -668,6 +672,9 @@ body.glass .input {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* 内容超出时只滚这里，头尾保持可见（min-height:0 是 flex 子项能收缩滚动的前提） */
+  overflow-y: auto;
+  min-height: 0;
 }
 .dialog-foot {
   display: flex;
@@ -675,6 +682,7 @@ body.glass .input {
   gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .dialog-tip {
   font-size: 12px;
