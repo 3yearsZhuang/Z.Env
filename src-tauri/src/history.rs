@@ -19,7 +19,8 @@ fn path() -> Option<std::path::PathBuf> {
         .map(|h| h.join(".zenv/history.jsonl"))
 }
 
-fn now_secs() -> u64 {
+/// 当前 unix 秒（历史留痕与预设导出的时间戳共用）。
+pub(crate) fn now_secs() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())

@@ -9,6 +9,7 @@ mod history;
 mod managed;
 mod mise;
 mod net;
+mod preset;
 mod services;
 mod snapshot;
 mod sources;
@@ -370,6 +371,41 @@ fn snapshot_restore(path: String) -> Result<String, String> {
     r
 }
 
+/// 环境预设：导出为可分享的预设文件（Z.Env 预设 TOML v1）
+#[tauri::command(async)]
+fn preset_export(
+    path: String,
+    name: String,
+    description: String,
+    toml: String,
+) -> Result<String, String> {
+    let r = preset::export(
+        &path,
+        &name,
+        &description,
+        &toml,
+        env!("CARGO_PKG_VERSION"),
+    )
+    .map(|n| format!("已导出 {n} 个工具到 {path}"));
+    traced("preset-export", format!("环境预设「{name}」→ {path}"), &r);
+    r.map_err(String::from)
+}
+
+/// 环境预设：导入预设文件（Z.Env 预设 TOML v1，兼容纯 mise.toml）
+#[tauri::command(async)]
+fn preset_import(path: String) -> Result<preset::PresetFile, String> {
+    let r = preset::import(&path);
+    // 返回值不是 String，用不了 traced，按同样方式手写留痕
+    match &r {
+        Ok(p) => history::record(
+            "preset-import",
+            format!("环境预设「{}」（{} 个工具）← {path}", p.name, p.tools.len()),
+        ),
+        Err(e) => history::record("preset-import", format!("{path} 失败：{e}")),
+    }
+    r.map_err(String::from)
+}
+
 /// 项目发现：扫描常用目录，识别 .git / 技术栈指纹 / mise.toml，对照已装工具给出缺失清单
 #[tauri::command(async)]
 fn discover_projects() -> Vec<discover::DiscoveredProject> {
@@ -526,6 +562,8 @@ pub fn run() {
             history_list,
             snapshot_export,
             snapshot_restore,
+            preset_export,
+            preset_import,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

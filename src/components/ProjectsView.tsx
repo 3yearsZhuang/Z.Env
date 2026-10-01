@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   readProjectConfig,
   writeProjectConfig,
@@ -8,10 +8,24 @@ import {
   stableBinPath,
   discoverProjects,
   errorMessage,
+  listTools,
+  installVersionStreaming,
+  onInstallProgress,
+  presetExport,
+  presetImport,
   ToolSource,
   type DiscoveredProject,
+  type PresetFile,
+  type PresetTool,
 } from "../api";
-import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import {
+  parseStoredPresets,
+  presetFileName,
+  presetToToml,
+  toolsOf,
+  type UserPreset,
+} from "../lib/preset";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 // 编辑器整体懒加载：CodeMirror 及其 TOML 语言包只在首次进入项目配置页时拉取
 const TomlEditor = lazy(() => import("./TomlEditor"));
@@ -61,13 +75,6 @@ const PRESETS: {
   },
 ];
 
-function presetToToml(tools: Record<string, string>): string {
-  const rows = Object.entries(tools)
-    .map(([k, v]) => `${k} = "${v}"`)
-    .join("\n");
-  return `# 由 Mise GUI 环境预设生成\n[tools]\n${rows}\n`;
-}
-
 /** 监听 <html>.dark 类变化，让编辑器主题跟随应用明暗切换 */
 function useDarkMode(): boolean {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -93,8 +100,16 @@ export default function ProjectsView() {
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [userPresets, setUserPresets] = useState<{ name: string; content: string }[]>([]);
+  const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
   const dark = useDarkMode();
+
+  // 预设导入：预览 + 选择安装去向（整机 / 项目）
+  const [imported, setImported] = useState<PresetFile | null>(null);
+  const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
+  const [installTarget, setInstallTarget] = useState<"global" | "project">("project");
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const [installBusy, setInstallBusy] = useState(false);
+  const logRef = useRef<HTMLPreElement | null>(null);
 
   // 整机环境绑定（策略 C）：把 brew/scoop 安装的运行时以 PATH 方式绑定进项目 mise.toml
   const [bindOpen, setBindOpen] = useState(false);
@@ -137,17 +152,12 @@ export default function ProjectsView() {
   }
 
   const PRESET_STORAGE_KEY = "mise-gui:user-presets";
-  // 启动时读取本地保存的用户预设
+  // 启动时读取本地保存的用户预设（旧数据与损坏项由 parseStoredPresets 兜底）
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PRESET_STORAGE_KEY);
-      if (raw) setUserPresets(JSON.parse(raw));
-    } catch {
-      /* 忽略损坏数据 */
-    }
+    setUserPresets(parseStoredPresets(localStorage.getItem(PRESET_STORAGE_KEY)));
   }, []);
 
-  function persistPresets(list: { name: string; content: string }[]) {
+  function persistPresets(list: UserPreset[]) {
     setUserPresets(list);
     try {
       localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(list));
@@ -155,6 +165,11 @@ export default function ProjectsView() {
       /* 存储满等忽略 */
     }
   }
+
+  // 安装日志自动滚到底部
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [installLog]);
 
   /** 把当前配置保存为用户预设 */
   function saveUserPreset() {
@@ -164,6 +179,157 @@ export default function ProjectsView() {
     const list = [...userPresets.filter((p) => p.name !== trimmed), { name: trimmed, content }];
     persistPresets(list);
     setNotice(`已保存用户预设「${trimmed}」`);
+  }
+
+  /** 导出预设为可分享文件（三个入口共用） */
+  async function exportPreset(name: string, description: string, toml: string) {
+    const target = await save({
+      title: "导出环境预设",
+      defaultPath: presetFileName(name),
+      filters: [{ name: "Z.Env 环境预设", extensions: ["toml"] }],
+    });
+    if (!target) return;
+    setError(null);
+    setNotice(null);
+    try {
+      setNotice(await presetExport(target, name, description, toml));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
+  /** 导出编辑器里的当前配置（名字走与保存用户预设一致的 prompt 交互） */
+  function exportCurrentConfig() {
+    const name = window.prompt("为导出的预设命名：", "我的环境");
+    if (!name || !name.trim()) return;
+    void exportPreset(name.trim(), "", content);
+  }
+
+  /** 选择预设文件并打开导入预览 */
+  async function handleImportPreset() {
+    const picked = await open({
+      multiple: false,
+      title: "选择环境预设文件",
+      filters: [{ name: "Z.Env 环境预设", extensions: ["toml"] }],
+    });
+    if (!picked || typeof picked !== "string") return;
+    setError(null);
+    setNotice(null);
+    try {
+      const file = await presetImport(picked);
+      // 已装状态仅供预览参考，取不到就不标注
+      try {
+        const tools = await listTools();
+        setInstalledNames(new Set(tools.map((t) => t.name)));
+      } catch {
+        setInstalledNames(new Set());
+      }
+      setInstallLog([]);
+      setInstallTarget("project");
+      setImported(file);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
+  /** 把导入的预设写入本地预设库；同名时先确认覆盖，用户取消则返回 false */
+  function rememberImported(file: PresetFile): boolean {
+    if (
+      userPresets.some((p) => p.name === file.name) &&
+      !window.confirm(`已存在同名预设「${file.name}」，覆盖它吗？`)
+    ) {
+      return false;
+    }
+    const list = [
+      ...userPresets.filter((p) => p.name !== file.name),
+      {
+        name: file.name,
+        content: presetToToml(toolsOf(file.tools)),
+        ...(file.description ? { description: file.description } : {}),
+      },
+    ];
+    persistPresets(list);
+    return true;
+  }
+
+  /** 载入导入的预设到编辑器 */
+  function loadImported() {
+    if (!imported || !rememberImported(imported)) return;
+    setContent(presetToToml(toolsOf(imported.tools)));
+    setLoaded(true);
+    setError(null);
+    setNotice(`已导入预设「${imported.name}」并载入编辑器，可编辑后保存或一键安装`);
+    setImported(null);
+  }
+
+  /** 整机安装：逐个流式安装，单个失败不中断（返回成功数） */
+  async function installToMachine(tools: PresetTool[]): Promise<number> {
+    let unlisten: (() => void) | undefined;
+    try {
+      unlisten = await onInstallProgress((p) => {
+        setInstallLog((prev) => [...prev, `[${p.tool}] ${p.line}`]);
+      });
+    } catch {
+      /* 订阅失败不阻断安装，只是没有实时输出 */
+    }
+    let ok = 0;
+    try {
+      for (const t of tools) {
+        setInstallLog((prev) => [...prev, `▶ 正在安装 ${t.name}@${t.version} …`]);
+        try {
+          await installVersionStreaming(t.name, t.version);
+          ok += 1;
+          setInstallLog((prev) => [...prev, `✓ ${t.name}@${t.version} 完成`]);
+        } catch (e) {
+          setInstallLog((prev) => [...prev, `✗ ${t.name}@${t.version} 失败：${errorMessage(e)}`]);
+        }
+      }
+    } finally {
+      unlisten?.();
+    }
+    return ok;
+  }
+
+  /** 项目安装：写入 mise.toml 后执行 mise install（复用现成命令） */
+  async function installToProject(file: PresetFile, dir: string): Promise<string> {
+    const toml = presetToToml(toolsOf(file.tools));
+    const msg = await installAllProject(dir, toml);
+    setContent(toml);
+    setLoaded(true);
+    return msg;
+  }
+
+  /** 一键安装导入的预设 */
+  async function installImported() {
+    if (!imported) return;
+    const dir = path.trim();
+    if (installTarget === "project" && !dir) {
+      setError("请先选择要安装到的项目目录");
+      return;
+    }
+    if (!rememberImported(imported)) return;
+
+    setInstallBusy(true);
+    setError(null);
+    setNotice(null);
+    setInstallLog([]);
+    try {
+      if (installTarget === "global") {
+        const total = imported.tools.length;
+        const ok = await installToMachine(imported.tools);
+        setNotice(`整机安装完成：成功 ${ok}/${total}`);
+        if (ok < total) {
+          setInstallLog((prev) => [...prev, `⚠ ${total - ok} 个工具未装成功，详见上方日志`]);
+        }
+      } else {
+        setNotice(await installToProject(imported, dir));
+      }
+      rescan();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setInstallBusy(false);
+    }
   }
 
   function loadUserPreset(name: string) {
@@ -293,15 +459,33 @@ export default function ProjectsView() {
       )}
 
       <div className="preset-section">
-        <h2 className="section-title">环境预设</h2>
-        <p className="preset-hint">选择技术栈，一键生成并安装全套运行环境</p>
+        <div className="preset-head">
+          <div>
+            <h2 className="section-title">环境预设</h2>
+            <p className="preset-hint">选择技术栈一键生成全套环境，也可导入他人分享的预设文件</p>
+          </div>
+          <button className="btn" onClick={handleImportPreset}>
+            导入预设
+          </button>
+        </div>
         <div className="preset-grid">
           {PRESETS.map((p) => (
-            <button key={p.id} className="preset-card" onClick={() => applyPreset(p.tools, p.name)}>
-              <span className="preset-name">{p.name}</span>
-              <span className="preset-desc">{p.desc}</span>
-              <span className="preset-tools">{Object.keys(p.tools).slice(0, 4).join(" · ")}</span>
-            </button>
+            <div className="preset-card-wrap" key={p.id}>
+              <button className="preset-card" onClick={() => applyPreset(p.tools, p.name)}>
+                <span className="preset-name">{p.name}</span>
+                <span className="preset-desc">{p.desc}</span>
+                <span className="preset-tools">{Object.keys(p.tools).slice(0, 4).join(" · ")}</span>
+              </button>
+              <div className="preset-acts">
+                <button
+                  className="preset-act"
+                  title="导出为可分享的预设文件"
+                  onClick={() => void exportPreset(p.name, p.desc, presetToToml(p.tools))}
+                >
+                  ⤓
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -314,15 +498,26 @@ export default function ProjectsView() {
               <div className="preset-card-wrap" key={up.name}>
                 <button className="preset-card" onClick={() => loadUserPreset(up.name)}>
                   <span className="preset-name">{up.name}</span>
-                  <span className="preset-tools">点击载入 · 可再一键安装</span>
+                  <span className="preset-tools">
+                    {up.description ?? "点击载入 · 可再一键安装"}
+                  </span>
                 </button>
-                <button
-                  className="preset-del"
-                  title="删除该预设"
-                  onClick={() => deleteUserPreset(up.name)}
-                >
-                  ✕
-                </button>
+                <div className="preset-acts">
+                  <button
+                    className="preset-act"
+                    title="导出为可分享的预设文件"
+                    onClick={() => void exportPreset(up.name, up.description ?? "", up.content)}
+                  >
+                    ⤓
+                  </button>
+                  <button
+                    className="preset-act danger"
+                    title="删除该预设"
+                    onClick={() => deleteUserPreset(up.name)}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -425,6 +620,9 @@ export default function ProjectsView() {
               >
                 保存为用户预设
               </button>
+              <button className="btn" onClick={exportCurrentConfig} title="导出为可分享的预设文件">
+                导出为预设
+              </button>
               <button className="btn" onClick={handleSave} disabled={saving}>
                 {saving ? "保存中…" : "保存配置"}
               </button>
@@ -477,6 +675,100 @@ export default function ProjectsView() {
           <div className="dialog-foot">
             <button className="btn-ghost" onClick={() => setBindOpen(false)}>
               关闭
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={imported !== null}
+        onOpenChange={(o) => {
+          if (!o && !installBusy) setImported(null);
+        }}
+      >
+        <DialogContent className="w-[520px] p-0">
+          <div className="dialog-head">
+            <DialogTitle>导入环境预设</DialogTitle>
+            <DialogDescription className="setting-desc">
+              {imported ? imported.path : ""}
+            </DialogDescription>
+          </div>
+          <div className="dialog-body">
+            {imported && (
+              <>
+                <div className="dialog-tip">
+                  <strong>{imported.name}</strong>
+                  {imported.description ? ` · ${imported.description}` : ""}
+                  <br />共 {imported.tools.length} 个工具；选择安装去向后点「一键安装」。
+                  已装状态按本机 mise 现状标注，仅作参考。
+                </div>
+                <div className="adopt-list">
+                  {imported.tools.map((t) => (
+                    <div className="adopt-row" key={t.name}>
+                      <span className="adopt-info">
+                        {t.name} @ {t.version}
+                      </span>
+                      {installedNames.has(t.name) ? (
+                        <span className="pill active">已装</span>
+                      ) : (
+                        <span className="pill muted">未装</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="preset-target">
+                  <label className="preset-radio">
+                    <input
+                      type="radio"
+                      name="preset-target"
+                      checked={installTarget === "global"}
+                      onChange={() => setInstallTarget("global")}
+                    />
+                    安装到整机（不依赖项目，逐个装进 mise）
+                  </label>
+                  <label className="preset-radio">
+                    <input
+                      type="radio"
+                      name="preset-target"
+                      checked={installTarget === "project"}
+                      onChange={() => setInstallTarget("project")}
+                    />
+                    安装到项目
+                  </label>
+                  {installTarget === "project" && (
+                    <div className="form-row" style={{ marginTop: 8 }}>
+                      <input
+                        className="input grow"
+                        placeholder="项目目录路径，将写入该目录的 mise.toml"
+                        value={path}
+                        onChange={(e) => setPath(e.target.value)}
+                      />
+                      <button className="btn" onClick={handlePickDir}>
+                        📁 选择文件夹
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {installLog.length > 0 && (
+                  <pre className="terminal" ref={logRef}>
+                    {installLog.join("\n")}
+                  </pre>
+                )}
+              </>
+            )}
+          </div>
+          <div className="dialog-foot">
+            <button className="btn-ghost" onClick={() => setImported(null)} disabled={installBusy}>
+              关闭
+            </button>
+            <span style={{ flex: 1 }} />
+            <button className="btn" onClick={loadImported} disabled={installBusy}>
+              载入到编辑器
+            </button>
+            <button className="btn primary" onClick={installImported} disabled={installBusy}>
+              {installBusy ? "安装中…" : "一键安装"}
             </button>
           </div>
         </DialogContent>

@@ -457,6 +457,37 @@ export function snapshotRestore(path: string): Promise<string> {
   return invoke("snapshot_restore", { path });
 }
 
+// ---------- 环境预设（可分享的编程环境配置） ----------
+
+/** 预设中的一个工具与版本请求（版本可为 20 / latest / temurin-21 等 mise 请求式） */
+export interface PresetTool {
+  name: string;
+  version: string;
+}
+
+/** 导入的环境预设文件内容 */
+export interface PresetFile {
+  name: string;
+  description: string | null;
+  tools: PresetTool[];
+  path: string;
+}
+
+/** 导出环境预设为可分享文件（Z.Env 预设 TOML v1），返回摘要 */
+export function presetExport(
+  path: string,
+  name: string,
+  description: string,
+  toml: string,
+): Promise<string> {
+  return invoke("preset_export", { path, name, description, toml });
+}
+
+/** 导入环境预设文件（Z.Env 预设 TOML v1，兼容纯 mise.toml） */
+export function presetImport(path: string): Promise<PresetFile> {
+  return invoke("preset_import", { path });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
