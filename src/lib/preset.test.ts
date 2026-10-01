@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyPresetEdit,
   hasOtherSections,
   parseStoredPresets,
   presetFileName,
+  presetNameClash,
   presetToToml,
   replaceToolsSection,
   tomlKey,
   tomlString,
   toolsOf,
+  type UserPreset,
 } from "./preset";
 
 describe("tomlKey", () => {
@@ -145,5 +148,116 @@ describe("hasOtherSections", () => {
 
   it("注释里的方括号不算表", () => {
     expect(hasOtherSections('# 见 [文档]\n[tools]\nnode = "20"\n')).toBe(false);
+  });
+});
+
+describe("presetNameClash", () => {
+  const list: UserPreset[] = [
+    { name: "A", content: "[tools]\n" },
+    { name: "B", content: "[tools]\n" },
+  ];
+
+  it("撞上别人的名字算冲突", () => {
+    expect(presetNameClash(list, "B", "A")?.name).toBe("B");
+    expect(presetNameClash(list, "B")).toBeDefined();
+  });
+
+  it("编辑自身、名字没变时不算冲突", () => {
+    expect(presetNameClash(list, "A", "A")).toBeUndefined();
+  });
+
+  it("新名字没人用则无冲突", () => {
+    expect(presetNameClash(list, "C", "A")).toBeUndefined();
+  });
+});
+
+describe("applyPresetEdit", () => {
+  const list: UserPreset[] = [
+    { name: "A", content: '[tools]\nnode = "20"\n', description: "旧描述" },
+    { name: "B", content: '[tools]\ngo = "1.27"\n' },
+  ];
+  const tool = (name: string, version: string) => ({ name, version });
+
+  it("新建：追加一条，不动既有的", () => {
+    const next = applyPresetEdit(list, {
+      name: "C",
+      description: "新",
+      tools: [tool("rust", "stable")],
+    });
+    expect(next).toHaveLength(3);
+    expect(next.map((p) => p.name)).toEqual(["A", "B", "C"]);
+    expect(next[2].content).toBe('# 由 Z.Env 环境预设生成\n[tools]\nrust = "stable"\n');
+    expect(next[2].description).toBe("新");
+  });
+
+  it("新建重名：覆盖，不产生两份", () => {
+    const next = applyPresetEdit(list, { name: "B", tools: [tool("go", "1.28")] });
+    expect(next).toHaveLength(2);
+    expect(next.filter((p) => p.name === "B")).toHaveLength(1);
+    expect(next.find((p) => p.name === "B")?.content).toBe(
+      '# 由 Z.Env 环境预设生成\n[tools]\ngo = "1.28"\n',
+    );
+  });
+
+  it("修改同名：只换内容，条目数与顺序不变", () => {
+    const next = applyPresetEdit(list, {
+      name: "A",
+      description: "改后",
+      tools: [tool("node", "22")],
+      original: { name: "A", content: '[tools]\nnode = "20"\n' },
+    });
+    expect(next.map((p) => p.name)).toEqual(["A", "B"]);
+    expect(next[0].content).toBe('[tools]\nnode = "22"\n');
+    expect(next[0].description).toBe("改后");
+  });
+
+  it("改名：旧名条目消失、新名出现，总数不变且不换位置", () => {
+    const next = applyPresetEdit(list, {
+      name: "A2",
+      tools: [tool("node", "20")],
+      original: { name: "A", content: '[tools]\nnode = "20"\n' },
+    });
+    expect(next).toHaveLength(2);
+    expect(next.map((p) => p.name)).toEqual(["A2", "B"]);
+  });
+
+  it("修改时保住 [env] 等 [tools] 以外的配置", () => {
+    const withEnv =
+      '# 我的配置\n[tools]\nnode = "20"\n\n[env]\nEDITOR = "vim"\n_.path = ["/opt/bin"]\n';
+    const next = applyPresetEdit([{ name: "A", content: withEnv }], {
+      name: "A",
+      tools: [tool("node", "22")],
+      original: { name: "A", content: withEnv },
+    });
+    expect(next[0].content).toContain('node = "22"');
+    expect(next[0].content).toContain('EDITOR = "vim"');
+    expect(next[0].content).toContain('_.path = ["/opt/bin"]');
+    expect(next[0].content).toContain("# 我的配置");
+  });
+
+  it("描述被清空时不残留旧描述", () => {
+    const next = applyPresetEdit(list, {
+      name: "A",
+      description: "   ",
+      tools: [tool("node", "20")],
+      original: { name: "A", content: '[tools]\nnode = "20"\n' },
+    });
+    expect(next[0].description).toBeUndefined();
+    expect("description" in next[0]).toBe(false);
+  });
+
+  it("名称与描述两端空白会被裁掉", () => {
+    const next = applyPresetEdit([], {
+      name: "  X  ",
+      description: " 说明 ",
+      tools: [tool("node", "20")],
+    });
+    expect(next[0].name).toBe("X");
+    expect(next[0].description).toBe("说明");
+  });
+
+  it("删掉全部工具后只剩空 [tools] 段，不留多余空行", () => {
+    const next = applyPresetEdit([], { name: "empty", tools: [] });
+    expect(next[0].content).toBe("# 由 Z.Env 环境预设生成\n[tools]\n");
   });
 });

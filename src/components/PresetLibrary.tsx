@@ -5,7 +5,7 @@ import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { errorMessage, presetImport, presetParseTools, type PresetFile } from "../api";
 import { PRESETS } from "../data/presets";
-import { hasOtherSections, presetToToml, replaceToolsSection, toolsOf } from "../lib/preset";
+import { applyPresetEdit, hasOtherSections, presetNameClash, presetToToml } from "../lib/preset";
 import type { UserPresetsApi } from "../lib/useUserPresets";
 import PresetEditorDialog, { type PresetDraft } from "./PresetEditorDialog";
 
@@ -96,8 +96,8 @@ export default function PresetLibrary({
   }
 
   /**
-   * 落库。三种情况一次写入，避免 save/remove 连调时各自基于同一份过期快照互相覆盖：
-   * 新建 / 同名覆盖 / 改名（删掉旧名条目）。
+   * 落库。新建 / 同名覆盖 / 改名三种情况都在 applyPresetEdit 里一次算完，
+   * 避免 save 与 remove 连调时各自基于同一份过期快照互相覆盖。
    */
   function handleEditorSave(values: {
     name: string;
@@ -105,19 +105,18 @@ export default function PresetLibrary({
     tools: { name: string; version: string }[];
   }) {
     if (!draft) return;
-    const { name, description, tools } = values;
-    const clash = userPresets.find((p) => p.name === name && p.name !== draft.originalName);
-    if (clash && !window.confirm(`已存在同名预设「${name}」，覆盖它吗？`)) return;
-
-    // 修改时只替换 [tools] 段，保住 [env] 之类的既有配置；新建则直接生成
-    const content = draft.originalContent
-      ? replaceToolsSection(draft.originalContent, toolsOf(tools))
-      : presetToToml(toolsOf(tools));
-
-    persist([
-      ...userPresets.filter((p) => p.name !== name && p.name !== draft.originalName),
-      { name, content, ...(description ? { description } : {}) },
-    ]);
+    const clash = presetNameClash(userPresets, values.name, draft.originalName);
+    if (clash && !window.confirm(`已存在同名预设「${values.name}」，覆盖它吗？`)) return;
+    persist(
+      applyPresetEdit(userPresets, {
+        name: values.name,
+        description: values.description,
+        tools: values.tools,
+        ...(draft.originalContent && draft.originalName
+          ? { original: { name: draft.originalName, content: draft.originalContent } }
+          : {}),
+      }),
+    );
     setDraft(null);
   }
 
