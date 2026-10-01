@@ -902,10 +902,15 @@ body.glass .input {
 .preset-card-wrap .preset-card {
   width: 100%;
 }
-.preset-del {
+/* 卡片右上角动作组（导出 / 删除） */
+.preset-acts {
   position: absolute;
   top: -6px;
   right: -6px;
+  display: flex;
+  gap: 4px;
+}
+.preset-act {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -918,9 +923,35 @@ body.glass .input {
   display: grid;
   place-items: center;
 }
-.preset-del:hover {
+.preset-act:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.preset-act.danger:hover {
   color: var(--red);
   border-color: var(--red);
+}
+
+/* ---------- 预设导入 ---------- */
+.preset-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.preset-target {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.preset-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
 }
 
 /* ---------- 彩蛋 ---------- */

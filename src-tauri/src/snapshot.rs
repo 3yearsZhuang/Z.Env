@@ -155,8 +155,8 @@ fn brewfile_line(name: &str) -> String {
     format!("brew \"{}\"\n", name)
 }
 
-/// 解析快照的一个段：引号键 + 基本字符串值；遇到下一个顶层表头即止；注释与占位行跳过。
-fn parse_section(content: &str, header: &str) -> Vec<(String, String)> {
+/// 解析快照的一个段：引号键或裸键 + 基本字符串值；遇到下一个顶层表头即止；注释与占位行跳过。
+pub(crate) fn parse_section(content: &str, header: &str) -> Vec<(String, String)> {
     let lines: Vec<&str> = content.lines().collect();
     let Some(start) = lines.iter().position(|l| l.trim() == header) else {
         return Vec::new();
@@ -171,7 +171,7 @@ fn parse_section(content: &str, header: &str) -> Vec<(String, String)> {
             break;
         }
         let Some(eq) = t.find('=') else { continue };
-        let Some(key) = parse_basic_value(t[..eq].trim()) else {
+        let Some(key) = parse_key(t[..eq].trim()) else {
             continue;
         };
         let Some(val) = parse_basic_value(t[eq + 1..].trim()) else {
@@ -182,9 +182,21 @@ fn parse_section(content: &str, header: &str) -> Vec<(String, String)> {
     out
 }
 
+/// 解析 TOML 键：引号键走 `parse_basic_value`，裸键要求全部为 `[A-Za-z0-9_-]`。
+/// 机器生成的快照用引号键，用户手写的 mise.toml 用裸键，两者都要吃。
+pub(crate) fn parse_key(raw: &str) -> Option<String> {
+    if raw.starts_with('"') {
+        return parse_basic_value(raw);
+    }
+    if !raw.is_empty() && raw.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        return Some(raw.to_string());
+    }
+    None
+}
+
 /// 解析一个 TOML 基本字符串字面量（含转义还原），要求整体为一对引号包裹；
 /// 能正确处理值内含 `\"` 的情形（trim_matches 会误剥转义引号，故逐字符扫描）。
-fn parse_basic_value(raw: &str) -> Option<String> {
+pub(crate) fn parse_basic_value(raw: &str) -> Option<String> {
     let rest = raw.strip_prefix('"')?;
     let mut out = String::new();
     let mut chars = rest.chars();
@@ -225,6 +237,24 @@ mod tests {
             vec![("wget".to_string(), "installed".to_string())]
         );
         assert!(parse_section(snap, "[nope]").is_empty());
+    }
+
+    #[test]
+    fn parse_section_accepts_bare_keys() {
+        // 用户手写的 mise.toml 用裸键；带冒号的后端名必须加引号
+        let toml = "[tools]\nnode = \"20\"\n\"npm:prettier\" = \"3\"\n\n[env]\nEDITOR = \"vim\"\n";
+        assert_eq!(
+            parse_section(toml, "[tools]"),
+            vec![
+                ("node".to_string(), "20".to_string()),
+                ("npm:prettier".to_string(), "3".to_string())
+            ]
+        );
+        // [env] 段不被吞进 [tools]
+        assert_eq!(
+            parse_section(toml, "[env]"),
+            vec![("EDITOR".to_string(), "vim".to_string())]
+        );
     }
 
     #[test]

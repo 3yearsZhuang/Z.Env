@@ -32,6 +32,8 @@ const OP_KINDS: Record<string, string> = {
   "cache-clean": "缓存清理",
   "snapshot-export": "快照导出",
   "snapshot-restore": "快照重建",
+  "preset-export": "预设导出",
+  "preset-import": "预设导入",
 };
 
 const STACK = [
