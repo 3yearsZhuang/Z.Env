@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# 本地包管理器产物：项目用 npm（CI 走 npm ci，锁定文件是 package-lock.json），
+# pnpm 只是本机临时使用，不要提交进来
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.pnpm-store/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
