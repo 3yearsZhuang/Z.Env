@@ -20,7 +20,7 @@ export function presetToToml(tools: Record<string, string>): string {
   const rows = Object.entries(tools)
     .map(([k, v]) => `${tomlKey(k)} = "${tomlString(v)}"`)
     .join("\n");
-  return `# 由 Z.Env 环境预设生成\n[tools]\n${rows}\n`;
+  return `# 由 Z.Env 环境预设生成\n[tools]\n${rows}${rows ? "\n" : ""}`;
 }
 
 /** 预设的工具数组 → 工具表（供 presetToToml 使用） */
@@ -112,4 +112,53 @@ export function parseStoredPresets(raw: string | null): UserPreset[] {
     });
   }
   return out;
+}
+
+/** 一次预设编辑（新建或修改）的输入 */
+export interface PresetEdit {
+  name: string;
+  description?: string;
+  tools: PresetTool[];
+  /** 修改既有预设时给出原始条目；新建时省略 */
+  original?: { name: string; content: string };
+}
+
+/**
+ * 保存前判断是否会覆盖「别人」：编辑自身同名不算冲突，改名撞上别的预设才算。
+ * 返回被撞上的那条，没有则 undefined。
+ */
+export function presetNameClash(
+  list: UserPreset[],
+  name: string,
+  originalName?: string,
+): UserPreset | undefined {
+  return list.find((p) => p.name === name && p.name !== originalName);
+}
+
+/**
+ * 应用一次预设编辑，返回新的预设库列表。三种情况在同一处处理：
+ * 新建（追加）、同名覆盖、改名（移除旧名条目）——调用方只需写入一次，
+ * 不会出现 save/remove 连调时各自基于同一份过期快照互相覆盖的问题。
+ *
+ * 修改既有条目时**原地替换**：卡片顺序不变，改完不会跳到列表末尾。
+ */
+export function applyPresetEdit(list: UserPreset[], edit: PresetEdit): UserPreset[] {
+  const name = edit.name.trim();
+  const tools = toolsOf(edit.tools);
+  // 修改只替换 [tools] 段，保住 [env] / _.path 等既有配置；新建直接生成
+  const content = edit.original
+    ? replaceToolsSection(edit.original.content, tools)
+    : presetToToml(tools);
+  const description = edit.description?.trim();
+  const entry: UserPreset = { name, content, ...(description ? { description } : {}) };
+
+  // 原地替换：命中原始条目（改名时靠 original.name 找）或同名条目
+  const at = list.findIndex((p) => p.name === edit.original?.name || p.name === name);
+  if (at >= 0) {
+    const next = [...list];
+    next[at] = entry;
+    // 极端情况：改名后与另一条重名，去掉那条，保证名字唯一
+    return next.filter((p, i) => i === at || p.name !== name);
+  }
+  return [...list, entry];
 }
