@@ -18,10 +18,10 @@ import SoftwareView from "./components/SoftwareView";
 import ServicesCachesView from "./components/ServicesCachesView";
 import EasterEgg from "./components/EasterEgg";
 import { initLogger, logInfo } from "./logger";
+import type { Tab } from "./lib/nav";
 import "./index.css";
 import "./styles.css";
 
-type Tab = "dashboard" | "tools" | "projects" | "ops" | "settings" | "software";
 type Theme = "auto" | "light" | "dark";
 const THEME_NEXT: Record<Theme, Theme> = {
   auto: "light",
@@ -157,8 +157,8 @@ export default function App() {
 
       <main className="content">
         {tab === "dashboard" && <Dashboard />}
-        {tab === "tools" && <EnvironmentView />}
-        {tab === "projects" && <ProjectsView />}
+        {tab === "tools" && <EnvironmentView onNavigate={setTab} />}
+        {tab === "projects" && <ProjectsView onNavigate={setTab} />}
         {tab === "ops" && <ServicesCachesView />}
         {tab === "settings" && <SettingsView onEaster={() => setEaster(true)} />}
         {tab === "software" && <SoftwareView />}

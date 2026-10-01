@@ -363,12 +363,18 @@ fn snapshot_export(path: String) -> Result<snapshot::SnapshotSummary, String> {
     r.map_err(String::from)
 }
 
-/// 环境快照：重建（全局 env 写入 + mise 工具逐个安装 + brew 清单生成 Brewfile）
+/// 环境快照：重建（全局 env 写入 + mise 工具逐个流式安装 + brew 清单生成 Brewfile）
 #[tauri::command(async)]
-fn snapshot_restore(path: String) -> Result<String, String> {
-    let r = snapshot::restore(&path).map_err(String::from);
+fn snapshot_restore(app: tauri::AppHandle, path: String) -> Result<String, String> {
+    let r = snapshot::restore(&app, &path).map_err(String::from);
     traced("snapshot-restore", path.clone(), &r);
     r
+}
+
+/// 环境预设：从 mise.toml 风格文本提取工具清单（供「装到整机」解析用户预设）
+#[tauri::command(async)]
+fn preset_parse_tools(toml: String) -> Result<Vec<preset::PresetTool>, String> {
+    Ok(preset::parse_tools(&toml))
 }
 
 /// 环境预设：导出为可分享的预设文件（Z.Env 预设 TOML v1）
@@ -564,6 +570,7 @@ pub fn run() {
             snapshot_restore,
             preset_export,
             preset_import,
+            preset_parse_tools,
             stable_bin_path,
         ])
         .run(tauri::generate_context!())

@@ -5,13 +5,13 @@ import { envCenterRemove, envCenterSet, errorMessage, type EnvCenterSnapshot } f
 const SYSTEM_ENV_RENDER_LIMIT = 80;
 
 interface Props {
-  /** 页面级加载的环境快照（与环境页顶部摘要条同源） */
+  /** 页面级加载的环境快照（由「环境」页持有并传入） */
   snap: EnvCenterSnapshot | null;
   /** 增删改成功后由本组件回调页面刷新快照 */
   reload: () => void;
 }
 
-/** 环境页「全局环境变量」区块：[env] 增删改 + 冲突提示 + 系统级只读列表（默认折叠） */
+/** 「环境」页的全局环境变量区块：[env] 增删改 + 冲突提示 + 系统级只读列表（默认折叠） */
 export default function EnvPanel({ snap, reload }: Props) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -82,7 +82,7 @@ export default function EnvPanel({ snap, reload }: Props) {
         </div>
       )}
 
-      <section className="panel" id="env-panel">
+      <section className="panel">
         <h2 className="panel-title">全局环境变量（mise [env]）</h2>
         <p className="setting-desc" style={{ marginBottom: 10 }}>
           配置文件：{snap?.configPath || "（无法定位）"}
