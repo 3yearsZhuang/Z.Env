@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasOtherSections,
   parseStoredPresets,
   presetFileName,
   presetToToml,
+  replaceToolsSection,
   tomlKey,
   tomlString,
   toolsOf,
@@ -90,5 +92,58 @@ describe("parseStoredPresets", () => {
   it("非法 JSON 与空值返回空数组", () => {
     expect(parseStoredPresets("{ not json")).toEqual([]);
     expect(parseStoredPresets(null)).toEqual([]);
+  });
+});
+
+describe("replaceToolsSection", () => {
+  it("只换 [tools] 段，[env] 与注释原样保留", () => {
+    const src = '# 我的配置\n[tools]\nnode = "20"\n\n[env]\nEDITOR = "vim"\n';
+    expect(replaceToolsSection(src, { node: "22", go: "1.27" })).toBe(
+      '# 我的配置\n[tools]\nnode = "22"\ngo = "1.27"\n\n[env]\nEDITOR = "vim"\n',
+    );
+  });
+
+  it("没有 [tools] 段时追加到末尾", () => {
+    const src = '[env]\nEDITOR = "vim"\n';
+    expect(replaceToolsSection(src, { node: "20" })).toBe(
+      '[env]\nEDITOR = "vim"\n\n[tools]\nnode = "20"\n',
+    );
+  });
+
+  it("[tools] 位于末尾时正常替换", () => {
+    expect(replaceToolsSection('# c\n[tools]\nnode = "20"\n', { node: "22" })).toBe(
+      '# c\n[tools]\nnode = "22"\n',
+    );
+  });
+
+  it("空文本只产出 [tools] 段", () => {
+    expect(replaceToolsSection("", { node: "20" })).toBe('[tools]\nnode = "20"\n');
+  });
+
+  it("含冒号的工具名加引号", () => {
+    expect(replaceToolsSection('[tools]\na = "1"\n', { "npm:prettier": "3" })).toBe(
+      '[tools]\n"npm:prettier" = "3"\n',
+    );
+  });
+
+  it("[tools] 后面紧跟另一个表时不吞掉空行", () => {
+    const src = '[tools]\nnode = "20"\n[settings]\nexperimental = true\n';
+    expect(replaceToolsSection(src, { node: "22" })).toBe(
+      '[tools]\nnode = "22"\n[settings]\nexperimental = true\n',
+    );
+  });
+});
+
+describe("hasOtherSections", () => {
+  it("只有 [tools] 时为 false", () => {
+    expect(hasOtherSections('[tools]\nnode = "20"\n')).toBe(false);
+  });
+
+  it("含 [env] 等其它表时为 true", () => {
+    expect(hasOtherSections('[tools]\nnode = "20"\n\n[env]\nA = "b"\n')).toBe(true);
+  });
+
+  it("注释里的方括号不算表", () => {
+    expect(hasOtherSections('# 见 [文档]\n[tools]\nnode = "20"\n')).toBe(false);
   });
 });

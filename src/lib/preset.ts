@@ -30,6 +30,47 @@ export function toolsOf(tools: PresetTool[]): Record<string, string> {
   return out;
 }
 
+/** `[tools]` 段文本（不含结尾换行） */
+function toolsBlock(tools: Record<string, string>): string {
+  const rows = Object.entries(tools)
+    .map(([k, v]) => `${tomlKey(k)} = "${tomlString(v)}"`)
+    .join("\n");
+  return rows ? `[tools]\n${rows}` : "[tools]";
+}
+
+/**
+ * 用新的工具表替换 mise.toml 文本里的 `[tools]` 段，其余内容（`[env]`、`_.path`、注释等）
+ * 原样保留——用户在编辑器里存下的预设可能带这些配置，改写时不能丢。
+ * 原文本没有 `[tools]` 段时追加到末尾。
+ */
+export function replaceToolsSection(toml: string, tools: Record<string, string>): string {
+  const block = toolsBlock(tools);
+  const lines = toml.split("\n");
+  const start = lines.findIndex((l) => l.trim() === "[tools]");
+  if (start < 0) {
+    const head = toml.replace(/\s+$/, "");
+    return head ? `${head}\n\n${block}\n` : `${block}\n`;
+  }
+  // 段范围：`[tools]` 行到下一个顶层表头；末尾空行留给后面，保住与下一段之间的分隔
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].trim().startsWith("[")) {
+      end = i;
+      break;
+    }
+  }
+  while (end > start + 1 && lines[end - 1].trim() === "") end--;
+  return [...lines.slice(0, start), ...block.split("\n"), ...lines.slice(end)].join("\n");
+}
+
+/** 文本是否含 `[tools]` 以外的顶层表（这些段在编辑时会被保留，仅用于提示） */
+export function hasOtherSections(toml: string): boolean {
+  return toml.split("\n").some((l) => {
+    const t = l.trim();
+    return t.startsWith("[") && t !== "[tools]";
+  });
+}
+
 /** 生成安全的导出文件名（去掉路径分隔符与文件系统不友好字符） */
 export function presetFileName(name: string): string {
   const cleaned = name
