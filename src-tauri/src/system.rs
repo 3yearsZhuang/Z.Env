@@ -679,7 +679,6 @@ fn read_windows_battery() -> Option<BatteryInfo> {
     let mut percent: Option<u8> = None;
     let mut charging = false;
     for line in text.lines().skip(1) {
-        let mut it = line.split_whitespace();
         // Status 可能为数字或字符串，取后一个字段作为电量
         let mut parts: Vec<&str> = line.split_whitespace().collect();
         if let Some(last) = parts.pop() {

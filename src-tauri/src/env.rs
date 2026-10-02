@@ -76,13 +76,11 @@ fn os_info() -> OsInfo {
     }
     #[cfg(target_os = "windows")]
     {
-        let mut name = "Windows".to_string();
+        let name = "Windows".to_string();
         let mut version = String::new();
         if let Some(v) = out("cmd", &["/C", "ver"]) {
             version = v;
         }
-        // 尝试从 (OS 注册表/CMD ver) 提取时，name 统一为 Windows
-        name = "Windows".into();
         return OsInfo {
             name,
             version,

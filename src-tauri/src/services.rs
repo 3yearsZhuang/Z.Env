@@ -91,7 +91,8 @@ pub fn action(manager: &str, name: &str, act: &str) -> Result<String, AppError> 
 }
 
 /// systemd 单元名白名单校验：字母数字与 -_.@ 组成，且不含路径分隔。
-#[cfg(not(windows))]
+/// 纯字符串校验，不随平台裁剪——`action()` 的 systemd 分支在所有平台都参与编译，
+/// Windows 下若被 cfg 掉会在 release 构建时报 not found（CI 只在 Linux 跑，查不出来）。
 fn validate_unit_name(name: &str) -> Result<(), AppError> {
     let ok = !name.is_empty()
         && name
@@ -224,7 +225,6 @@ mod tests {
         assert_eq!(list[1].name, "app.service");
     }
 
-    #[cfg(not(windows))]
     #[test]
     fn unit_name_validation_blocks_injection() {
         assert!(validate_unit_name("nginx.service").is_ok());
