@@ -21,6 +21,10 @@ interface Props {
   presets: UserPresetsApi;
   /** 「我的预设」无描述时的卡片副标题，说明点击后会发生什么 */
   useHint: string;
+  /** 禁用「点击卡片」安装入口（另一路安装任务占用通道时由环境页传入） */
+  useDisabled?: boolean;
+  /** 禁用时的按钮提示文案 */
+  useDisabledHint?: string;
   /** 点击卡片 */
   onUse: (choice: PresetChoice) => void;
   /** 点击卡片上的导出按钮 */
@@ -33,6 +37,8 @@ interface Props {
 export default function PresetLibrary({
   presets,
   useHint,
+  useDisabled,
+  useDisabledHint,
   onUse,
   onExport,
   onImported,
@@ -146,7 +152,12 @@ export default function PresetLibrary({
             };
             return (
               <div className="preset-card-wrap" key={p.id}>
-                <button className="preset-card" onClick={() => onUse(choice)}>
+                <button
+                  className="preset-card"
+                  disabled={useDisabled}
+                  title={useDisabled ? useDisabledHint : undefined}
+                  onClick={() => onUse(choice)}
+                >
                   <span className="preset-name">{p.name}</span>
                   <span className="preset-desc">{p.desc}</span>
                   <span className="preset-tools">
@@ -193,7 +204,12 @@ export default function PresetLibrary({
               };
               return (
                 <div className="preset-card-wrap" key={up.name}>
-                  <button className="preset-card" onClick={() => onUse(choice)}>
+                  <button
+                    className="preset-card"
+                    disabled={useDisabled}
+                    title={useDisabled ? useDisabledHint : undefined}
+                    onClick={() => onUse(choice)}
+                  >
                     <span className="preset-name">{up.name}</span>
                     <span className="preset-tools">{up.description ?? useHint}</span>
                   </button>

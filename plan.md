@@ -338,23 +338,31 @@
 
 ## P8 — 发布与健壮性收口（35 → 36 → 37）
 
-### ⬜ 35. 安装通道并发治理：预设装整机 × 快照重建互斥
+### ✅ 35. 安装通道并发治理：预设装整机 × 快照重建互斥
 - **问题**（PR #1 审查 Follow-up）：MachinePresetSection 与 SnapshotPanel 共用 `mise:install-progress`
   事件通道，两入口并发触发时进度日志互相串台，且并发两条 `mise install` 可能互踩
   （同一工具被同时安装，mise 侧无并发保护）。
-- **方案**：把「安装任务进行中」提升为环境页级共享 busy 状态（`useMachineInstall` 上提），
-  任一入口在跑时另一入口禁用并提示；顺带对齐 InstallDialog 既有惯例——安装中弹窗
-  `showClose={false}`（InstallDialog 已是如此，MachinePresetSection 弹窗未传）。
-- **验证**：busy 互斥逻辑抽纯函数补单测；lint/test/build 全绿；桌面端实测两入口并发只跑一个、
-  日志不串；审查指出的「快照重建流式进度、useMachineInstall 整体流无自动化触达」随本轮补齐可测部分。
+- **落地**：互斥判定抽为纯函数 `installChannelGate(selfBusy, otherBusy, other)`（`lib/installChannel.ts`，
+  5 个单测），两组件直接消费同一份判定。`useMachineInstall` 实例上提到 EnvironmentView 页面级
+  （`installApi` 注入 MachinePresetSection）——预设安装的 busy/日志与 tab 切换彻底解耦；
+  快照重建开始/结束经 `onRestoreBusyChange` 上报页面级 `restoreBusy`。双向互斥：
+  重建占用时预设卡片禁用并提示（PresetLibrary 新增 `useDisabled`/`useDisabledHint`，
+  项目配置页不传不受影响）、openInstall 二次守门；预设安装占用时快照按钮禁用 + 提示文案。
+  导出快照不动安装通道，不参与互斥。MachinePresetSection 弹窗补 `showClose={!installBusy}`
+  （对齐 InstallDialog 惯例）。日志串台的根因是并发订阅，互斥后同一时刻只有一路订阅，随之消失。
+- **验证**：vitest **53 passed**（新增 installChannel 5 + upsertPreset 3）；tsc / eslint / prettier /
+  build 全绿。两路并发的真机表现待桌面端验收。
 
-### ⬜ 36. 审查遗留小项清零
-- `.preset-head` 在 styles.css 857 与 987 两处逐字重复，删 987 处。
-- `useUserPresets.save` 同名重存把条目挪到列表末尾（过滤后追加），与 `applyPresetEdit`
-  的原地替换行为不一致——统一为原地替换，卡片顺序不变。
-- EnvironmentView 手写 tab-bar 有 `role="tablist"`/`aria-selected` 但缺方向键导航与 `tabpanel`
-  关联——补 roving tabindex 方向键切换 + `role="tabpanel"`/`aria-labelledby`。
-- **验证**：lint/test/build 全绿；键盘走查环境页三个区块切换。
+### ✅ 36. 审查遗留小项清零
+- `.preset-head` 在 styles.css 857 与 987 两处逐字重复——删 987 处（后者缺 `margin-bottom`，
+  前者本就赢得全部生效属性，删除零视觉差异）。
+- `useUserPresets.save` 同名重存把条目挪到列表末尾——新增纯函数 `upsertPreset`
+  （同名**原地替换**、新名字追加），`save` 与导入收录 `remember` 一并改走
+  （后者有同样的跳位问题），与 `applyPresetEdit` 行为对齐；3 个单测。
+- EnvironmentView tab-bar 补齐无障碍：roving tabindex（只有激活 tab 在 Tab 序列）+
+  方向键/Home/End 环绕切换并移动焦点，`id`/`aria-controls` 与三个区块的
+  `role="tabpanel"`/`aria-labelledby` 全部接线。
+- **验证**：vitest 53 passed；tsc / eslint / prettier / build 全绿。键盘走查待桌面端验收。
 
 ### ⬜ 37. v0.7.1 发布：验证应用内更新端到端
 - **动因**：17 遗留②——latest.json 与签名工件已产出，但「检查更新 → 下载 → 自动重启」

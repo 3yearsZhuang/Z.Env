@@ -4,17 +4,28 @@
 import { useEffect, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { errorMessage, onInstallProgress, snapshotExport, snapshotRestore } from "../api";
+import { installChannelGate } from "../lib/installChannel";
 
 interface Props {
   /** 重建会改写全局 [env]，完成后回调页面刷新环境变量快照 */
   onRestored?: () => void;
+  /** 「装到整机」预设安装进行中——同一安装通道被占用，本区块按钮须禁用 */
+  machineInstallBusy?: boolean;
+  /** 重建开始/结束时上报通道占用（导出不动安装通道，不上报） */
+  onRestoreBusyChange?: (busy: boolean) => void;
 }
 
-export default function SnapshotPanel({ onRestored }: Props) {
+export default function SnapshotPanel({
+  onRestored,
+  machineInstallBusy,
+  onRestoreBusyChange,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [log, setLog] = useState<string[]>([]);
   const logRef = useRef<HTMLPreElement | null>(null);
+  // 通道占用判定：另一路（预设安装）在跑时禁用入口并提示
+  const gate = installChannelGate(busy, machineInstallBusy ?? false, "preset");
 
   // 重建日志自动滚到底部
   useEffect(() => {
@@ -59,6 +70,7 @@ export default function SnapshotPanel({ onRestored }: Props) {
     setBusy(true);
     setLog([]);
     setMsg("重建中，安装工具可能需要几分钟…");
+    onRestoreBusyChange?.(true);
 
     let unlisten: (() => void) | undefined;
     try {
@@ -76,6 +88,7 @@ export default function SnapshotPanel({ onRestored }: Props) {
     } finally {
       unlisten?.();
       setBusy(false);
+      onRestoreBusyChange?.(false);
     }
   }
 
@@ -86,9 +99,15 @@ export default function SnapshotPanel({ onRestored }: Props) {
         <button className="btn primary" onClick={handleExport} disabled={busy}>
           {busy ? "处理中…" : "导出快照"}
         </button>
-        <button className="btn" onClick={handleRestore} disabled={busy}>
+        <button
+          className="btn"
+          onClick={handleRestore}
+          disabled={gate.selfBusy || gate.blocked}
+          title={gate.blockHint ?? undefined}
+        >
           从快照重建
         </button>
+        {gate.blockHint && <span className="pill muted">{gate.blockHint}</span>}
       </div>
       {msg && (
         <p className="setting-desc" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>

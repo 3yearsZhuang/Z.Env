@@ -984,12 +984,7 @@ body.glass .input {
 }
 
 /* ---------- 预设导入 ---------- */
-.preset-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
+/* .preset-head 样式见「环境预设」段（此前与 858 行起逐字重复，已删） */
 .preset-target {
   margin-top: 12px;
   display: flex;

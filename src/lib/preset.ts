@@ -151,6 +151,19 @@ export interface PresetEdit {
 }
 
 /**
+ * 同名覆盖时**原地替换**（卡片顺序不变），新名字追加到列表末尾。
+ * `save` 直存与导入收录共用——过滤重名再追加的写法会把覆盖的条目挪到列表末尾，
+ * 与 applyPresetEdit 的原地替换行为不一致。
+ */
+export function upsertPreset(list: UserPreset[], entry: UserPreset): UserPreset[] {
+  const at = list.findIndex((p) => p.name === entry.name);
+  if (at < 0) return [...list, entry];
+  const next = [...list];
+  next[at] = entry;
+  return next;
+}
+
+/**
  * 保存前判断是否会覆盖「别人」：编辑自身同名不算冲突，改名撞上别的预设才算。
  * 返回被撞上的那条，没有则 undefined。
  */

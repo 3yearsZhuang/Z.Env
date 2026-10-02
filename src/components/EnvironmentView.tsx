@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   detectSystemVersions,
   detectToolSources,
@@ -23,6 +23,7 @@ import EnvPanel from "./EnvPanel";
 import MachinePresetSection from "./MachinePresetSection";
 import SnapshotPanel from "./SnapshotPanel";
 import type { Navigate } from "../lib/nav";
+import { useMachineInstall } from "../lib/useMachineInstall";
 import { KNOWN_RUNTIMES, TOOL_ICON_PATHS } from "../data/catalog";
 
 /** 工具徽标：先走显式映射，再按 /tools/{name}.svg 通用查找，都没有则回退名称缩写 */
@@ -58,6 +59,9 @@ interface Props {
   onNavigate?: Navigate;
 }
 
+/** 环境页顶部三个区块的顺序（tablist 键盘导航按此环绕） */
+const PANE_ORDER = ["runtime", "vars", "preset"] as const;
+
 export default function EnvironmentView({ onNavigate }: Props) {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
@@ -73,6 +77,31 @@ export default function EnvironmentView({ onNavigate }: Props) {
   const [envSnap, setEnvSnap] = useState<EnvCenterSnapshot | null>(null);
   // 顶部区块切换：三块常驻挂载、按需显隐，避免切换时丢掉进行中的安装日志与流式进度
   const [pane, setPane] = useState<"runtime" | "vars" | "preset">("runtime");
+  // 安装通道唯一实例挂在页面级：「装到整机」与「快照重建」共用 busy 状态实现互斥，
+  // 也保证切 tab 不会丢掉进行中的流式安装
+  const machineInstall = useMachineInstall();
+  // 快照重建占用安装通道中（由 SnapshotPanel 上报）
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  // tablist roving tabindex：只有激活 tab 在 Tab 序列里，方向键/Home/End 切换并移动焦点
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  function onTabKeyDown(
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    key: (typeof PANE_ORDER)[number],
+  ) {
+    const idx = PANE_ORDER.indexOf(key);
+    let next: (typeof PANE_ORDER)[number] | undefined;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")
+      next = PANE_ORDER[(idx + 1) % PANE_ORDER.length];
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+      next = PANE_ORDER[(idx + PANE_ORDER.length - 1) % PANE_ORDER.length];
+    else if (e.key === "Home") next = PANE_ORDER[0];
+    else if (e.key === "End") next = PANE_ORDER[PANE_ORDER.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    setPane(next);
+    tabRefs.current[next]?.focus();
+  }
 
   const loadEnvSnap = useCallback(() => {
     envCenterList()
@@ -241,9 +270,16 @@ export default function EnvironmentView({ onNavigate }: Props) {
         ).map(([key, label]) => (
           <button
             key={key}
+            ref={(el) => {
+              tabRefs.current[key] = el;
+            }}
             className={`tab-btn${pane === key ? " active" : ""}`}
             role="tab"
+            id={`env-tab-${key}`}
             aria-selected={pane === key}
+            aria-controls={`env-pane-${key}`}
+            tabIndex={pane === key ? 0 : -1}
+            onKeyDown={(e) => onTabKeyDown(e, key)}
             onClick={() => setPane(key)}
           >
             {label}
@@ -253,7 +289,12 @@ export default function EnvironmentView({ onNavigate }: Props) {
 
       {/* 运行时：摘要 + 环境健康 + 已装清单。三块都常驻挂载、按需显隐——
           条件渲染会在切换时卸载组件，进行中的预设安装日志与流式进度会一起丢掉 */}
-      <div style={{ display: pane === "runtime" ? undefined : "none" }}>
+      <div
+        role="tabpanel"
+        id="env-pane-runtime"
+        aria-labelledby="env-tab-runtime"
+        style={{ display: pane === "runtime" ? undefined : "none" }}
+      >
         {cards.length > 0 && (
           <div
             className={`banner ${envSnap && envSnap.conflicts.length > 0 ? "warn" : "info"}`}
@@ -486,15 +527,33 @@ export default function EnvironmentView({ onNavigate }: Props) {
         )}
       </div>
 
-      <div style={{ display: pane === "vars" ? undefined : "none" }}>
+      <div
+        role="tabpanel"
+        id="env-pane-vars"
+        aria-labelledby="env-tab-vars"
+        style={{ display: pane === "vars" ? undefined : "none" }}
+      >
         <EnvPanel snap={envSnap} reload={loadEnvSnap} />
       </div>
 
-      <div style={{ display: pane === "preset" ? undefined : "none" }}>
+      <div
+        role="tabpanel"
+        id="env-pane-preset"
+        aria-labelledby="env-tab-preset"
+        style={{ display: pane === "preset" ? undefined : "none" }}
+      >
         {/* 整机搭建：选一套配方装到整机，不依赖任何项目 */}
-        <MachinePresetSection onNavigate={onNavigate} />
+        <MachinePresetSection
+          onNavigate={onNavigate}
+          installApi={machineInstall}
+          channelBusy={restoreBusy}
+        />
         {/* 整机迁移：本机现状的打包与还原（含全局 env 与 brew 清单） */}
-        <SnapshotPanel onRestored={loadEnvSnap} />
+        <SnapshotPanel
+          onRestored={loadEnvSnap}
+          machineInstallBusy={machineInstall.installBusy}
+          onRestoreBusyChange={setRestoreBusy}
+        />
       </div>
 
       {installFor && (

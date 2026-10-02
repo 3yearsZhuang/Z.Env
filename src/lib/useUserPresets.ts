@@ -1,7 +1,7 @@
 // 用户预设库：存 localStorage，由「项目配置」与「环境」两页共用。
 // 两页在 App 里是互斥挂载的（切换 tab 即卸载），因此挂载时读取一次即可保持一致。
 import { useCallback, useEffect, useState } from "react";
-import { parseStoredPresets, presetToToml, toolsOf, type UserPreset } from "./preset";
+import { parseStoredPresets, presetToToml, toolsOf, upsertPreset, type UserPreset } from "./preset";
 import type { PresetFile } from "../api";
 
 const STORAGE_KEY = "mise-gui:user-presets";
@@ -39,10 +39,14 @@ export function useUserPresets(): UserPresetsApi {
     (name: string, content: string, description?: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      persist([
-        ...userPresets.filter((p) => p.name !== trimmed),
-        { name: trimmed, content, ...(description ? { description } : {}) },
-      ]);
+      // 同名覆盖原地替换（卡片不跳位），新名字追加到末尾
+      persist(
+        upsertPreset(userPresets, {
+          name: trimmed,
+          content,
+          ...(description ? { description } : {}),
+        }),
+      );
     },
     [persist, userPresets],
   );
@@ -62,14 +66,13 @@ export function useUserPresets(): UserPresetsApi {
       ) {
         return false;
       }
-      persist([
-        ...userPresets.filter((p) => p.name !== file.name),
-        {
+      persist(
+        upsertPreset(userPresets, {
           name: file.name,
           content: presetToToml(toolsOf(file.tools)),
           ...(file.description ? { description: file.description } : {}),
-        },
-      ]);
+        }),
+      );
       return true;
     },
     [persist, userPresets],

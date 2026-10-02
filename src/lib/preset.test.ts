@@ -10,6 +10,7 @@ import {
   tomlKey,
   tomlString,
   toolsOf,
+  upsertPreset,
   type UserPreset,
 } from "./preset";
 
@@ -278,5 +279,28 @@ describe("applyPresetEdit", () => {
   it("删掉全部工具后只剩空 [tools] 段，不留多余空行", () => {
     const next = applyPresetEdit([], { name: "empty", tools: [] });
     expect(next[0].content).toBe("# 由 Z.Env 环境预设生成\n[tools]\n");
+  });
+});
+
+describe("upsertPreset", () => {
+  const a: UserPreset = { name: "a", content: "[tools]" };
+  const b: UserPreset = { name: "b", content: '[tools]\nnode = "20"' };
+
+  it("新名字追加到列表末尾", () => {
+    const next = upsertPreset([a], b);
+    expect(next).toEqual([a, b]);
+  });
+
+  it("同名覆盖原地替换，卡片顺序不变", () => {
+    const next = upsertPreset([a, b], { name: "a", content: '[tools]\ngo = "1.27"' });
+    expect(next.map((p) => p.name)).toEqual(["a", "b"]);
+    expect(next[0].content).toBe('[tools]\ngo = "1.27"');
+  });
+
+  it("覆盖只改动目标条目，其余条目原样保留", () => {
+    const next = upsertPreset([a, b], { name: "b", content: "x" });
+    expect(next[0]).toBe(a);
+    expect(next[1]).not.toBe(b);
+    expect(next[1].content).toBe("x");
   });
 });

@@ -10,8 +10,9 @@ import {
 } from "../api";
 import type { Navigate } from "../lib/nav";
 import { presetToToml, toolsOf } from "../lib/preset";
+import { installChannelGate } from "../lib/installChannel";
 import { exportPresetFile } from "../lib/presetFileIO";
-import { useMachineInstall } from "../lib/useMachineInstall";
+import type { MachineInstallApi } from "../lib/useMachineInstall";
 import { useUserPresets } from "../lib/useUserPresets";
 import PresetLibrary, { type PresetChoice } from "./PresetLibrary";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
@@ -19,11 +20,15 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dial
 interface Props {
   /** 切到别的 tab（弹窗里给出「装到某个项目」的出口） */
   onNavigate?: Navigate;
+  /** 安装 API 由页面持有：与快照重建共用同一份 busy 状态（互斥）与事件订阅 */
+  installApi: MachineInstallApi;
+  /** 快照重建进行中（同一安装通道被占用，本区块入口须让位） */
+  channelBusy?: boolean;
 }
 
-export default function MachinePresetSection({ onNavigate }: Props) {
+export default function MachinePresetSection({ onNavigate, installApi, channelBusy }: Props) {
   const presets = useUserPresets();
-  const { installLog, setInstallLog, installBusy, logRef, install } = useMachineInstall();
+  const { installLog, setInstallLog, installBusy, logRef, install } = installApi;
 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -33,8 +38,13 @@ export default function MachinePresetSection({ onNavigate }: Props) {
   const [pendingTools, setPendingTools] = useState<PresetTool[]>([]);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
 
-  /** 打开预设预览弹窗（解析出工具清单） */
+  /** 打开预设预览弹窗（解析出工具清单）；快照重建占用通道时拒绝进入 */
   async function openInstall(choice: PresetChoice) {
+    const gate = installChannelGate(installBusy, channelBusy ?? false, "snapshot");
+    if (gate.blocked) {
+      setError(gate.blockHint);
+      return;
+    }
     setError(null);
     setNotice(null);
     try {
@@ -95,6 +105,8 @@ export default function MachinePresetSection({ onNavigate }: Props) {
       <PresetLibrary
         presets={presets}
         useHint="点击预览并装到整机"
+        useDisabled={channelBusy}
+        useDisabledHint="快照重建进行中，暂不能安装预设"
         onUse={(choice) => void openInstall(choice)}
         onExport={(choice) => void handleExportPreset(choice)}
         onImported={(file: PresetFile) =>
@@ -113,7 +125,7 @@ export default function MachinePresetSection({ onNavigate }: Props) {
           if (!o && !installBusy) setPending(null);
         }}
       >
-        <DialogContent className="w-[520px] p-0">
+        <DialogContent className="w-[520px] p-0" showClose={!installBusy}>
           <div className="dialog-head">
             <DialogTitle>装到整机</DialogTitle>
             <DialogDescription className="setting-desc">
