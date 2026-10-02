@@ -159,7 +159,7 @@ fn brewfile_line(name: &str) -> String {
     format!("brew \"{}\"\n", name)
 }
 
-/// 解析快照的一个段：引号键或裸键 + 基本字符串值；遇到下一个顶层表头即止；注释与占位行跳过。
+/// 解析快照的一个段：引号键或裸键 + 标量值（见 `parse_value`）；遇到下一个顶层表头即止；注释与占位行跳过。
 pub(crate) fn parse_section(content: &str, header: &str) -> Vec<(String, String)> {
     let lines: Vec<&str> = content.lines().collect();
     let Some(start) = lines.iter().position(|l| l.trim() == header) else {
@@ -178,7 +178,7 @@ pub(crate) fn parse_section(content: &str, header: &str) -> Vec<(String, String)
         let Some(key) = parse_key(t[..eq].trim()) else {
             continue;
         };
-        let Some(val) = parse_basic_value(t[eq + 1..].trim()) else {
+        let Some(val) = parse_value(t[eq + 1..].trim()) else {
             continue;
         };
         out.push((key, val));
@@ -222,9 +222,131 @@ pub(crate) fn parse_basic_value(raw: &str) -> Option<String> {
     None
 }
 
+/// 把一段 TOML 值解析为字符串：覆盖手写 mise.toml 的常见版本写法——
+/// - 双引号基本串 / 单引号字面串（无转义）；
+/// - 裸整数或浮点（`node = 20`、`go = 1.27` 均为合法 TOML）；
+/// - mise 工具表形式 `{ version = ... }`：取 `version` 字段；
+/// - 数组版本 `{ version = ["20", "22"] }`：取首个（预设一条工具只装一个版本）。
+///
+/// 布尔、日期等其余形式不是合法的版本请求，返回 `None`（跳过该行）。
+pub(crate) fn parse_value(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    if raw.starts_with('"') {
+        return parse_basic_value(raw);
+    }
+    if raw.starts_with('\'') && raw.ends_with('\'') && raw.len() >= 2 {
+        // 单引号字面串：值内不允许再出现单引号（多行 ''' 不在版本场景里）
+        let inner = &raw[1..raw.len() - 1];
+        return if inner.contains('\'') {
+            None
+        } else {
+            Some(inner.to_string())
+        };
+    }
+    if raw.starts_with('[') && raw.ends_with(']') {
+        let inner = &raw[1..raw.len() - 1];
+        for part in split_top_level(inner) {
+            if let Some(v) = parse_value(&part) {
+                return Some(v);
+            }
+        }
+        return None;
+    }
+    if raw.starts_with('{') && raw.ends_with('}') {
+        let inner = &raw[1..raw.len() - 1];
+        for part in split_top_level(inner) {
+            let Some(eq) = part.find('=') else { continue };
+            let Some(key) = parse_key(part[..eq].trim()) else {
+                continue;
+            };
+            if key == "version" {
+                return parse_value(&part[eq + 1..]);
+            }
+        }
+        return None;
+    }
+    if let Ok(i) = raw.parse::<i64>() {
+        return Some(i.to_string());
+    }
+    raw.parse::<f64>()
+        .ok()
+        .filter(|f| f.is_finite())
+        .map(|f| f.to_string())
+}
+
+/// 按顶层逗号切分内联表 / 数组的成员（忽略 `[]`、`{}` 与引号内的逗号）。
+fn split_top_level(s: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut depth = 0i32;
+    let mut quote: Option<char> = None;
+    let mut cur = String::new();
+    for c in s.chars() {
+        if let Some(q) = quote {
+            cur.push(c);
+            if c == q {
+                quote = None;
+            }
+            continue;
+        }
+        match c {
+            '"' | '\'' => {
+                quote = Some(c);
+                cur.push(c);
+            }
+            '[' | '{' => {
+                depth += 1;
+                cur.push(c);
+            }
+            ']' | '}' => {
+                depth -= 1;
+                cur.push(c);
+            }
+            ',' if depth == 0 => out.push(cur.trim().to_string()),
+            _ => cur.push(c),
+        }
+    }
+    if !cur.trim().is_empty() {
+        out.push(cur.trim().to_string());
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_value_covers_handwritten_toml_forms() {
+        // 双引号基本串与转义
+        assert_eq!(parse_value("\"say \\\"hi\\\"\""), Some("say \"hi\"".into()));
+        // 单引号字面串（无转义）
+        assert_eq!(parse_value("'20'"), Some("20".into()));
+        // 裸整数 / 浮点
+        assert_eq!(parse_value("3"), Some("3".into()));
+        assert_eq!(parse_value("1.27"), Some("1.27".into()));
+        // mise 工具表：取 version 字段，数组取首个
+        assert_eq!(parse_value("{ version = \"20\" }"), Some("20".into()));
+        assert_eq!(
+            parse_value("{ version = [\"20\", \"22\"] }"),
+            Some("20".into())
+        );
+        // 布尔、日期、裸单词不是合法版本请求
+        assert_eq!(parse_value("true"), None);
+        assert_eq!(parse_value("1979-05-27"), None);
+        assert_eq!(parse_value("latest"), None);
+    }
+
+    #[test]
+    fn parse_section_accepts_literal_and_number_values() {
+        let toml = "[tools]\nnode = '20'\ngo = 1.27\n";
+        assert_eq!(
+            parse_section(toml, "[tools]"),
+            vec![
+                ("node".to_string(), "20".to_string()),
+                ("go".to_string(), "1.27".to_string())
+            ]
+        );
+    }
 
     #[test]
     fn parse_section_reads_quoted_keys_and_stops_at_next_header() {

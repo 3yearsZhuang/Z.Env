@@ -28,6 +28,8 @@ pub struct PresetFile {
 }
 
 /// 从 mise.toml 风格文本中提取 `[tools]` 段；同名键保留首个，避免重复安装。
+/// 兼容 mise 的三种工具写法：`node = "20"`、`node = { version = "20" }`
+/// 与 `[tools.node]` 子表（子表取其 `version` 字段）。
 pub fn parse_tools(toml: &str) -> Vec<PresetTool> {
     let mut out: Vec<PresetTool> = Vec::new();
     for (name, version) in crate::snapshot::parse_section(toml, "[tools]") {
@@ -35,6 +37,26 @@ pub fn parse_tools(toml: &str) -> Vec<PresetTool> {
             continue;
         }
         out.push(PresetTool { name, version });
+    }
+    // `[tools.<name>]` 子表形式（mise 官方文档写法之一）：读取子表的 version 字段。
+    // 引号子表名（如 `[tools."npm:prettier"]`）由 parse_key 统一处理。
+    for line in toml.lines() {
+        let t = line.trim();
+        if !(t.starts_with("[tools.") && t.ends_with(']')) {
+            continue;
+        }
+        let Some(name) = crate::snapshot::parse_key(t["[tools.".len()..t.len() - 1].trim()) else {
+            continue;
+        };
+        if name.is_empty() || out.iter().any(|x| x.name == name) {
+            continue; // 与 [tools] 段同名：TOML 不允许，容错取先出现的
+        }
+        if let Some((_, version)) = crate::snapshot::parse_section(toml, t)
+            .into_iter()
+            .find(|(k, _)| k == "version")
+        {
+            out.push(PresetTool { name, version });
+        }
     }
     out
 }
@@ -206,6 +228,84 @@ mod tests {
         let toml = "[tools]\nnode = \"20\"\nnode = \"22\"\n";
         assert_eq!(
             parse_tools(toml),
+            vec![PresetTool {
+                name: "node".into(),
+                version: "20".into()
+            }]
+        );
+    }
+
+    #[test]
+    fn parse_tools_accepts_literal_string_and_number_versions() {
+        // 手写 mise.toml 常见写法：单引号字面串、裸整数 / 浮点（均为合法 TOML）
+        let toml = "[tools]\nnode = '20'\ngo = 1.27\npython = 3\n";
+        assert_eq!(
+            parse_tools(toml),
+            vec![
+                PresetTool {
+                    name: "node".into(),
+                    version: "20".into()
+                },
+                PresetTool {
+                    name: "go".into(),
+                    version: "1.27".into()
+                },
+                PresetTool {
+                    name: "python".into(),
+                    version: "3".into()
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_tools_accepts_inline_table_form() {
+        // mise 官方表写法：{ version = "..." }；数组版本取首个
+        let toml = "[tools]\nnode = { version = \"20\" }\n\"npm:prettier\" = { version = '3' }\n";
+        assert_eq!(
+            parse_tools(toml),
+            vec![
+                PresetTool {
+                    name: "node".into(),
+                    version: "20".into()
+                },
+                PresetTool {
+                    name: "npm:prettier".into(),
+                    version: "3".into()
+                },
+            ]
+        );
+        assert_eq!(
+            parse_tools("[tools]\nnode = { version = [\"20\", \"22\"] }\n"),
+            vec![PresetTool {
+                name: "node".into(),
+                version: "20".into()
+            }]
+        );
+        // 无 version 字段的表单条目不指定版本，跳过而非误读
+        assert!(parse_tools("[tools]\nnode = { os = [\"linux\"] }\n").is_empty());
+    }
+
+    #[test]
+    fn parse_tools_accepts_sub_table_form() {
+        // `[tools.<name>]` 子表写法，含引号子表名
+        let toml = "[tools.node]\nversion = \"20\"\n\n[tools.\"npm:prettier\"]\nversion = \"3\"\n\n[env]\nEDITOR = \"vim\"\n";
+        assert_eq!(
+            parse_tools(toml),
+            vec![
+                PresetTool {
+                    name: "node".into(),
+                    version: "20".into()
+                },
+                PresetTool {
+                    name: "npm:prettier".into(),
+                    version: "3".into()
+                },
+            ]
+        );
+        // 子表与 [tools] 段同名（TOML 不允许的写法）：容错取先出现的
+        assert_eq!(
+            parse_tools("[tools]\nnode = \"20\"\n\n[tools.node]\nversion = \"22\"\n"),
             vec![PresetTool {
                 name: "node".into(),
                 version: "20".into()

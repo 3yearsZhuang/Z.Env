@@ -135,6 +135,21 @@ describe("replaceToolsSection", () => {
       '[tools]\nnode = "22"\n[settings]\nexperimental = true\n',
     );
   });
+
+  it("[tools.x] 子表与 [tools] 段一并重建，不再残留", () => {
+    const src =
+      '[tools]\nnode = "20"\n\n[tools.python]\nversion = "3.13"\n\n[env]\nEDITOR = "vim"\n';
+    expect(replaceToolsSection(src, { node: "22", python: "3.13" })).toBe(
+      '[tools]\nnode = "22"\npython = "3.13"\n\n[env]\nEDITOR = "vim"\n',
+    );
+  });
+
+  it("只有 [tools.x] 子表时替换后转为内联写法", () => {
+    const src = '[tools.python]\nversion = "3.13"\n\n[env]\nA = "b"\n';
+    expect(replaceToolsSection(src, { python: "3.13" })).toBe(
+      '[env]\nA = "b"\n\n[tools]\npython = "3.13"\n',
+    );
+  });
 });
 
 describe("hasOtherSections", () => {
@@ -148,6 +163,10 @@ describe("hasOtherSections", () => {
 
   it("注释里的方括号不算表", () => {
     expect(hasOtherSections('# 见 [文档]\n[tools]\nnode = "20"\n')).toBe(false);
+  });
+
+  it("[tools.x] 子表属于工具段，不算「其它配置」", () => {
+    expect(hasOtherSections('[tools]\nnode = "20"\n\n[tools.python]\nversion = "3"\n')).toBe(false);
   });
 });
 
