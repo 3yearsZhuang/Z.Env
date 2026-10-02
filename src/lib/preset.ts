@@ -38,17 +38,41 @@ function toolsBlock(tools: Record<string, string>): string {
   return rows ? `[tools]\n${rows}` : "[tools]";
 }
 
+/** `[tools.<name>]` 子表头（mise 工具表的另一种写法） */
+function isToolsSubTable(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith("[tools.") && t.endsWith("]");
+}
+
+/** 删除所有 `[tools.<name>]` 子表块：其工具已并入新的 `[tools]` 段，留着会造成键重复 */
+function dropToolsSubTables(lines: string[]): string[] {
+  const out: string[] = [];
+  let skipping = false;
+  for (const l of lines) {
+    const t = l.trim();
+    if (t.startsWith("[")) {
+      // 任何表头都终结上一个块；`[tools.*]` 自身进入跳过态
+      skipping = isToolsSubTable(t);
+    }
+    if (skipping && t !== "") continue; // 子表头与属性行丢弃，空行留待统一压缩
+    out.push(l);
+  }
+  return out;
+}
+
 /**
  * 用新的工具表替换 mise.toml 文本里的 `[tools]` 段，其余内容（`[env]`、`_.path`、注释等）
  * 原样保留——用户在编辑器里存下的预设可能带这些配置，改写时不能丢。
  * 原文本没有 `[tools]` 段时追加到末尾。
+ * `[tools.<name>]` 子表与 `[tools]` 段表达同一份工具，替换后一并重建为内联写法，
+ * 否则新内联键与旧子表同名会构成非法 TOML（键重复）。
  */
 export function replaceToolsSection(toml: string, tools: Record<string, string>): string {
   const block = toolsBlock(tools);
   const lines = toml.split("\n");
   const start = lines.findIndex((l) => l.trim() === "[tools]");
   if (start < 0) {
-    const head = toml.replace(/\s+$/, "");
+    const head = dropToolsSubTables(lines).join("\n").replace(/^\n+/, "").replace(/\s+$/, "");
     return head ? `${head}\n\n${block}\n` : `${block}\n`;
   }
   // 段范围：`[tools]` 行到下一个顶层表头；末尾空行留给后面，保住与下一段之间的分隔
@@ -60,14 +84,17 @@ export function replaceToolsSection(toml: string, tools: Record<string, string>)
     }
   }
   while (end > start + 1 && lines[end - 1].trim() === "") end--;
-  return [...lines.slice(0, start), ...block.split("\n"), ...lines.slice(end)].join("\n");
+  return dropToolsSubTables([...lines.slice(0, start), ...block.split("\n"), ...lines.slice(end)])
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\n+/, "");
 }
 
 /** 文本是否含 `[tools]` 以外的顶层表（这些段在编辑时会被保留，仅用于提示） */
 export function hasOtherSections(toml: string): boolean {
   return toml.split("\n").some((l) => {
     const t = l.trim();
-    return t.startsWith("[") && t !== "[tools]";
+    return t.startsWith("[") && t !== "[tools]" && !isToolsSubTable(t);
   });
 }
 
