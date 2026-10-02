@@ -330,3 +330,44 @@
   `.dialog-head` 横排导致标题换行、描述压住关闭按钮；整窗 `overflow-y-auto` 让「取消 / 保存」
   被截出视野（改为头尾固定、只滚内容区）；卡片嵌入面板后边界不明显（根因是 `--border`
   自引用使全站边框失效，已在 33 修复）。
+
+---
+
+> 2026-10-02 规划：34 合并（PR #1）的预合并审查留下一项并发正确性缺陷与三个小项；
+> 17 遗留的「更新器端到端验证」也一直悬着。下一轮先收口健壮性与发布，再开产品纵深（P9 候选见 37 后）。
+
+## P8 — 发布与健壮性收口（35 → 36 → 37）
+
+### ⬜ 35. 安装通道并发治理：预设装整机 × 快照重建互斥
+- **问题**（PR #1 审查 Follow-up）：MachinePresetSection 与 SnapshotPanel 共用 `mise:install-progress`
+  事件通道，两入口并发触发时进度日志互相串台，且并发两条 `mise install` 可能互踩
+  （同一工具被同时安装，mise 侧无并发保护）。
+- **方案**：把「安装任务进行中」提升为环境页级共享 busy 状态（`useMachineInstall` 上提），
+  任一入口在跑时另一入口禁用并提示；顺带对齐 InstallDialog 既有惯例——安装中弹窗
+  `showClose={false}`（InstallDialog 已是如此，MachinePresetSection 弹窗未传）。
+- **验证**：busy 互斥逻辑抽纯函数补单测；lint/test/build 全绿；桌面端实测两入口并发只跑一个、
+  日志不串；审查指出的「快照重建流式进度、useMachineInstall 整体流无自动化触达」随本轮补齐可测部分。
+
+### ⬜ 36. 审查遗留小项清零
+- `.preset-head` 在 styles.css 857 与 987 两处逐字重复，删 987 处。
+- `useUserPresets.save` 同名重存把条目挪到列表末尾（过滤后追加），与 `applyPresetEdit`
+  的原地替换行为不一致——统一为原地替换，卡片顺序不变。
+- EnvironmentView 手写 tab-bar 有 `role="tablist"`/`aria-selected` 但缺方向键导航与 `tabpanel`
+  关联——补 roving tabindex 方向键切换 + `role="tabpanel"`/`aria-labelledby`。
+- **验证**：lint/test/build 全绿；键盘走查环境页三个区块切换。
+
+### ⬜ 37. v0.7.1 发布：验证应用内更新端到端
+- **动因**：17 遗留②——latest.json 与签名工件已产出，但「检查更新 → 下载 → 自动重启」
+  全链路从未实跑；且 33 修的全站边框、34 的预设格式兼容都值得尽快随版本出去。
+- **改动**：三处版本 0.7.0 → 0.7.1（`check:version` 门禁）；发 tag 触发 release.yml；
+  发布前确认 0.7.0 草稿 Release 已 Publish，避免 latest.json 指向草稿资产。
+- **验证**：run 全绿；0.7.0 实机客户端收到 0.7.1 并完成重启升级。落地后 17 遗留②④清零，
+  ①Intel Mac 产物挪入 P9 平台缺口。
+
+> P9 候选（37 后按反馈排序，不预设立项、不排死顺序）：
+> - **doctor v2**：磁盘体积类检查（`~/.zenv` 农场，与 27 缓存治理联动）；定时巡检 + 托盘提醒。
+> - **PATH 治理**：重复/失效条目的可视化清理——要写用户 shell 配置，安全边界需单独设计
+>   （24 只做了追加式修复，刻意不动既有内容）。
+> - **平台缺口**：Windows 服务列表、Intel Mac 产物（17 遗留①）。
+> - **项目页纵深**：从预设初始化新项目；展示并运行 mise tasks。
+> - **shadcn/ui 阶段二**（21）：穿插在功能迭代里做，不单独立项。
