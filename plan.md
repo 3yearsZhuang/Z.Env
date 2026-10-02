@@ -364,15 +364,27 @@
   `role="tabpanel"`/`aria-labelledby` 全部接线。
 - **验证**：vitest 53 passed；tsc / eslint / prettier / build 全绿。键盘走查待桌面端验收。
 
-### ⬜ 37. v0.7.1 发布：验证应用内更新端到端
+### ✅ 37. v0.7.1 发布：验证应用内更新端到端
 - **动因**：17 遗留②——latest.json 与签名工件已产出，但「检查更新 → 下载 → 自动重启」
   全链路从未实跑；且 33 修的全站边框、34 的预设格式兼容都值得尽快随版本出去。
-- **改动**：三处版本 0.7.0 → 0.7.1（`check:version` 门禁）；发 tag 触发 release.yml；
-  发布前确认 0.7.0 草稿 Release 已 Publish，避免 latest.json 指向草稿资产。
-- **验证**：run 全绿；0.7.0 实机客户端收到 0.7.1 并完成重启升级。落地后 17 遗留②④清零，
-  ①Intel Mac 产物挪入 P9 平台缺口。
+- **前置**：v0.7.0 草稿先 Publish（它是 `/releases/latest/download/latest.json` 的解析目标，
+  草稿状态拉不到，updater 全链路无法验证）；0.6.x 旧草稿未动。
+- **实战踩坑**：首跑 Windows 构建失败——`action()` 的 systemd 分支全平台编译，而它调用的
+  `validate_unit_name` 挂了 `#[cfg(not(windows))]`，Windows 报 E0425 not found。CI 的 rust job
+  只在 ubuntu 跑，**Windows 专属编译错误只有 release 三平台构建才暴露**；本机交叉
+  `cargo check --target windows` 也走不通（ring 的 C 编译要 MSVC 工具链）。修复：该纯字符串
+  校验函数去平台门（services.rs），顺带清掉 Windows 专属路径三处警告（env.rs 重复赋值、
+  system.rs 死变量）。其余 cfg 门全库排查一遍，均已成对/内联，无同类坑。
+- **发布**：强推 tag 重跑（e8a2c66）三平台全绿，14 资产与 0.7.0 同构、`.sig` 齐全；
+  已 Publish 为 Latest，`latest.json` 实测返回 version 0.7.1 + 9 平台条目
+  （darwin-aarch64/windows-x86_64/linux-x86_64 及安装器变体）。
+- **验证**：run 37034754049 success；17 遗留②④清零，①Intel Mac 产物挪入 P9 平台缺口。
+  **剩最后一环**：0.7.0 实机客户端「设置 → 应用更新」检查并完成升级——只能真机做，
+  待用户验收。
 
 > P9 候选（37 后按反馈排序，不预设立项、不排死顺序）：
+> - **CI 补 Windows 编译覆盖**：rust job 加 windows-latest 的 cargo check——37 证明平台性
+>   编译错误只有 release 才暴露，且本机无法交叉 check。
 > - **doctor v2**：磁盘体积类检查（`~/.zenv` 农场，与 27 缓存治理联动）；定时巡检 + 托盘提醒。
 > - **PATH 治理**：重复/失效条目的可视化清理——要写用户 shell 配置，安全边界需单独设计
 >   （24 只做了追加式修复，刻意不动既有内容）。
