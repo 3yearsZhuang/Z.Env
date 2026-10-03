@@ -22,6 +22,7 @@
 - 应用内置**自动更新**（更新包经 minisign 签名验证）：设置 → 应用更新 → 检查更新，
   下载完成后自动换包重启，无需手动重装。
 - 已知平台缺口：Windows 服务列表暂缺（待实机验证后提供）、Intel Mac 产物未覆盖。
+- 各版本变更摘要见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## ✨ 功能
 
@@ -121,6 +122,7 @@ npm install            # 安装前端依赖
 npm run tauri dev      # 启动开发模式（拉起桌面窗口）
 npm run build          # 构建前端（tsc + vite）
 npm run lint           # ESLint
+npm run format         # Prettier 格式化 src（CI 有 format:check 门禁）
 npm test               # vitest 单测
 npm run check:version  # 校验三处版本号一致（package.json / tauri.conf.json / Cargo.toml）
 
@@ -153,17 +155,16 @@ cargo fmt --check
   后端 fmt + clippy（-D warnings）+ test + build。
 - **release.yml**：推送 `v*` 标签触发，tauri-action 在 macOS / Windows / Linux 三平台打包，
   生成应用内更新所需的 `latest.json` 与 minisign 签名工件。
-- **发布操作**：三处版本号同步升位（`check:version` 门禁）→ `git tag vX.Y.Z && git push origin vX.Y.Z` →
-  run 全绿后 Release 以**草稿**产出，确认资产无误后手动 Publish——`latest.json` 的
-  `/releases/latest/` 端点只解析已发布版本，草稿状态应用内更新拉不到。
+- **发布操作**：完整步骤与历次实踩的坑见 [docs/release.md](./docs/release.md)
+  （版本号三处同步 → 本地全量门禁 → tag → 草稿资产核对 → Publish → 验证 `latest.json`）。
 - 更新包使用 minisign 签名，公钥位于 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey`；
   签名私钥经 GitHub Secrets 注入（`TAURI_SIGNING_PRIVATE_KEY`，密码项留空）。
 
 ## 迭代计划
 
-迭代单一事实源是 [plan.md](./plan.md)：P0–P8 已收口（正确性修复 → 工程质量 → 发布闭环 →
-工程欠账 → 产品纵深 → 整机最小闭环 → 环境页信息架构 → 发布与健壮性收口），
-P9 候选已列（CI 补 Windows 编译覆盖、doctor v2、PATH 治理、平台缺口、项目页纵深等）。
+迭代单一事实源是 [plan.md](./plan.md)（只放向前看的活计划）：P0–P8 已收口，P9 候选已列
+（CI 补 Windows 编译覆盖、doctor v2、PATH 治理、平台缺口、项目页纵深等）。
+完整执行档案（动因 / 备选取舍 / 踩坑 / 验证数据）见 [docs/devlog-P0-P8.md](./docs/devlog-P0-P8.md)。
 
 ## 相关链接
 
