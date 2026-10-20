@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # 允许在功能分支上手动验证，先跑通再合入 main。
+  workflow_dispatch:
 
 jobs:
   # 前端：类型检查 + 生产构建（TS 即 lint 一部分），并做依赖安全审计
@@ -13,11 +15,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Check version consistency
         run: npm run check:version
+      - name: Check documentation links
+        run: npm run check:docs
       - name: Lint (eslint)
         run: npm run lint
       - name: Format check (prettier)
@@ -28,18 +32,23 @@ jobs:
         run: npm run build
       - name: Security audit (npm)
         # 依赖存在 high 及以上漏洞时阻断 CI
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --audit-level=high
 
   # 后端：格式 + lint(clippy) + 编译，Linux 需安装 WebKit 系统依赖
   # ubuntu-20.04 runner 已被 GitHub 淘汰（2025-04 起不可用），升到 24.04
   rust:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - name: Install Linux system deps
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -51,8 +60,8 @@ jobs:
       - name: Format check
         run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - name: Lint (clippy)
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - name: Unit tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
       - name: Build
-        run: cargo build --manifest-path src-tauri/Cargo.toml
+        run: cargo build --locked --manifest-path src-tauri/Cargo.toml
