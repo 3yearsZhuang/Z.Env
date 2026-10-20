@@ -295,21 +295,15 @@ fn standard_mise_aliases_are_observed_without_execution_and_do_not_hide_full_cov
     assert_eq!(scan.report.status, ProviderStatus::Unsupported);
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn uv_minor_alias_stays_observable_without_hiding_full_coverage() {
     let f = Fixture::new();
-    let real = f
-        .options
-        .uv_python_dir
-        .join("cpython-3.12.13-macos-aarch64-none");
+    let exact = uv_dir_name("3.12.13").unwrap();
+    let alias = uv_dir_name("3.12").unwrap();
+    let real = f.options.uv_python_dir.join(&exact);
     script(&real.join("bin/python3"), "3.12.13");
-    symlink(
-        &real,
-        f.options
-            .uv_python_dir
-            .join("cpython-3.12-macos-aarch64-none"),
-    )
-    .unwrap();
+    symlink(&real, f.options.uv_python_dir.join(&alias)).unwrap();
     let scan = f.scan(ProviderId::Uv);
     assert_eq!(scan.report.status, ProviderStatus::Ok);
     assert!(scan.report.error.is_none());
@@ -331,25 +325,19 @@ fn uv_minor_alias_stays_observable_without_hiding_full_coverage() {
     assert!(scan
         .observations
         .iter()
-        .any(|i| Path::new(&i.locator).ends_with("cpython-3.12.13-macos-aarch64-none")));
+        .any(|i| Path::new(&i.locator).ends_with(&exact)));
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn uv_alias_pointing_outside_the_managed_directory_is_not_trusted() {
     let f = Fixture::new();
-    let outside = f
-        .root
-        .path()
-        .join("outside/cpython-3.12.13-macos-aarch64-none");
+    let exact = uv_dir_name("3.12.13").unwrap();
+    let alias = uv_dir_name("3.12").unwrap();
+    let outside = f.root.path().join("outside").join(&exact);
     script(&outside.join("bin/python3"), "3.12.13");
     fs::create_dir_all(&f.options.uv_python_dir).unwrap();
-    symlink(
-        &outside,
-        f.options
-            .uv_python_dir
-            .join("cpython-3.12-macos-aarch64-none"),
-    )
-    .unwrap();
+    symlink(&outside, f.options.uv_python_dir.join(&alias)).unwrap();
     let scan = f.scan(ProviderId::Uv);
     assert!(!scan.report.coverage.complete);
     assert_eq!(scan.report.status, ProviderStatus::Unsupported);
