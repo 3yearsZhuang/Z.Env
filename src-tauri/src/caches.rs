@@ -155,33 +155,19 @@ fn dir_size(dir: &std::path::Path, budget: &mut usize) -> (u64, bool) {
 
 /// 运行命令取完整输出（10 分钟超时，供清理等长操作）。
 fn run_long(prog: &str, args: &[&str]) -> Result<std::process::Output, AppError> {
-    let (prog2, args2) = (
-        prog.to_string(),
-        args.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
-    );
-    let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = tx.send(std::process::Command::new(&prog2).args(&args2).output());
-    });
-    rx.recv_timeout(std::time::Duration::from_secs(600))
-        .map_err(|_| AppError::Other("清理命令执行超时（10 分钟）".into()))?
-        .map_err(|e| AppError::Io(format!("无法执行 {prog}: {e}")))
+    crate::process::output(
+        std::process::Command::new(prog).args(args),
+        std::time::Duration::from_secs(600),
+    )
 }
 
 /// 运行探测命令取首行作为路径（命令缺失/失败/空输出返回 None；10 秒超时）。
 fn probe_path(prog: &str, args: &[&str]) -> Option<std::path::PathBuf> {
-    let (prog2, args2) = (
-        prog.to_string(),
-        args.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
-    );
-    let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = tx.send(std::process::Command::new(&prog2).args(&args2).output());
-    });
-    let out = rx
-        .recv_timeout(std::time::Duration::from_secs(10))
-        .ok()?
-        .ok()?;
+    let out = crate::process::output(
+        std::process::Command::new(prog).args(args),
+        std::time::Duration::from_secs(15),
+    )
+    .ok()?;
     if !out.status.success() {
         return None;
     }

@@ -4,7 +4,7 @@
 //  A. 直连接管：nvm/pyenv/asdf 等用户级稳定目录，直接 mise link；
 //  B. 托管接管：brew 等“目录生命周期归包管理器”的来源，软链指向应用自有的农场目录
 //     （~/.zenv/managed/<tool>/<version> → 真实目录），mise 只认识农场路径；
-//     目标目录被 brew 升级/删除时，reconcile 对账自动重连到新版本或显式移除；
+//     目标目录被 brew 升级/删除时，只修复同软件同版本，不静默升级或删除绑定；
 //  C. PATH 绑定：不建立任何链接，向项目 mise.toml 写入 [env] _.path（stable_bin_path
 //     返回 brew opt / scoop current 这类包管理器自维护的稳定路径），由前端完成写入。
 //
@@ -12,6 +12,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+use crate::config;
 use crate::error::AppError;
 use crate::mise::{detect_tool_sources, run_mise};
 use crate::sources::normalize_version;
@@ -29,6 +30,16 @@ fn home_dir() -> Option<PathBuf> {
 }
 
 fn farm_path(tool: &str, version: &str) -> Result<PathBuf, AppError> {
+    if [tool, version].iter().any(|s| {
+        s.is_empty()
+            || *s == "."
+            || *s == ".."
+            || !s
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c))
+    }) {
+        return Err(AppError::Unsupported("托管目录标识无效".into()));
+    }
     let root = managed_root().ok_or_else(|| AppError::Other("无法定位用户主目录".into()))?;
     Ok(root.join(tool).join(version))
 }
@@ -50,7 +61,7 @@ pub struct ReconcileEvent {
     pub tool: String,
     pub from: String,
     pub to: Option<String>,
-    /// relinked = 已自动重连；removed = 目标消失且无替代，已移除接入；failed = 重连失败
+    /// relinked = 同版本重连；needs-review = 精确版本不可用；failed = 修复失败
     pub action: String,
     pub message: String,
 }
@@ -61,38 +72,34 @@ fn manifest_path() -> Result<PathBuf, AppError> {
         .join("manifest.json"))
 }
 
-fn load_manifest_at(path: &Path) -> Vec<ManagedEntry> {
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+fn load_manifest_at(path: &Path) -> Result<Vec<ManagedEntry>, AppError> {
+    let Some(content) = config::read_optional(path)? else {
+        return Ok(Vec::new());
+    };
+    serde_json::from_str(&content)
+        .map_err(|e| AppError::Parse(format!("托管清单损坏，已停止修改，请检查备份：{e}")))
 }
 
-fn save_manifest_at(path: &Path, entries: &[ManagedEntry]) {
-    if let Ok(json) = serde_json::to_string_pretty(entries) {
-        if let Some(dir) = path.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(path, json);
-    }
+fn save_manifest_at(path: &Path, entries: &[ManagedEntry]) -> Result<(), AppError> {
+    let json = serde_json::to_vec_pretty(entries).map_err(|e| AppError::Parse(e.to_string()))?;
+    config::atomic_write(path, &json)
 }
 
-fn load_manifest() -> Vec<ManagedEntry> {
-    match manifest_path() {
-        Ok(p) => load_manifest_at(&p),
-        Err(_) => Vec::new(),
-    }
+fn load_manifest() -> Result<Vec<ManagedEntry>, AppError> {
+    load_manifest_at(&manifest_path()?)
 }
-
 fn save_manifest(entries: &[ManagedEntry]) -> Result<(), AppError> {
-    let p = manifest_path()?;
-    save_manifest_at(&p, entries);
-    Ok(())
+    save_manifest_at(&manifest_path()?, entries)
 }
 
 /// 创建目录软链（Windows 需开发者模式；brew 仅存在于 unix，此路径不会在 Windows 触发）。
-fn create_symlink(target: &Path, link: &Path) -> Result<(), AppError> {
-    let _ = std::fs::remove_file(link);
+pub(crate) fn create_symlink(target: &Path, link: &Path) -> Result<(), AppError> {
+    if let Ok(old) = std::fs::read_link(link) {
+        if old == target {
+            return Ok(());
+        }
+        return Err(AppError::Other("托管路径已有其他链接，已停止覆盖".into()));
+    }
     #[cfg(unix)]
     let result = std::os::unix::fs::symlink(target, link);
     #[cfg(windows)]
@@ -125,10 +132,12 @@ fn resolve_brew_layout(dir: &Path) -> PathBuf {
 /// 校验 mise 已注册该版本（`mise ls <tool> --json` 中出现），失败时由调用方回滚。
 fn verify_registered(tool: &str, version: &str) -> Result<(), AppError> {
     let out = run_mise(&["ls", tool, "--json"])?;
-    let vs: Vec<serde_json::Value> = serde_json::from_str(&out).unwrap_or_default();
-    let ok = vs
-        .iter()
-        .any(|v| v.get("version").and_then(|x| x.as_str()) == Some(version));
+    let vs: Vec<serde_json::Value> =
+        serde_json::from_str(&out).map_err(|e| AppError::Parse(e.to_string()))?;
+    let ok = vs.iter().any(|v| {
+        v.get("version").and_then(|x| x.as_str()) == Some(version)
+            && v["installed"].as_bool() == Some(true)
+    });
     if ok {
         Ok(())
     } else {
@@ -152,7 +161,7 @@ fn adopt_farm(tool: &str, version: &str, real: &Path) -> Result<(), AppError> {
         return Err(e);
     }
     if let Err(e) = verify_registered(tool, version) {
-        let _ = run_mise(&["uninstall", &spec]);
+        let _ = crate::operations::without_cancellation(|| run_mise(&["uninstall", &spec]));
         let _ = std::fs::remove_file(&farm);
         return Err(e);
     }
@@ -164,71 +173,208 @@ fn adopt_direct(tool: &str, version: &str, real: &Path) -> Result<(), AppError> 
     let spec = format!("{}@{}", tool, version);
     run_mise(&["link", &spec, &real.to_string_lossy()])?;
     if let Err(e) = verify_registered(tool, version) {
-        let _ = run_mise(&["uninstall", &spec]);
+        let _ = crate::operations::without_cancellation(|| run_mise(&["uninstall", &spec]));
         return Err(e);
     }
     Ok(())
 }
 
-/// 接入 mise：按来源自动选择策略，成功后更新托管清单。
+/// 只从目标目录执行版本探针，绝不借用 PATH 上另一个运行时冒充验证成功。
+fn verify_runtime(tool: &str, version: &str, real: &Path) -> Result<(), AppError> {
+    let binary = match tool {
+        "node" => "node",
+        "python" => "python3",
+        "java" => "java",
+        "go" => "go",
+        "ruby" => "ruby",
+        "rust" => "rustc",
+        "php" => "php",
+        "bun" => "bun",
+        "deno" => "deno",
+        "dotnet" => "dotnet",
+        _ => {
+            return Err(AppError::Unsupported(format!(
+                "{tool} 暂无运行验证规则，请使用项目 PATH 绑定"
+            )))
+        }
+    };
+    let mut candidates = vec![
+        real.join("bin").join(binary),
+        real.join(binary),
+        real.join(format!("{binary}.exe")),
+        real.join("bin").join(format!("{binary}.exe")),
+    ];
+    if tool == "python" {
+        candidates.extend([real.join("bin/python"), real.join("python.exe")]);
+    }
+    let bin = candidates
+        .into_iter()
+        .find(|p| p.is_file())
+        .ok_or_else(|| AppError::Other(format!("目标目录缺少 {binary} 可执行文件")))?;
+    let arg = if tool == "java" {
+        "-version"
+    } else if tool == "go" {
+        "version"
+    } else {
+        "--version"
+    };
+    let out = crate::process::output(
+        std::process::Command::new(bin).arg(arg),
+        std::time::Duration::from_secs(10),
+    )?;
+    if !out.status.success() {
+        return Err(AppError::Other("目标运行时无法执行版本探针".into()));
+    }
+    let text = format!(
+        "{} {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let expected: Vec<_> = normalize_version(version.split('_').next().unwrap_or(version))
+        .into_iter()
+        .take(3)
+        .collect();
+    if !expected.is_empty()
+        && !text.split_whitespace().any(|s| {
+            normalize_version(s)
+                .into_iter()
+                .take(expected.len())
+                .collect::<Vec<_>>()
+                == expected
+        })
+    {
+        return Err(AppError::Other(format!(
+            "目标运行时的实际版本与 {version} 不符"
+        )));
+    }
+    Ok(())
+}
+
+fn registered_path(tool: &str, version: &str) -> Result<Option<PathBuf>, AppError> {
+    let out = run_mise(&["ls", tool, "--json"])?;
+    let rows: Vec<serde_json::Value> =
+        serde_json::from_str(&out).map_err(|e| AppError::Parse(e.to_string()))?;
+    Ok(rows
+        .iter()
+        .find(|v| v["version"].as_str() == Some(version))
+        .and_then(|v| v["install_path"].as_str())
+        .map(PathBuf::from))
+}
+
 pub fn adopt(tool: &str, version: &str, manager: &str, path: &str) -> Result<String, AppError> {
     if manager == "system" {
         return Err(AppError::Unsupported(
-            "系统组件没有独立的版本目录，无法接管；可在「项目配置」中使用整机环境绑定（PATH 方式）"
-                .into(),
+            "系统组件不可接管，请使用项目 PATH 绑定".into(),
         ));
     }
     let real = PathBuf::from(path);
-    if !real.exists() {
-        return Err(AppError::Other(format!("源目录不存在：{}", path)));
+    if !real.is_dir() {
+        return Err(AppError::Other(format!("源目录不存在：{path}")));
     }
-    let spec = format!("{}@{}", tool, version);
-
-    if manager == "brew" {
-        // 策略 B：托管接管（brew 仅存在于 unix，农场软链可用）
-        let real = resolve_brew_layout(&real);
-        adopt_farm(tool, version, &real)?;
-        let mut entries = load_manifest();
+    farm_path(tool, version)?;
+    let real = if manager == "brew" {
+        resolve_brew_layout(&real)
+    } else {
+        real
+    };
+    verify_runtime(tool, version, &real)?;
+    let mut entries = load_manifest()?;
+    if let Some(existing) = registered_path(tool, version)? {
+        if existing.canonicalize()? != real.canonicalize()? {
+            return Err(AppError::Other("同版本已有其他安装，已停止覆盖".into()));
+        }
+        if !std::fs::symlink_metadata(&existing)?
+            .file_type()
+            .is_symlink()
+        {
+            return Err(AppError::Other(
+                "该版本是独立安装，不应登记为外部接管".into(),
+            ));
+        }
         entries.retain(|e| !(e.tool == tool && e.version == version));
         entries.push(ManagedEntry {
-            tool: tool.to_string(),
-            version: version.to_string(),
-            manager: manager.to_string(),
+            tool: tool.into(),
+            version: version.into(),
+            manager: manager.into(),
             target: real.display().to_string(),
         });
         save_manifest(&entries)?;
-        return Ok(format!(
-            "已接管 {spec}（托管模式：brew 升级后将在下次扫描时自动重连到新版本）"
-        ));
+        return Ok(format!("{tool}@{version} 已接入且运行验证通过"));
     }
-
-    // 策略 A：直连
-    adopt_direct(tool, version, &real)?;
-    Ok(format!("已接管 {spec}"))
-}
-
-/// 解除接入：移除 mise 链接与农场记录（对旧的直连接管同样有效）。
-pub fn unadopt(tool: &str, version: &str) -> Result<String, AppError> {
-    let spec = format!("{}@{}", tool, version);
-    run_mise(&["uninstall", &spec])?;
-    if let Ok(farm) = farm_path(tool, version) {
-        let _ = std::fs::remove_file(farm);
+    if manager == "brew" {
+        adopt_farm(tool, version, &real)?;
+    } else {
+        adopt_direct(tool, version, &real)?;
     }
-    let mut entries = load_manifest();
-    let before = entries.len();
     entries.retain(|e| !(e.tool == tool && e.version == version));
-    if entries.len() != before {
-        save_manifest(&entries)?;
+    entries.push(ManagedEntry {
+        tool: tool.into(),
+        version: version.into(),
+        manager: manager.into(),
+        target: real.display().to_string(),
+    });
+    if let Err(error) = save_manifest(&entries) {
+        let rollback = crate::operations::without_cancellation(|| {
+            run_mise(&["uninstall", &format!("{tool}@{version}")])
+        });
+        if manager == "brew" {
+            let _ = std::fs::remove_file(farm_path(tool, version)?);
+        }
+        return Err(AppError::Other(format!(
+            "清单保存失败：{error}；注册回滚{}",
+            if rollback.is_ok() {
+                "完成"
+            } else {
+                "失败，请检查运行时"
+            }
+        )));
     }
-    Ok(format!("已解除接管 {spec}"))
+    Ok(format!("已接管 {tool}@{version}，目标运行验证通过"))
 }
 
-/// 当前列表 + 健康状态（真实目录是否仍存在）。
-pub fn list() -> Vec<ManagedEntryHealthy> {
-    load_manifest()
+pub fn unadopt(tool: &str, version: &str) -> Result<String, AppError> {
+    farm_path(tool, version)?;
+    let old = load_manifest()?;
+    let entry = old.iter().find(|e| e.tool == tool && e.version == version);
+    let registered = registered_path(tool, version)?;
+    let registration = registered.map(LinkState::capture).transpose()?;
+    if registration.is_none() && entry.is_none() {
+        return Err(AppError::Other("未发现该托管接入".into()));
+    }
+    let farm = LinkState::capture(farm_path(tool, version)?)?;
+    let kept: Vec<_> = old
+        .iter()
+        .filter(|e| !(e.tool == tool && e.version == version))
+        .cloned()
+        .collect();
+    let result = (|| {
+        run_mise(&["uninstall", &format!("{tool}@{version}")])?;
+        if farm.target.is_some() {
+            std::fs::remove_file(&farm.path)?;
+        }
+        save_manifest(&kept)
+    })();
+    if let Err(error) = result {
+        let rollback = (|| -> Result<(), AppError> {
+            farm.restore()?;
+            if let Some(registration) = registration {
+                registration.restore()?;
+            }
+            Ok(())
+        })();
+        return Err(AppError::Other(match rollback {
+            Ok(()) => format!("{error}；原接管链接已恢复"),
+            Err(rollback) => format!("{error}；回滚失败：{rollback}，请检查托管清单和链接"),
+        }));
+    }
+    Ok(format!("已解除接管 {tool}@{version}"))
+}
+
+pub fn list() -> Result<Vec<ManagedEntryHealthy>, AppError> {
+    Ok(load_manifest()?
         .into_iter()
         .map(|e| {
-            let healthy = Path::new(&e.target).exists();
+            let healthy = healthy(&e);
             ManagedEntryHealthy {
                 tool: e.tool,
                 version: e.version,
@@ -237,88 +383,249 @@ pub fn list() -> Vec<ManagedEntryHealthy> {
                 healthy,
             }
         })
-        .collect()
+        .collect())
 }
 
-/// 对账：目标目录消失（brew 升级/卸载）时自动重连到同来源的新版本，或显式移除接入。
-pub fn reconcile() -> Vec<ReconcileEvent> {
-    let mut events: Vec<ReconcileEvent> = Vec::new();
-    let entries = load_manifest();
-    if entries.is_empty() {
-        return events;
+fn healthy(entry: &ManagedEntry) -> bool {
+    let target = Path::new(&entry.target);
+    target.is_dir()
+        && registered_path(&entry.tool, &entry.version)
+            .ok()
+            .flatten()
+            .is_some_and(|path| path.canonicalize().ok() == target.canonicalize().ok())
+        && verify_runtime(&entry.tool, &entry.version, target).is_ok()
+}
+
+/// 捕获链接状态；普通目录绝不参与修复或回滚，避免删除独立安装。
+struct LinkState {
+    path: PathBuf,
+    target: Option<PathBuf>,
+}
+impl LinkState {
+    fn capture(path: PathBuf) -> Result<Self, AppError> {
+        let target = match std::fs::symlink_metadata(&path) {
+            Ok(meta) if meta.file_type().is_symlink() => Some(std::fs::read_link(&path)?),
+            Ok(_) => {
+                return Err(AppError::Other(format!(
+                    "{} 不是接管链接，已停止覆盖",
+                    path.display()
+                )))
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e.into()),
+        };
+        Ok(Self { path, target })
     }
-    let sources = detect_tool_sources();
-    let mut kept: Vec<ManagedEntry> = Vec::new();
-
-    for e in entries {
-        if Path::new(&e.target).exists() {
-            kept.push(e);
-            continue;
+    fn restore(&self) -> Result<(), AppError> {
+        match &self.target {
+            Some(target) => replace_symlink(target, &self.path),
+            None => match std::fs::symlink_metadata(&self.path) {
+                Ok(meta) if meta.file_type().is_symlink() => {
+                    std::fs::remove_file(&self.path)?;
+                    Ok(())
+                }
+                Ok(_) => Err(AppError::Other(
+                    "回滚路径已被替换为普通文件，请人工检查".into(),
+                )),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(e.into()),
+            },
         }
-        // 目标消失：在同来源中寻找仍然存在的新版本目录
-        let candidate = sources
-            .iter()
-            .filter(|s| s.tool == e.tool && s.manager == e.manager)
-            .filter(|s| Path::new(&s.path).exists() && s.path != e.target)
-            .max_by_key(|s| normalize_version(&s.version))
-            .cloned();
+    }
+}
 
-        let spec = format!("{}@{}", e.tool, e.version);
-        let _ = run_mise(&["uninstall", &spec]); // 旧链接（已悬空）先移除
-        let _ = std::fs::remove_file(farm_path(&e.tool, &e.version).unwrap_or_default());
+fn replace_symlink(target: &Path, path: &Path) -> Result<(), AppError> {
+    let old = LinkState::capture(path.to_path_buf())?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| AppError::Other("链接路径无父目录".into()))?;
+    std::fs::create_dir_all(parent)?;
+    let staging = tempfile::tempdir_in(parent)?;
+    let next = staging.path().join("next");
+    create_symlink(target, &next)?;
+    #[cfg(windows)]
+    if old.target.is_some() {
+        std::fs::rename(path, staging.path().join("old"))?;
+    }
+    if let Err(error) = std::fs::rename(&next, path) {
+        #[cfg(windows)]
+        if old.target.is_some() {
+            std::fs::rename(staging.path().join("old"), path)?;
+        }
+        return Err(error.into());
+    }
+    let _ = old;
+    Ok(())
+}
 
-        match candidate {
-            Some(next) if next.version != e.version => {
-                let new_real = resolve_brew_layout(Path::new(&next.path));
-                match adopt_farm(&e.tool, &next.version, &new_real) {
-                    Ok(()) => {
-                        let mut next_entry = e.clone();
-                        next_entry.version = next.version.clone();
-                        next_entry.target = new_real.display().to_string();
-                        kept.push(next_entry);
-                        events.push(ReconcileEvent {
-                            tool: e.tool.clone(),
-                            from: e.version.clone(),
-                            to: Some(next.version.clone()),
-                            action: "relinked".into(),
-                            message: format!(
-                                "{} {} 已被 {} 升级为 {}，已自动重连接入",
-                                e.tool, e.version, e.manager, next.version
-                            ),
-                        });
-                    }
-                    Err(err) => {
-                        events.push(ReconcileEvent {
-                            tool: e.tool.clone(),
-                            from: e.version.clone(),
-                            to: Some(next.version.clone()),
-                            action: "failed".into(),
-                            message: format!(
-                                "{} 升级到 {} 后重连失败：{}；可在运行时页重新接管",
-                                e.tool, next.version, err
-                            ),
-                        });
+fn repair(
+    entry: &ManagedEntry,
+    real: &Path,
+    commit: impl FnOnce() -> Result<(), AppError>,
+) -> Result<(), AppError> {
+    farm_path(&entry.tool, &entry.version)?;
+    verify_runtime(&entry.tool, &entry.version, real)?;
+    let registered = registered_path(&entry.tool, &entry.version)?;
+    let mut links = Vec::new();
+    if let Some(path) = registered.as_ref() {
+        let old = LinkState::capture(path.clone())?;
+        if let Some(target) = &old.target {
+            let absolute = if target.is_absolute() {
+                target.clone()
+            } else {
+                path.parent().unwrap().join(target)
+            };
+            let farm = farm_path(&entry.tool, &entry.version)?;
+            if absolute != Path::new(&entry.target) && absolute != farm {
+                return Err(AppError::Other(
+                    "注册链接已指向其他来源，已停止自动修复".into(),
+                ));
+            }
+        }
+        links.push(old);
+    }
+    let destination = if entry.manager == "brew" {
+        let farm = farm_path(&entry.tool, &entry.version)?;
+        let old = LinkState::capture(farm.clone())?;
+        if old
+            .target
+            .as_deref()
+            .is_some_and(|target| target != Path::new(&entry.target))
+        {
+            return Err(AppError::Other(
+                "农场链接已指向其他来源，已停止自动修复".into(),
+            ));
+        }
+        links.push(old);
+        farm
+    } else {
+        real.to_path_buf()
+    };
+    let result = (|| {
+        if entry.manager == "brew" {
+            replace_symlink(real, &destination)?;
+        }
+        if let Some(path) = registered.as_ref() {
+            replace_symlink(&destination, path)?;
+        } else {
+            run_mise(&[
+                "link",
+                &format!("{}@{}", entry.tool, entry.version),
+                &destination.to_string_lossy(),
+            ])?;
+        }
+        verify_registered(&entry.tool, &entry.version)?;
+        commit()
+    })();
+    if let Err(error) = result {
+        let rollback = crate::operations::without_cancellation(|| -> Result<(), AppError> {
+            if registered.is_none() {
+                if let Some(path) = registered_path(&entry.tool, &entry.version)? {
+                    let current = LinkState::capture(path.clone())?;
+                    if current.target.as_deref() == Some(destination.as_path()) {
+                        std::fs::remove_file(path)?;
+                    } else {
+                        return Err(AppError::Other("新注册链接目标不符，请人工检查".into()));
                     }
                 }
             }
-            _ => {
-                events.push(ReconcileEvent {
-                    tool: e.tool.clone(),
-                    from: e.version.clone(),
-                    to: None,
-                    action: "removed".into(),
-                    message: format!(
-                        "{} {} 的 {} 目录已不存在（可能被卸载），已移除接入",
-                        e.tool, e.version, e.manager
-                    ),
-                });
+            for link in links.iter().rev() {
+                link.restore()?;
             }
+            Ok(())
+        });
+        return Err(AppError::Other(match rollback {
+            Ok(()) => format!("{error}；原链接已恢复"),
+            Err(rollback) => format!("{error}；链接回滚失败：{rollback}，请检查托管清单与链接"),
+        }));
+    }
+    Ok(())
+}
+
+/// 包身份取自原始 Cellar 路径，不能把 node@20 与 node@22 当成同一软件。
+fn formula(path: &str) -> Option<String> {
+    let parts: Vec<_> = Path::new(path)
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_string())
+        .collect();
+    parts
+        .windows(2)
+        .find(|w| w[0] == "Cellar")
+        .map(|w| w[1].clone())
+}
+
+pub fn reconcile() -> Result<Vec<ReconcileEvent>, AppError> {
+    let mut events = Vec::new();
+    let mut entries = load_manifest()?;
+    let sources = detect_tool_sources();
+    for index in 0..entries.len() {
+        let entry = entries[index].clone();
+        if healthy(&entry) {
+            continue;
+        }
+        let same_package = |s: &&crate::mise::ToolSource| {
+            s.tool == entry.tool
+                && s.manager == entry.manager
+                && (entry.manager != "brew"
+                    || (formula(&entry.target).is_some()
+                        && formula(&s.path) == formula(&entry.target)))
+        };
+        let exact = sources
+            .iter()
+            .filter(same_package)
+            .find(|s| s.version == entry.version && Path::new(&s.path).is_dir());
+        // 精确版本绑定不能在扫描时静默跨版本升级；保留记录，明确让用户选择新版本。
+        let real = if Path::new(&entry.target).is_dir() {
+            Some(PathBuf::from(&entry.target))
+        } else {
+            exact.map(|source| {
+                if entry.manager == "brew" {
+                    resolve_brew_layout(Path::new(&source.path))
+                } else {
+                    PathBuf::from(&source.path)
+                }
+            })
+        };
+        if let Some(real) = real {
+            let mut updated = entries.clone();
+            updated[index].target = real.display().to_string();
+            let result = repair(&entry, &real, || save_manifest(&updated));
+            let (action, message) = match result {
+                Ok(()) => {
+                    entries = updated;
+                    (
+                        "relinked",
+                        "已修复同软件、同版本的链接，原版本绑定保持有效".into(),
+                    )
+                }
+                Err(error) => ("failed", error.to_string()),
+            };
+            events.push(ReconcileEvent {
+                tool: entry.tool.clone(),
+                from: entry.version.clone(),
+                to: Some(entry.version.clone()),
+                action: action.into(),
+                message,
+            });
+        } else {
+            events.push(ReconcileEvent {
+                tool: entry.tool.clone(),
+                from: entry.version.clone(),
+                to: None,
+                action: "needs-review".into(),
+                message: format!(
+                    "{}@{} 的来源已移除；精确版本绑定保留，请选择并验证替代版本后再解除旧接管",
+                    entry.tool, entry.version
+                ),
+            });
         }
     }
-    if save_manifest(&kept).is_ok() {
-        return events;
+    if events.iter().any(|e| e.action != "relinked") {
+        if let Some(id) = crate::operations::current_id() {
+            crate::operations::partial(&id);
+        }
     }
-    events
+    Ok(events)
 }
 
 /// 策略 C：返回包管理器自维护的稳定 bin 路径（brew 用 opt 链接，scoop 用 current），
@@ -378,50 +685,57 @@ pub struct ManagedEntryHealthy {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    #[cfg(unix)]
     #[test]
-    fn manifest_roundtrip() {
-        let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("manifest.json");
-        assert!(load_manifest_at(&path).is_empty());
-        save_manifest_at(
-            &path,
-            &[ManagedEntry {
-                tool: "node".into(),
-                version: "22.11.0".into(),
-                manager: "brew".into(),
-                target: "/opt/homebrew/Cellar/node/22.11.0".into(),
-            }],
-        );
-        let loaded = load_manifest_at(&path);
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].tool, "node");
-        assert_eq!(loaded[0].version, "22.11.0");
-        // 损坏的 JSON 视为空清单
-        std::fs::write(&path, "not json").unwrap();
-        assert!(load_manifest_at(&path).is_empty());
+    fn replacement_can_restore_broken_link_and_never_overwrites_native_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let link = dir.path().join("registered");
+        let missing = dir.path().join("old-missing");
+        let replacement = dir.path().join("new");
+        std::fs::create_dir(&replacement).unwrap();
+        create_symlink(&missing, &link).unwrap();
+        let before = LinkState::capture(link.clone()).unwrap();
+        replace_symlink(&replacement, &link).unwrap();
+        assert_eq!(std::fs::read_link(&link).unwrap(), replacement);
+        before.restore().unwrap();
+        assert_eq!(std::fs::read_link(&link).unwrap(), missing);
+        assert!(replace_symlink(&missing, &replacement).is_err());
+        assert!(replacement.is_dir());
     }
-
+    #[test]
+    fn corrupt_manifest_and_write_errors_are_not_silenced() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("manifest.json");
+        assert!(load_manifest_at(&file).unwrap().is_empty());
+        save_manifest_at(&file, &[]).unwrap();
+        std::fs::write(&file, "broken").unwrap();
+        assert!(load_manifest_at(&file).is_err());
+        assert!(save_manifest_at(dir.path(), &[]).is_err());
+    }
+    #[test]
+    fn empty_runtime_is_rejected_before_linking() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(verify_runtime("node", "20", dir.path()).is_err());
+        assert!(adopt("python", "3", "system", "/usr/bin").is_err());
+    }
+    #[test]
+    fn brew_package_identity_preserves_major_formula() {
+        assert_ne!(
+            formula("/opt/homebrew/Cellar/node@20/20.1"),
+            formula("/opt/homebrew/Cellar/node@22/22.1")
+        );
+        assert_eq!(
+            formula("/opt/homebrew/Cellar/openjdk@21/21/libexec/openjdk.jdk/Contents/Home"),
+            Some("openjdk@21".into())
+        );
+    }
     #[cfg(target_os = "macos")]
     #[test]
-    fn brew_openjdk_layout_resolves_to_inner_home() {
-        let tmp = tempfile::tempdir().unwrap();
-        let cellar = tmp.path().join("Cellar/openjdk/21");
-        let home = cellar.join("libexec/openjdk.jdk/Contents/Home");
-        std::fs::create_dir_all(&home).unwrap();
-        let resolved = resolve_brew_layout(&cellar);
-        assert_eq!(resolved, home);
-        // 非 openjdk 目录原样返回
-        let plain = tmp.path().join("Cellar/node/22.11.0");
-        std::fs::create_dir_all(&plain).unwrap();
-        assert_eq!(resolve_brew_layout(&plain), plain);
-    }
-
-    #[test]
-    fn adopt_rejects_system_and_missing_dir() {
-        let err = adopt("python", "3.9.6", "system", "/usr/bin").unwrap_err();
-        assert!(matches!(err, AppError::Unsupported(_)));
-        let err = adopt("node", "20.0.0", "nvm", "/nonexistent/path").unwrap_err();
-        assert!(err.to_string().contains("源目录不存在"));
+    fn java_layout_resolves_real_home() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Cellar/openjdk@21/21");
+        let inner = root.join("libexec/openjdk.jdk/Contents/Home");
+        std::fs::create_dir_all(&inner).unwrap();
+        assert_eq!(resolve_brew_layout(&root), inner);
     }
 }

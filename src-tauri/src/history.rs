@@ -33,7 +33,7 @@ pub fn record(kind: &str, detail: impl Into<String>) {
     let entry = HistoryEntry {
         time: now_secs(),
         kind: kind.to_string(),
-        detail: detail.into(),
+        detail: redact(kind, detail.into()),
     };
     let Ok(line) = serde_json::to_string(&entry) else {
         return;
@@ -58,6 +58,16 @@ pub fn list(count: usize) -> Vec<HistoryEntry> {
     out
 }
 
+/// 兼容旧版 key=value 历史；读取时也隐藏已有值，不再向 UI 传播。
+fn redact(kind: &str, detail: String) -> String {
+    if kind == "env-set" {
+        if let Some((key, _)) = detail.split_once('=') {
+            return format!("{key}（值已隐藏）");
+        }
+    }
+    detail
+}
+
 /// 追加一行到日志文件。
 fn append_line(file: &std::path::Path, line: &str) -> std::io::Result<()> {
     use std::io::Write;
@@ -73,7 +83,11 @@ fn parse_lines(content: &str) -> Vec<HistoryEntry> {
     content
         .lines()
         .filter(|l| !l.trim().is_empty())
-        .filter_map(|l| serde_json::from_str(l).ok())
+        .filter_map(|l| serde_json::from_str::<HistoryEntry>(l).ok())
+        .map(|mut entry| {
+            entry.detail = redact(&entry.kind, entry.detail);
+            entry
+        })
         .collect()
 }
 
@@ -107,6 +121,7 @@ mod tests {
         let content = std::fs::read_to_string(&file).unwrap();
         let entries = parse_lines(&content);
         assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].detail, "A（值已隐藏）");
         assert_eq!(entries[1].kind, "cache-clean");
     }
 

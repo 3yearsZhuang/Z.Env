@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::io::Read;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Command;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 use crate::error::AppError;
@@ -35,6 +35,7 @@ pub fn mise_status() -> MiseStatus {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolSource {
+    pub package_id: Option<String>,
     pub tool: String,
     pub version: String,
     pub manager: String,
@@ -171,6 +172,7 @@ fn scan_versions<F>(
             continue;
         }
         out.push(ToolSource {
+            package_id: None,
             tool: tool.to_string(),
             version,
             manager: manager.to_string(),
@@ -198,6 +200,7 @@ fn scan_sdkman(out: &mut Vec<ToolSource>, dir: &std::path::Path) {
                 }
                 if v.path().join("bin").exists() {
                     out.push(ToolSource {
+                        package_id: None,
                         tool: tool_name.clone(),
                         version: vname,
                         manager: "sdkman".to_string(),
@@ -227,6 +230,7 @@ fn scan_asdf(out: &mut Vec<ToolSource>, dir: &std::path::Path) {
                 }
                 if v.path().join("bin").exists() {
                     out.push(ToolSource {
+                        package_id: None,
                         tool: tool_name.clone(),
                         version: vname,
                         manager: "asdf".to_string(),
@@ -256,6 +260,7 @@ fn scan_tool_versions(out: &mut Vec<ToolSource>, dir: &std::path::Path, manager:
                 }
                 if v.path().join("bin").exists() {
                     out.push(ToolSource {
+                        package_id: None,
                         tool: tool_name.clone(),
                         version: vname,
                         manager: manager.to_string(),
@@ -291,6 +296,7 @@ fn scan_homebrew_cellar(out: &mut Vec<ToolSource>, dir: &std::path::Path) {
             }
             if v.path().join("bin").exists() {
                 out.push(ToolSource {
+                    package_id: Some(formula.clone()),
                     tool: tool.to_string(),
                     version: vname,
                     manager: "brew".to_string(),
@@ -307,7 +313,8 @@ fn homebrew_tool_name(formula: &str) -> Option<&str> {
     let base = formula.split('@').next().unwrap_or(formula);
     let mapped = match base {
         "openjdk" => "java",
-        other => other,
+        "node" | "python" | "go" | "ruby" | "rust" | "php" | "bun" | "deno" | "dotnet" => base,
+        _ => return None,
     };
     Some(mapped)
 }
@@ -337,6 +344,7 @@ fn scan_system_binaries(out: &mut Vec<ToolSource>) {
             .unwrap_or_else(|| "system".to_string());
         seen.insert(tool.to_string());
         out.push(ToolSource {
+            package_id: None,
             tool: tool.to_string(),
             version,
             manager: "system".to_string(),
@@ -344,10 +352,10 @@ fn scan_system_binaries(out: &mut Vec<ToolSource>) {
         });
     }
     // 系统自带多版本能力：查询 java_home 的 JDK 列表
-    let jh = std::process::Command::new("/usr/libexec/java_home")
-        .args(["-V"])
-        .stderr(std::process::Stdio::piped())
-        .output();
+    let jh = crate::process::output(
+        std::process::Command::new("/usr/libexec/java_home").args(["-V"]),
+        Duration::from_secs(10),
+    );
     if let Ok(o) = jh {
         for line in String::from_utf8_lossy(&o.stderr).lines() {
             let l = line.trim();
@@ -358,6 +366,7 @@ fn scan_system_binaries(out: &mut Vec<ToolSource>) {
             let v = l.split_whitespace().next().unwrap_or("").to_string();
             if !v.is_empty() {
                 out.push(ToolSource {
+                    package_id: None,
                     tool: "java".to_string(),
                     version: format!("system ({})", v),
                     manager: "system".to_string(),
@@ -371,10 +380,11 @@ fn scan_system_binaries(out: &mut Vec<ToolSource>) {
 /// 试探式读取二进制 `--version` 输出中的第一个版本 token。
 #[allow(dead_code)]
 fn probe_version(bin: &str) -> Option<String> {
-    let out = std::process::Command::new(bin)
-        .arg("--version")
-        .output()
-        .ok()?;
+    let out = crate::process::output(
+        std::process::Command::new(bin).arg("--version"),
+        Duration::from_secs(10),
+    )
+    .ok()?;
     let text = String::from_utf8_lossy(&out.stdout)
         .chars()
         .chain(String::from_utf8_lossy(&out.stderr).chars())
@@ -396,6 +406,7 @@ fn scan_scoop(out: &mut Vec<ToolSource>, dir: &std::path::Path) {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstallProgress {
+    pub job_id: String,
     pub tool: String,
     pub version: String,
     pub line: String,
@@ -486,15 +497,6 @@ fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-/// 把子进程启动失败映射为更友好的错误：mise 不在 PATH 时给出安装引导文案。
-fn spawn_mise_error(mise: &std::path::Path, e: std::io::Error) -> AppError {
-    if e.kind() == std::io::ErrorKind::NotFound {
-        AppError::MiseNotInstalled
-    } else {
-        AppError::Io(format!("无法执行 mise ({}): {}", mise.display(), e))
-    }
-}
-
 /// 执行一个 mise 命令并返回标准输出。失败时返回错误信息。
 pub fn run_mise(args: &[&str]) -> Result<String, AppError> {
     let mise = find_mise();
@@ -503,7 +505,11 @@ pub fn run_mise(args: &[&str]) -> Result<String, AppError> {
     if let Some(h) = home_dir() {
         command.current_dir(h);
     }
-    let output = command.output().map_err(|e| spawn_mise_error(&mise, e))?;
+    let output = crate::process::output_with_environment(
+        &mut command,
+        Duration::from_secs(120),
+        crate::process::EnvironmentPolicy::AsConfigured,
+    )?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if output.status.success() {
@@ -523,8 +529,15 @@ pub fn run_mise(args: &[&str]) -> Result<String, AppError> {
 
 /// 列出所有已安装的工具及其版本。
 pub fn list_tools() -> Result<Vec<ToolInfo>, AppError> {
-    let output = run_mise(&["ls", "--json"])?;
-    let map: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&output)
+    parse_tools_output(&run_mise(&["ls", "--json"])?)
+}
+
+pub fn list_global_tools() -> Result<Vec<ToolInfo>, AppError> {
+    parse_tools_output(&run_mise(&["ls", "--global", "--json"])?)
+}
+
+fn parse_tools_output(output: &str) -> Result<Vec<ToolInfo>, AppError> {
+    let map: serde_json::Map<String, serde_json::Value> = serde_json::from_str(output)
         .map_err(|e| AppError::Parse(format!("解析 mise ls 输出失败: {}", e)))?;
 
     let mut tools: Vec<ToolInfo> = Vec::new();
@@ -572,110 +585,74 @@ pub fn list_registry() -> Result<Vec<String>, AppError> {
 
 /// 安装指定工具版本。
 pub fn install_version(tool: &str, version: &str) -> Result<String, AppError> {
+    validate_spec(tool, version)?;
     let spec = format!("{}@{}", tool, version);
     run_mise(&["install", &spec]).map(|_| format!("{} 安装完成", spec))
 }
 
-/// 流式安装指定工具版本，逐帧将输出通过 Tauri 事件推送给前端。
+/// 任务 ID 贯穿日志与命令；仅安装内容，不隐式改变用户默认版本。
 pub fn install_version_streaming(
     app: &AppHandle,
     tool: &str,
     version: &str,
+    job_id: &str,
 ) -> Result<String, AppError> {
-    let spec = format!("{}@{}", tool, version);
-    let mise = find_mise();
-
-    let mut command = Command::new(&mise);
-    command
-        .args(["install", &spec])
-        .env("PATH", build_path())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    validate_spec(tool, version)?;
+    let spec = format!("{tool}@{version}");
+    let mut command = Command::new(find_mise());
+    command.args(["install", &spec]);
     if let Some(h) = home_dir() {
         command.current_dir(h);
     }
-    let mut child = command.spawn().map_err(|e| spawn_mise_error(&mise, e))?;
-
-    let stdout = child.stdout.take().expect("stdout pipe");
-    let stderr = child.stderr.take().expect("stderr pipe");
-
-    // 两个线程分别转发 stdout / stderr 到前端事件
-    let app_out = app.clone();
-    let out_tool = tool.to_string();
-    let out_version = version.to_string();
-    let t_out = std::thread::spawn(move || {
-        pump_stream(stdout, &app_out, &out_tool, &out_version);
-    });
-
-    let app_err = app.clone();
-    let err_tool = tool.to_string();
-    let err_version = version.to_string();
-    let t_err = std::thread::spawn(move || {
-        pump_stream(stderr, &app_err, &err_tool, &err_version);
-    });
-
-    let status = child
-        .wait()
-        .map_err(|e| AppError::Io(format!("等待 mise 进程失败: {}", e)))?;
-    let _ = t_out.join();
-    let _ = t_err.join();
-
-    if status.success() {
-        Ok(format!("{} 安装完成", spec))
+    let output = crate::process::run(
+        &mut command,
+        Duration::from_secs(3600),
+        Some(job_id),
+        |line| {
+            let _ = app.emit(
+                "mise:install-progress",
+                InstallProgress {
+                    job_id: job_id.into(),
+                    tool: tool.into(),
+                    version: version.into(),
+                    line: line.into(),
+                },
+            );
+        },
+    )?;
+    if output.status.success() {
+        Ok(format!("{spec} 安装完成"))
     } else {
-        Err(AppError::Other(format!("{} 安装失败", spec)))
+        Err(AppError::Other(format!(
+            "{spec} 安装失败：{}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )))
     }
 }
 
-/// 逐字节读取子进程输出，按 `\r` / `\n` 切分成一行帧并推送事件。
-fn pump_stream<R: Read>(mut reader: R, app: &AppHandle, tool: &str, version: &str) {
-    let mut byte = [0u8; 1];
-    let mut line = String::new();
-    loop {
-        match reader.read(&mut byte) {
-            Ok(0) => break,
-            Ok(_) => {
-                let c = byte[0] as char;
-                if c == '\n' || c == '\r' {
-                    if !line.trim().is_empty() {
-                        let _ = app.emit(
-                            "mise:install-progress",
-                            InstallProgress {
-                                tool: tool.to_string(),
-                                version: version.to_string(),
-                                line: line.trim_end().to_string(),
-                            },
-                        );
-                    }
-                    line.clear();
-                } else {
-                    line.push(c);
-                }
-            }
-            Err(_) => break,
-        }
+/// 参数仍以独立 argv 传递；拒绝选项、控制字符与空请求。
+pub fn validate_spec(tool: &str, version: &str) -> Result<(), AppError> {
+    if [tool, version].iter().any(|s| {
+        s.is_empty()
+            || s.starts_with('-')
+            || s.contains(char::is_whitespace)
+            || s.contains(char::is_control)
+    }) {
+        return Err(AppError::Unsupported("工具名或版本请求无效".into()));
     }
-    // 末尾残留（可能没有换行符）
-    if !line.trim().is_empty() {
-        let _ = app.emit(
-            "mise:install-progress",
-            InstallProgress {
-                tool: tool.to_string(),
-                version: version.to_string(),
-                line: line.trim_end().to_string(),
-            },
-        );
-    }
+    Ok(())
 }
 
 /// 卸载指定工具版本。
 pub fn uninstall_version(tool: &str, version: &str) -> Result<String, AppError> {
+    validate_spec(tool, version)?;
     let spec = format!("{}@{}", tool, version);
     run_mise(&["uninstall", &spec]).map(|_| format!("{} 卸载完成", spec))
 }
 
 /// 切换（激活）某个工具版本。global 为 true 时写入全局配置。
 pub fn use_version(tool: &str, version: &str, global: bool) -> Result<String, AppError> {
+    validate_spec(tool, version)?;
     let spec = format!("{}@{}", tool, version);
     // 注意：global=false 时不要传空字符串参数，否则 `mise use ""` 可能解析异常。
     if global {
@@ -688,96 +665,43 @@ pub fn use_version(tool: &str, version: &str, global: bool) -> Result<String, Ap
 /// 接管：将已存在的外部环境目录链接为 mise 管理版本（`mise link`），
 /// 无需重新下载。
 pub fn link_version(tool: &str, version: &str, path: &str) -> Result<String, AppError> {
-    let spec = format!("{}@{}", tool, version);
-    run_mise(&["link", &spec, path]).map(|_| format!("已接管 {} -> {}", spec, path))
+    validate_spec(tool, version)?;
+    crate::managed::adopt(tool, version, "external", path)
 }
 
 /// 解除接管：移除某版本与外部目录的链接。
 /// mise 无 `unlink` 子命令（`unlink` 会被当作未知命令报“no tasks defined”）；
 /// 对由 `link` 创建的 symlink，用 `mise uninstall` 即可移除链接而不删除外部目录。
 pub fn unlink_version(tool: &str, version: &str) -> Result<String, AppError> {
-    let spec = format!("{}@{}", tool, version);
-    run_mise(&["uninstall", &spec]).map(|_| format!("已解除接管（移除链接）{}", spec))
+    validate_spec(tool, version)?;
+    crate::managed::unadopt(tool, version)
 }
 
-/// 读取项目根目录的 mise 配置文件内容。
-pub fn read_project_config(path: &str) -> Result<String, AppError> {
-    let p = PathBuf::from(path);
-    if !p.exists() {
-        return Err(AppError::Other(format!("路径不存在：{}", path)));
+/// 已经由 project 服务校验、保存配置；这里只在明确的项目目录执行安装。
+pub fn install_all_project(app: &AppHandle, path: &str, job: &str) -> Result<String, AppError> {
+    let target = std::path::Path::new(path)
+        .parent()
+        .ok_or_else(|| AppError::Other("项目目录无效".into()))?;
+    let mut command = Command::new(find_mise());
+    command.arg("install").current_dir(target);
+    let output = crate::process::run(&mut command, Duration::from_secs(3600), Some(job), |line| {
+        let _ = app.emit(
+            "mise:install-progress",
+            InstallProgress {
+                job_id: job.into(),
+                tool: "project".into(),
+                version: String::new(),
+                line: line.into(),
+            },
+        );
+    })?;
+    if !output.status.success() {
+        return Err(AppError::Other(format!(
+            "项目安装失败：{}",
+            String::from_utf8_lossy(&output.stderr)
+        )));
     }
-    if p.is_file() {
-        std::fs::read_to_string(&p).map_err(|e| AppError::Io(format!("读取 {} 失败: {}", path, e)))
-    } else {
-        // 目录：优先找 mise.toml，其次是 .tool-versions
-        let candidates = [p.join("mise.toml"), p.join(".tool-versions")];
-        for c in candidates {
-            if c.exists() {
-                return std::fs::read_to_string(&c)
-                    .map_err(|e| AppError::Io(format!("读取 {} 失败: {}", c.display(), e)));
-            }
-        }
-        Err(AppError::Other(format!(
-            "目录 {} 下找不到 mise.toml 或 .tool-versions",
-            path
-        )))
-    }
-}
-
-/// 将项目配置内容写入指定路径的 mise.toml。
-pub fn write_project_config(path: &str, content: &str) -> Result<String, AppError> {
-    let p = PathBuf::from(path);
-    if p.is_dir() {
-        let target = p.join("mise.toml");
-        std::fs::write(&target, content)
-            .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", target.display(), e)))?;
-        Ok(format!("已保存到 {}", target.display()))
-    } else {
-        std::fs::write(&p, content)
-            .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", path, e)))?;
-        Ok(format!("已保存到 {}", path))
-    }
-}
-
-/// 在指定工作目录中运行一次 mise 命令。
-fn run_mise_in(cwd: &str, args: &[&str]) -> Result<String, AppError> {
-    let mise = find_mise();
-    let output = Command::new(&mise)
-        .args(args)
-        .current_dir(cwd)
-        .env("PATH", build_path())
-        .output()
-        .map_err(|e| spawn_mise_error(&mise, e))?;
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if output.status.success() {
-        Ok(stdout)
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        let combined = if stderr.is_empty() { stdout } else { stderr };
-        Err(AppError::Other(combined))
-    }
-}
-
-/// 将配置写入项目并一次性安装全套环境（`mise install`）。
-pub fn install_all_project(dir: &str, content: &str) -> Result<String, AppError> {
-    let p = PathBuf::from(dir);
-    let target = if p.is_dir() {
-        p
-    } else {
-        p.parent().map(|x| x.to_path_buf()).unwrap_or(p)
-    };
-    let _ = std::fs::create_dir_all(&target);
-    let toml = target.join("mise.toml");
-    std::fs::write(&toml, content)
-        .map_err(|e| AppError::Io(format!("写入 {} 失败: {}", toml.display(), e)))?;
-
-    let out = run_mise_in(&target.display().to_string(), &["install"])?;
-    let summary: Vec<&str> = out.lines().take(10).collect();
-    Ok(format!(
-        "已写入 {} 并安装：\n{}",
-        toml.display(),
-        summary.join("\n")
-    ))
+    Ok("项目配置已保存，工具安装完成".into())
 }
 
 #[cfg(test)]
@@ -804,32 +728,5 @@ mod tests {
         assert_eq!(out[0].tool, "node");
         assert_eq!(out[0].version, "20.0.0");
         assert_eq!(out[0].manager, "test");
-    }
-
-    /// read/write_project_config：目录写入 mise.toml 并能读回；指定文件路径直读；
-    /// 无配置与路径不存在时报错
-    #[test]
-    fn project_config_roundtrip() {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = tmp.path().join("proj");
-        std::fs::create_dir_all(&dir).unwrap();
-
-        write_project_config(dir.to_str().unwrap(), "node = '20'\n").unwrap();
-        let content = read_project_config(dir.to_str().unwrap()).unwrap();
-        assert_eq!(content, "node = '20'\n");
-
-        // 直接指定文件路径也能读
-        let file = dir.join("mise.toml");
-        assert_eq!(
-            read_project_config(file.to_str().unwrap()).unwrap(),
-            "node = '20'\n"
-        );
-
-        // 目录下无配置文件时报错
-        let empty = tmp.path().join("empty");
-        std::fs::create_dir_all(&empty).unwrap();
-        assert!(read_project_config(empty.to_str().unwrap()).is_err());
-        // 路径不存在时报错
-        assert!(read_project_config(tmp.path().join("nope").to_str().unwrap()).is_err());
     }
 }

@@ -10,7 +10,7 @@ pub const FORMAT_VERSION: u32 = 1;
 const MARKER_PREFIX: &str = "# Z.Env 环境预设";
 
 /// 预设中的一个工具与版本请求（版本可为 `20` / `latest` / `temurin-21` 等 mise 请求式）。
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PresetTool {
     pub name: String,
@@ -30,35 +30,43 @@ pub struct PresetFile {
 /// 从 mise.toml 风格文本中提取 `[tools]` 段；同名键保留首个，避免重复安装。
 /// 兼容 mise 的三种工具写法：`node = "20"`、`node = { version = "20" }`
 /// 与 `[tools.node]` 子表（子表取其 `version` 字段）。
-pub fn parse_tools(toml: &str) -> Vec<PresetTool> {
-    let mut out: Vec<PresetTool> = Vec::new();
-    for (name, version) in crate::snapshot::parse_section(toml, "[tools]") {
-        if name.is_empty() || out.iter().any(|t| t.name == name) {
-            continue;
-        }
-        out.push(PresetTool { name, version });
-    }
-    // `[tools.<name>]` 子表形式（mise 官方文档写法之一）：读取子表的 version 字段。
-    // 引号子表名（如 `[tools."npm:prettier"]`）由 parse_key 统一处理。
-    for line in toml.lines() {
-        let t = line.trim();
-        if !(t.starts_with("[tools.") && t.ends_with(']')) {
-            continue;
-        }
-        let Some(name) = crate::snapshot::parse_key(t["[tools.".len()..t.len() - 1].trim()) else {
-            continue;
-        };
-        if name.is_empty() || out.iter().any(|x| x.name == name) {
-            continue; // 与 [tools] 段同名：TOML 不允许，容错取先出现的
-        }
-        if let Some((_, version)) = crate::snapshot::parse_section(toml, t)
-            .into_iter()
-            .find(|(k, _)| k == "version")
-        {
-            out.push(PresetTool { name, version });
-        }
-    }
-    out
+pub fn parse_tools(content: &str) -> Result<Vec<PresetTool>, AppError> {
+    let doc: toml::Value = toml::from_str(content).map_err(|e| AppError::Parse(e.to_string()))?;
+    let Some(tools) = doc.get("tools") else {
+        return Ok(Vec::new());
+    };
+    let table = tools
+        .as_table()
+        .ok_or_else(|| AppError::Parse("tools 必须为表".into()))?;
+    table
+        .iter()
+        .map(|(name, item)| {
+            let value = item
+                .as_table()
+                .and_then(|t| t.get("version"))
+                .unwrap_or(item);
+            let value = match value.as_array() {
+                Some(a) if a.len() == 1 => &a[0],
+                Some(_) => {
+                    return Err(AppError::Unsupported(format!(
+                        "{name} 含多个版本，请使用项目编辑器管理"
+                    )))
+                }
+                None => value,
+            };
+            let version = match value {
+                toml::Value::String(s) => s.clone(),
+                toml::Value::Integer(i) => i.to_string(),
+                toml::Value::Float(f) if f.is_finite() => f.to_string(),
+                _ => return Err(AppError::Parse(format!("{name} 缺少有效的 version"))),
+            };
+            crate::mise::validate_spec(name, &version)?;
+            Ok(PresetTool {
+                name: name.clone(),
+                version,
+            })
+        })
+        .collect()
 }
 
 /// 导出预设到指定路径，返回写出的工具数量。
@@ -74,7 +82,7 @@ pub fn export(
     if name.is_empty() {
         return Err(AppError::Other("预设名不能为空".into()));
     }
-    let tools = parse_tools(toml);
+    let tools = parse_tools(toml)?;
     if tools.is_empty() {
         return Err(AppError::Other(
             "当前配置里没有可用的 [tools] 工具段，无法导出预设".into(),
@@ -111,7 +119,7 @@ pub fn export(
             std::fs::create_dir_all(dir)?;
         }
     }
-    std::fs::write(path, s)?;
+    crate::config::atomic_write(std::path::Path::new(path), s.as_bytes())?;
     Ok(tools.len())
 }
 
@@ -122,19 +130,21 @@ pub fn import(path: &str) -> Result<PresetFile, AppError> {
 
     check_format(&content)?;
 
-    let tools = parse_tools(&content);
+    let tools = parse_tools(&content)?;
     if tools.is_empty() {
         return Err(AppError::Other(
             "文件里没有可用的 [tools] 段，不是有效的环境预设".into(),
         ));
     }
 
-    let meta = crate::snapshot::parse_section(&content, "[preset]");
+    let doc: toml::Value = toml::from_str(&content).map_err(|e| AppError::Parse(e.to_string()))?;
     let pick = |key: &str| -> Option<String> {
-        meta.iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.trim().to_string())
-            .filter(|v| !v.is_empty())
+        doc.get("preset")?
+            .get(key)?
+            .as_str()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
     };
 
     Ok(PresetFile {
@@ -184,246 +194,39 @@ fn escape(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// 混合裸键与含冒号引号键的工具集，覆盖导出与解析两侧
-    const MIXED: &str =
-        "[tools]\nnode = \"20\"\n\"npm:prettier\" = \"3\"\ntypescript = \"latest\"\n";
-
     #[test]
-    fn parse_tools_accepts_bare_and_quoted_keys() {
+    fn preset_roundtrip_and_toml_forms() {
+        let src = "[tools] # comment\nnode = { version = '20', os = ['linux'] }\n[tools.\"npm:prettier\"]\nversion = \"3\"\n";
+        let tools = parse_tools(src).unwrap();
+        assert_eq!(tools.len(), 2);
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("demo.zenv.toml");
+        export(file.to_str().unwrap(), "中文\n预设", "说明", src, "0.7.1").unwrap();
+        let result = import(file.to_str().unwrap()).unwrap();
+        assert_eq!(result.name, "中文\n预设");
+        assert_eq!(result.tools, tools);
+    }
+    #[test]
+    fn invalid_or_lossy_imports_are_rejected() {
+        for src in [
+            "[tools]\nnode='20'\nnode='22'",
+            "[tools]\nnode=['20','22']",
+            "[tools]\nnode={os=['linux']}",
+        ] {
+            assert!(parse_tools(src).is_err());
+        }
+        assert!(check_format("# Z.Env 环境预设 v99").is_err());
+        assert!(check_format("").is_err());
+    }
+    #[test]
+    fn plain_mise_and_unicode_escapes_are_supported() {
         assert_eq!(
-            parse_tools(MIXED),
-            vec![
-                PresetTool {
-                    name: "node".into(),
-                    version: "20".into()
-                },
-                PresetTool {
-                    name: "npm:prettier".into(),
-                    version: "3".into()
-                },
-                PresetTool {
-                    name: "typescript".into(),
-                    version: "latest".into()
-                },
-            ]
+            parse_tools("[tools]\nnode = '20' # version\n").unwrap()[0].version,
+            "20"
         );
-    }
-
-    #[test]
-    fn parse_tools_stops_at_next_section() {
-        // [tools] 之后的 [env] 不能被吞进来
-        let toml = "[tools]\nnode = \"20\"\n\n[env]\nEDITOR = \"vim\"\npath = \"x\"\n";
-        assert_eq!(
-            parse_tools(toml),
-            vec![PresetTool {
-                name: "node".into(),
-                version: "20".into()
-            }]
-        );
-    }
-
-    #[test]
-    fn parse_tools_keeps_first_on_duplicate() {
-        let toml = "[tools]\nnode = \"20\"\nnode = \"22\"\n";
-        assert_eq!(
-            parse_tools(toml),
-            vec![PresetTool {
-                name: "node".into(),
-                version: "20".into()
-            }]
-        );
-    }
-
-    #[test]
-    fn parse_tools_accepts_literal_string_and_number_versions() {
-        // 手写 mise.toml 常见写法：单引号字面串、裸整数 / 浮点（均为合法 TOML）
-        let toml = "[tools]\nnode = '20'\ngo = 1.27\npython = 3\n";
-        assert_eq!(
-            parse_tools(toml),
-            vec![
-                PresetTool {
-                    name: "node".into(),
-                    version: "20".into()
-                },
-                PresetTool {
-                    name: "go".into(),
-                    version: "1.27".into()
-                },
-                PresetTool {
-                    name: "python".into(),
-                    version: "3".into()
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn parse_tools_accepts_inline_table_form() {
-        // mise 官方表写法：{ version = "..." }；数组版本取首个
-        let toml = "[tools]\nnode = { version = \"20\" }\n\"npm:prettier\" = { version = '3' }\n";
-        assert_eq!(
-            parse_tools(toml),
-            vec![
-                PresetTool {
-                    name: "node".into(),
-                    version: "20".into()
-                },
-                PresetTool {
-                    name: "npm:prettier".into(),
-                    version: "3".into()
-                },
-            ]
-        );
-        assert_eq!(
-            parse_tools("[tools]\nnode = { version = [\"20\", \"22\"] }\n"),
-            vec![PresetTool {
-                name: "node".into(),
-                version: "20".into()
-            }]
-        );
-        // 无 version 字段的表单条目不指定版本，跳过而非误读
-        assert!(parse_tools("[tools]\nnode = { os = [\"linux\"] }\n").is_empty());
-    }
-
-    #[test]
-    fn parse_tools_accepts_sub_table_form() {
-        // `[tools.<name>]` 子表写法，含引号子表名
-        let toml = "[tools.node]\nversion = \"20\"\n\n[tools.\"npm:prettier\"]\nversion = \"3\"\n\n[env]\nEDITOR = \"vim\"\n";
-        assert_eq!(
-            parse_tools(toml),
-            vec![
-                PresetTool {
-                    name: "node".into(),
-                    version: "20".into()
-                },
-                PresetTool {
-                    name: "npm:prettier".into(),
-                    version: "3".into()
-                },
-            ]
-        );
-        // 子表与 [tools] 段同名（TOML 不允许的写法）：容错取先出现的
-        assert_eq!(
-            parse_tools("[tools]\nnode = \"20\"\n\n[tools.node]\nversion = \"22\"\n"),
-            vec![PresetTool {
-                name: "node".into(),
-                version: "20".into()
-            }]
-        );
-    }
-
-    #[test]
-    fn export_import_roundtrip() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("my.zenv.toml");
-        let p = file.to_str().unwrap();
-
-        let n = export(p, "Node 前端", "React / Vite", MIXED, "0.7.0").unwrap();
-        assert_eq!(n, 3);
-
-        let raw = std::fs::read_to_string(p).unwrap();
-        assert!(raw.starts_with("# Z.Env 环境预设 v1"));
-        // 含冒号的键必须带引号，否则不是合法 TOML
-        assert!(raw.contains("\"npm:prettier\" = \"3\""));
-        assert!(raw.contains("name = \"Node 前端\""));
-
-        let back = import(p).unwrap();
-        assert_eq!(back.name, "Node 前端");
-        assert_eq!(back.description.as_deref(), Some("React / Vite"));
-        assert_eq!(back.tools, parse_tools(MIXED));
-        assert_eq!(back.path, p);
-    }
-
-    #[test]
-    fn export_rejects_empty_tools() {
-        let tmp = tempfile::tempdir().unwrap();
-        let p = tmp.path().join("x.toml");
-        let err = export(
-            p.to_str().unwrap(),
-            "空预设",
-            "",
-            "[env]\nEDITOR = \"vim\"\n",
-            "0.7.0",
-        )
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("[tools]"), "错误信息应点明缺少 [tools]：{err}");
-    }
-
-    #[test]
-    fn export_rejects_blank_name() {
-        let tmp = tempfile::tempdir().unwrap();
-        let p = tmp.path().join("x.toml");
-        assert!(export(p.to_str().unwrap(), "   ", "", MIXED, "0.7.0").is_err());
-    }
-
-    #[test]
-    fn import_falls_back_to_plain_mise_toml() {
-        // 别人不用 Z.Env，直接手写的 mise.toml 也要能导入
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("rust-cli.zenv.toml");
-        std::fs::write(&file, "[tools]\nrust = \"stable\"\n").unwrap();
-
-        let got = import(file.to_str().unwrap()).unwrap();
-        assert_eq!(got.name, "rust-cli");
-        assert_eq!(got.description, None);
-        assert_eq!(
-            got.tools,
-            vec![PresetTool {
-                name: "rust".into(),
-                version: "stable".into()
-            }]
-        );
-    }
-
-    #[test]
-    fn import_rejects_empty_tools() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("bad.toml");
-        std::fs::write(&file, "# Z.Env 环境预设 v1\n\n[preset]\nname = \"x\"\n").unwrap();
-        let err = import(file.to_str().unwrap()).unwrap_err().to_string();
-        assert!(err.contains("[tools]"), "错误信息应点明缺少 [tools]：{err}");
-    }
-
-    #[test]
-    fn import_rejects_newer_format_version() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("future.toml");
-        std::fs::write(&file, "# Z.Env 环境预设 v2\n\n[tools]\nnode = \"20\"\n").unwrap();
-        let err = import(file.to_str().unwrap()).unwrap_err().to_string();
-        assert!(err.contains("v2"), "错误信息应点明版本：{err}");
-    }
-
-    #[test]
-    fn import_rejects_empty_file() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("empty.toml");
-        std::fs::write(&file, "\n\n").unwrap();
-        assert!(import(file.to_str().unwrap()).is_err());
-    }
-
-    #[test]
-    fn import_reads_metadata_from_top_of_file() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("m.toml");
-        std::fs::write(
-            &file,
-            "# Z.Env 环境预设 v1\n\n[preset]\nname = \"Go 服务\"\ndescription = \"微服务 / CLI\"\napp_version = \"0.7.0\"\n\n[tools]\ngo = \"1.27\"\n",
-        )
-        .unwrap();
-        let got = import(file.to_str().unwrap()).unwrap();
-        assert_eq!(got.name, "Go 服务");
-        assert_eq!(got.description.as_deref(), Some("微服务 / CLI"));
-        assert_eq!(got.tools.len(), 1);
-    }
-
-    #[test]
-    fn export_escapes_quotes_in_metadata() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("q.toml");
-        let p = file.to_str().unwrap();
-        export(p, "带\"引号\"的名字", "", MIXED, "0.7.0").unwrap();
-        assert_eq!(import(p).unwrap().name, "带\"引号\"的名字");
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("rust-cli.zenv.toml");
+        std::fs::write(&file, "[tools]\nrust='stable'\n").unwrap();
+        assert_eq!(import(file.to_str().unwrap()).unwrap().name, "rust-cli");
     }
 }

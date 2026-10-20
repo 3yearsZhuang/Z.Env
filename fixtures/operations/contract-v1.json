@@ -1,0 +1,102 @@
+{
+  "request": {
+    "snapshotRequestId": "snapshot-contract",
+    "intent": {
+      "action": "verify",
+      "installationId": "instance-contract"
+    }
+  },
+  "plan": {
+    "schemaVersion": 1,
+    "planId": "plan-contract-v1",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "snapshot-contract",
+    "action": "verify",
+    "target": {
+      "providerPackage": {
+        "providerId": "nvm",
+        "packageId": "node",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": "instance-contract",
+      "locator": "/Users/contract/.nvm/versions/node/v22.1.0"
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "只确认精确版本 22.1.0；不代表项目或终端生效",
+    "configuration": {
+      "path": "/Users/contract/.config/mise/config.toml",
+      "canonicalPath": null,
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "本计划不改写配置文件",
+    "permission": "当前用户；不提权",
+    "rollback": "只更新清单缓存并记录步骤状态",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重验来源、目标文件和配置指纹",
+        "program": null,
+        "argv": [],
+        "cwd": "/Users/contract",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "只读重扫此来源的全部 Node 记录",
+        "program": null,
+        "argv": [],
+        "cwd": "/Users/contract",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "确认原实例身份、版本与可执行状态",
+        "program": null,
+        "argv": [],
+        "cwd": "/Users/contract",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      }
+    ],
+    "impact": []
+  },
+  "record": {
+    "schemaVersion": 1,
+    "id": "plan-contract-v1",
+    "action": "verify",
+    "status": "interrupted",
+    "createdAt": 1792339200000,
+    "updatedAt": 1792339201000,
+    "steps": [
+      {
+        "kind": "preflight",
+        "status": "completed"
+      },
+      {
+        "kind": "refresh",
+        "status": "failed"
+      },
+      {
+        "kind": "verify",
+        "status": "skipped"
+      }
+    ],
+    "outcome": "interrupted"
+  }
+}

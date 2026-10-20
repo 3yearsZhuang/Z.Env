@@ -1,0 +1,190 @@
+{
+  "installPlan": {
+    "schemaVersion": 1,
+    "planId": "python-mise-install-contract",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "python-contract",
+    "action": "install",
+    "target": {
+      "providerPackage": {
+        "providerId": "mise",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": null,
+      "locator": null
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "精确预编译 CPython 3.12.12，执行后核验",
+    "configuration": {
+      "path": "/fixture/config.toml",
+      "canonicalPath": "/fixture/config.toml",
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "不改写项目或全局请求；mise 目录与状态副作用见计划",
+    "permission": "当前用户；不提权",
+    "rollback": "失败或取消保留残留并重扫",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重新核对来源与文件",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "command",
+        "title": "安装精确预编译 CPython",
+        "program": "/fixture/bin/mise",
+        "argv": [
+          "--no-config",
+          "--no-env",
+          "--no-hooks",
+          "install",
+          "core:python@3.12.12"
+        ],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "MISE_NO_CONFIG",
+          "MISE_NO_ENV",
+          "MISE_NO_HOOKS",
+          "MISE_DATA_DIR",
+          "MISE_PYTHON_COMPILE",
+          "MISE_PYTHON_DEFAULT_PACKAGES_FILE"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "隔离重扫 Python 来源",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "核对原实例",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      }
+    ],
+    "impact": [],
+    "toolId": "python"
+  },
+  "uninstallPlan": {
+    "schemaVersion": 1,
+    "planId": "python-mise-uninstall-contract",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "python-contract",
+    "action": "uninstall",
+    "target": {
+      "providerPackage": {
+        "providerId": "mise",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": "python-mise-exact-instance",
+      "locator": "/fixture/mise/installs/python/3.12.12"
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "精确预编译 CPython 3.12.12，执行后核验",
+    "configuration": {
+      "path": "/fixture/config.toml",
+      "canonicalPath": "/fixture/config.toml",
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "不改写项目或全局请求；mise 目录与状态副作用见计划",
+    "permission": "当前用户；不提权",
+    "rollback": "失败或取消保留残留并重扫",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重新核对来源与文件",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "command",
+        "title": "移除原生精确 CPython",
+        "program": "/fixture/bin/mise",
+        "argv": [
+          "--no-config",
+          "--no-env",
+          "--no-hooks",
+          "uninstall",
+          "core:python@3.12.12"
+        ],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "MISE_NO_CONFIG",
+          "MISE_NO_ENV",
+          "MISE_NO_HOOKS",
+          "MISE_DATA_DIR",
+          "MISE_PYTHON_COMPILE",
+          "MISE_PYTHON_DEFAULT_PACKAGES_FILE"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "隔离重扫 Python 来源",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "核对原实例",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      }
+    ],
+    "impact": [],
+    "toolId": "python"
+  }
+}

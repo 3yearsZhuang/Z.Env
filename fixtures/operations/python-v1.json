@@ -1,0 +1,461 @@
+{
+  "scope": {
+    "toolId": "python",
+    "request": {
+      "snapshotRequestId": "python-contract",
+      "intent": {
+        "action": "verify",
+        "installationId": "python-contract-instance"
+      }
+    }
+  },
+  "verifyPlan": {
+    "schemaVersion": 1,
+    "planId": "plan-python-contract",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "python-contract",
+    "action": "verify",
+    "target": {
+      "providerPackage": {
+        "providerId": "pyenv",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": "python-contract-instance",
+      "locator": "/fixture/pyenv/versions/3.13.15"
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "精确 CPython 3.13.15；不代表项目或终端生效",
+    "configuration": {
+      "path": "/fixture/config.toml",
+      "canonicalPath": "/fixture/config.toml",
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "不改写配置",
+    "permission": "当前用户；不提权",
+    "rollback": "只读验证只更新缓存和最小步骤记录",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重新核对来源与文件",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "隔离重扫 Python 来源",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "核对原实例",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH"
+        ]
+      }
+    ],
+    "impact": [],
+    "toolId": "python"
+  },
+  "installPlans": [
+    {
+      "schemaVersion": 1,
+      "planId": "plan-python-mise",
+      "createdAt": 1792339200000,
+      "expiresAt": 1792339320000,
+      "snapshotGeneration": "1",
+      "snapshotRequestId": "python-contract",
+      "action": "install",
+      "target": {
+        "providerPackage": {
+          "providerId": "mise",
+          "packageId": "python",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "installationId": null,
+        "locator": null
+      },
+      "capability": {
+        "canPreview": true,
+        "canExecute": false,
+        "reason": "渠道输出及副作用门禁尚未接入，安装执行未开放"
+      },
+      "versionPromise": "仅预览；实际产物未验证",
+      "configuration": {
+        "path": "/fixture/config.toml",
+        "canonicalPath": "/fixture/config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      "configurationChange": "不改写配置",
+      "permission": "当前用户；不提权",
+      "rollback": "只读验证只更新缓存和最小步骤记录",
+      "steps": [
+        {
+          "kind": "preflight",
+          "title": "重新核对来源与文件",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "安装步骤示意，禁止执行",
+          "program": "/fixture/bin/mise",
+          "argv": [
+            "install",
+            "core:python@3.13.15"
+          ],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "refresh",
+          "title": "隔离重扫 Python 来源",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "verify",
+          "title": "核对原实例",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        }
+      ],
+      "impact": [],
+      "toolId": "python"
+    },
+    {
+      "schemaVersion": 1,
+      "planId": "plan-python-brew",
+      "createdAt": 1792339200000,
+      "expiresAt": 1792339320000,
+      "snapshotGeneration": "1",
+      "snapshotRequestId": "python-contract",
+      "action": "install",
+      "target": {
+        "providerPackage": {
+          "providerId": "brew",
+          "packageId": "python@3.13",
+          "kind": "formula",
+          "platform": "macos"
+        },
+        "installationId": null,
+        "locator": null
+      },
+      "capability": {
+        "canPreview": true,
+        "canExecute": false,
+        "reason": "渠道输出及副作用门禁尚未接入，安装执行未开放"
+      },
+      "versionPromise": "仅预览；实际产物未验证",
+      "configuration": {
+        "path": "/fixture/config.toml",
+        "canonicalPath": "/fixture/config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      "configurationChange": "不改写配置",
+      "permission": "当前用户；不提权",
+      "rollback": "只读验证只更新缓存和最小步骤记录",
+      "steps": [
+        {
+          "kind": "preflight",
+          "title": "重新核对来源与文件",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "安装步骤示意，禁止执行",
+          "program": "/fixture/bin/brew",
+          "argv": [
+            "install",
+            "--formula",
+            "homebrew/core/python@3.13"
+          ],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "refresh",
+          "title": "隔离重扫 Python 来源",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "verify",
+          "title": "核对原实例",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        }
+      ],
+      "impact": [],
+      "toolId": "python"
+    },
+    {
+      "schemaVersion": 1,
+      "planId": "plan-python-pyenv",
+      "createdAt": 1792339200000,
+      "expiresAt": 1792339320000,
+      "snapshotGeneration": "1",
+      "snapshotRequestId": "python-contract",
+      "action": "install",
+      "target": {
+        "providerPackage": {
+          "providerId": "pyenv",
+          "packageId": "python",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "installationId": null,
+        "locator": null
+      },
+      "capability": {
+        "canPreview": true,
+        "canExecute": false,
+        "reason": "渠道输出及副作用门禁尚未接入，安装执行未开放"
+      },
+      "versionPromise": "仅预览；实际产物未验证",
+      "configuration": {
+        "path": "/fixture/config.toml",
+        "canonicalPath": "/fixture/config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      "configurationChange": "不改写配置",
+      "permission": "当前用户；不提权",
+      "rollback": "只读验证只更新缓存和最小步骤记录",
+      "steps": [
+        {
+          "kind": "preflight",
+          "title": "重新核对来源与文件",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "安装步骤示意，禁止执行",
+          "program": "/fixture/bin/pyenv",
+          "argv": [
+            "install",
+            "3.13.15"
+          ],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "refresh",
+          "title": "隔离重扫 Python 来源",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "verify",
+          "title": "核对原实例",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        }
+      ],
+      "impact": [],
+      "toolId": "python"
+    },
+    {
+      "schemaVersion": 1,
+      "planId": "plan-python-uv",
+      "createdAt": 1792339200000,
+      "expiresAt": 1792339320000,
+      "snapshotGeneration": "1",
+      "snapshotRequestId": "python-contract",
+      "action": "install",
+      "target": {
+        "providerPackage": {
+          "providerId": "uv",
+          "packageId": "python",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "installationId": null,
+        "locator": null
+      },
+      "capability": {
+        "canPreview": true,
+        "canExecute": false,
+        "reason": "渠道输出及副作用门禁尚未接入，安装执行未开放"
+      },
+      "versionPromise": "仅预览；实际产物未验证",
+      "configuration": {
+        "path": "/fixture/config.toml",
+        "canonicalPath": "/fixture/config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      "configurationChange": "不改写配置",
+      "permission": "当前用户；不提权",
+      "rollback": "只读验证只更新缓存和最小步骤记录",
+      "steps": [
+        {
+          "kind": "preflight",
+          "title": "重新核对来源与文件",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "安装步骤示意，禁止执行",
+          "program": "/fixture/bin/uv",
+          "argv": [
+            "--no-config",
+            "--no-progress",
+            "python",
+            "install",
+            "--no-bin",
+            "--install-dir",
+            "/fixture/.local/share/uv/python",
+            "cpython@3.13.15"
+          ],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH",
+            "UV_NO_CONFIG",
+            "UV_NO_PROGRESS",
+            "UV_COLOR",
+            "UV_PYTHON_INSTALL_DIR",
+            "UV_CACHE_DIR"
+          ]
+        },
+        {
+          "kind": "refresh",
+          "title": "隔离重扫 Python 来源",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        },
+        {
+          "kind": "verify",
+          "title": "核对原实例",
+          "program": null,
+          "argv": [],
+          "cwd": "/fixture",
+          "environmentKeys": [
+            "HOME",
+            "PATH"
+          ]
+        }
+      ],
+      "impact": [],
+      "toolId": "python"
+    }
+  ],
+  "record": {
+    "schemaVersion": 1,
+    "id": "plan-python-contract",
+    "action": "verify",
+    "status": "interrupted",
+    "createdAt": 1792339200000,
+    "updatedAt": 1792339201000,
+    "steps": [
+      {
+        "kind": "preflight",
+        "status": "completed"
+      },
+      {
+        "kind": "refresh",
+        "status": "failed"
+      },
+      {
+        "kind": "verify",
+        "status": "skipped"
+      }
+    ],
+    "outcome": "interrupted",
+    "toolId": "python"
+  }
+}

@@ -1,5 +1,5 @@
 // 项目发现：扫描常用根目录，识别含 .git 或技术栈指纹的项目目录，
-// 对照本机 mise 已装运行时给出缺失清单，衔接项目配置页的既有编辑/安装流程。
+// 指纹只用于发现项目，不据工具名称或配置文件存在推断版本满足及实际生效。
 // 扫描有目录预算与结果上限，跳过隐藏目录与依赖/构建产物目录，不做任何写操作。
 use serde::Serialize;
 
@@ -13,6 +13,7 @@ const ROOT_DEPTH: usize = 3;
 /// 指纹文件 → 建议的 mise 工具名（None 表示该指纹只用于识别项目，工具名在文件内容里）。
 const FINGERPRINTS: &[(&str, Option<&str>)] = &[
     ("package.json", Some("node")),
+    ("Cargo.toml", Some("rust")),
     (".nvmrc", Some("node")),
     ("pyproject.toml", Some("python")),
     ("requirements.txt", Some("python")),
@@ -42,7 +43,7 @@ const SKIP_DIRS: &[&str] = &[
     ".cache",
 ];
 
-/// 发现的项目（对外结构）。missing_tools = 推断工具中本机未安装的。
+/// missing_tools 保留传输兼容，但不再从名称比较伪造缺失结论。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredProject {
@@ -64,17 +65,11 @@ struct RawProject {
 
 /// 扫描入口：常用根目录（存在者，深 3 层）+ 家目录本身（1 层），对照已装工具产出缺失清单。
 pub fn run() -> Vec<DiscoveredProject> {
-    let installed: std::collections::HashSet<String> = crate::mise::list_tools()
-        .map(|ts| ts.into_iter().map(|t| t.name).collect())
-        .unwrap_or_default();
-    scan_with_roots(default_roots(), &installed)
+    scan_with_roots(default_roots())
 }
 
 /// 以给定根目录执行扫描（run 的可测内核）。
-fn scan_with_roots(
-    roots: Vec<(std::path::PathBuf, usize)>,
-    installed: &std::collections::HashSet<String>,
-) -> Vec<DiscoveredProject> {
+fn scan_with_roots(roots: Vec<(std::path::PathBuf, usize)>) -> Vec<DiscoveredProject> {
     let mut found: Vec<RawProject> = Vec::new();
     let mut budget = DIR_BUDGET;
     for (root, depth) in roots {
@@ -88,7 +83,7 @@ fn scan_with_roots(
     found
         .into_iter()
         .take(MAX_PROJECTS)
-        .map(|raw| to_discovered(raw, installed))
+        .map(to_discovered)
         .collect()
 }
 
@@ -148,7 +143,7 @@ fn scan_dir(dir: &std::path::Path, depth: usize, budget: &mut usize, out: &mut V
                 sub_dirs.push(e.path());
             }
         } else if ft.is_file() {
-            if name == "mise.toml" {
+            if name == "mise.toml" || name == ".mise.toml" {
                 project.has_mise = true;
                 is_project = true;
             } else if let Some((_, tool)) = FINGERPRINTS.iter().find(|(f, _)| *f == name) {
@@ -179,23 +174,17 @@ fn scan_dir(dir: &std::path::Path, depth: usize, budget: &mut usize, out: &mut V
 }
 
 /// 汇总单个项目：工具清单 = 指纹推断 ∪ mise.toml [tools] 声明；缺失 = 清单中未安装的。
-fn to_discovered(
-    raw: RawProject,
-    installed: &std::collections::HashSet<String>,
-) -> DiscoveredProject {
+fn to_discovered(raw: RawProject) -> DiscoveredProject {
     let mut tools = raw.tools;
     if raw.has_mise {
-        if let Ok(content) = std::fs::read_to_string(raw.path.join("mise.toml")) {
+        if let Ok(content) = std::fs::read_to_string(raw.path.join("mise.toml"))
+            .or_else(|_| std::fs::read_to_string(raw.path.join(".mise.toml")))
+        {
             tools.extend(tools_from_mise_toml(&content));
         }
     }
     tools.sort();
     tools.dedup();
-    let missing_tools = tools
-        .iter()
-        .filter(|t| !installed.contains(*t))
-        .cloned()
-        .collect();
     DiscoveredProject {
         name: raw
             .path
@@ -205,34 +194,23 @@ fn to_discovered(
         path: raw.path.display().to_string(),
         has_mise_toml: raw.has_mise,
         tools,
-        missing_tools,
+        missing_tools: Vec::new(),
     }
 }
 
 /// 解析 mise.toml 的 [tools] 段声明的工具名（点分键属高级用法，跳过）。
 fn tools_from_mise_toml(content: &str) -> Vec<String> {
-    let lines: Vec<&str> = content.lines().collect();
-    let Some((start, end)) = section_bounds(&lines, "[tools]") else {
-        return Vec::new();
-    };
-    (start + 1..end)
-        .filter_map(|i| {
-            let t = lines[i].trim();
-            if t.is_empty() || t.starts_with('#') {
-                return None;
-            }
-            let eq = t.find('=')?;
-            let mut k = t[..eq].trim();
-            // TOML 允许带引号的键："go" = "1.22"
-            if let Some(rest) = k.strip_prefix('"') {
-                k = rest.strip_suffix('"').unwrap_or(rest);
-            }
-            if k.is_empty() || k.contains('.') {
-                return None;
-            }
-            Some(k.to_string())
+    toml::from_str::<toml::Value>(content)
+        .ok()
+        .and_then(|doc| {
+            doc.get("tools").and_then(toml::Value::as_table).map(|t| {
+                t.keys()
+                    .filter(|key| key.as_str() != "_")
+                    .cloned()
+                    .collect()
+            })
         })
-        .collect()
+        .unwrap_or_default()
 }
 
 /// 解析 .tool-versions（asdf 风格）每行首个词为工具名。
@@ -249,19 +227,6 @@ fn tools_from_tool_versions(content: &str) -> Vec<String> {
         .collect()
 }
 
-/// 顶层段 `[header]` 的行区间 [start, end)（思路同 env_center，面向任意段头）。
-fn section_bounds(lines: &[&str], header: &str) -> Option<(usize, usize)> {
-    let start = lines.iter().position(|l| l.trim() == header)?;
-    let mut end = lines.len();
-    for (i, l) in lines.iter().enumerate().skip(start + 1) {
-        if l.trim_start().starts_with('[') {
-            end = i;
-            break;
-        }
-    }
-    Some((start, end))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,7 +235,7 @@ mod tests {
     fn tools_from_mise_toml_reads_tools_section_only() {
         let cfg = "# top comment\nmin_version = \"2024\"\n\n[tools]\n# node = \"22\" 已注释\nnode = \"22\"\n\"go\" = \"1.22\"\n_.path = [\"x\"]\n\n[env]\nFOO = \"1\"\n";
         let tools = tools_from_mise_toml(cfg);
-        assert_eq!(tools, vec!["node", "go"]);
+        assert_eq!(tools, vec!["go", "node"]);
     }
 
     #[test]
@@ -313,11 +278,10 @@ mod tests {
 
         let deep = found.iter().find(|p| p.has_mise).unwrap();
         assert_eq!(deep.path.file_name().unwrap(), "deep");
-        // mise.toml 的 [tools] 声明在 to_discovered 阶段解析并参与缺失对比
-        let empty = std::collections::HashSet::new();
-        let d = to_discovered(deep.clone(), &empty);
+        // 配置与指纹仅提供推断工具，不证明安装缺失或版本满足。
+        let d = to_discovered(deep.clone());
         assert!(d.tools.contains(&"go".to_string()));
-        assert_eq!(d.missing_tools, vec!["go"]);
+        assert!(d.missing_tools.is_empty());
         let a = found.iter().find(|p| p.path.ends_with("a-proj")).unwrap();
         assert!(a.tools.contains(&"node".to_string()));
     }
@@ -334,16 +298,15 @@ mod tests {
     }
 
     #[test]
-    fn discovered_missing_tools_compare_installed() {
+    fn discovery_never_treats_tool_names_as_proof_of_missing_or_satisfied_versions() {
         let raw = RawProject {
             path: std::path::PathBuf::from("/tmp/x"),
             has_mise: false,
             tools: vec!["node".into(), "go".into()],
         };
-        let mut installed = std::collections::HashSet::new();
-        installed.insert("node".to_string());
-        let d = to_discovered(raw, &installed);
-        assert_eq!(d.missing_tools, vec!["go"]);
+        let d = to_discovered(raw);
+        assert!(d.missing_tools.is_empty());
+        assert_eq!(d.tools, vec!["go", "node"]);
         assert_eq!(d.name, "x");
     }
 }

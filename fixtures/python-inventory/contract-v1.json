@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "requestId": "python-fixture",
+  "observedAt": 100,
+  "tools": [
+    {
+      "toolId": "python",
+      "displayName": "Python",
+      "aliases": [],
+      "executableNames": [
+        "python",
+        "python3"
+      ]
+    }
+  ],
+  "providers": [
+    {
+      "providerId": "mise",
+      "status": "ok",
+      "observedAt": 100,
+      "stale": false,
+      "coverage": {
+        "toolIds": [
+          "python"
+        ],
+        "complete": true,
+        "truncated": false
+      },
+      "error": null
+    },
+    {
+      "providerId": "brew",
+      "status": "ok",
+      "observedAt": 100,
+      "stale": false,
+      "coverage": {
+        "toolIds": [
+          "python"
+        ],
+        "complete": true,
+        "truncated": false
+      },
+      "error": null
+    },
+    {
+      "providerId": "pyenv",
+      "status": "ok",
+      "observedAt": 100,
+      "stale": false,
+      "coverage": {
+        "toolIds": [
+          "python"
+        ],
+        "complete": true,
+        "truncated": false
+      },
+      "error": null
+    },
+    {
+      "providerId": "uv",
+      "status": "ok",
+      "observedAt": 100,
+      "stale": false,
+      "coverage": {
+        "toolIds": [
+          "python"
+        ],
+        "complete": true,
+        "truncated": false
+      },
+      "error": null
+    },
+    {
+      "providerId": "path",
+      "status": "ok",
+      "observedAt": 100,
+      "stale": false,
+      "coverage": {
+        "toolIds": [
+          "python"
+        ],
+        "complete": true,
+        "truncated": false
+      },
+      "error": null
+    }
+  ],
+  "installations": [
+    {
+      "installationId": "installation:v1:6:python;4:mise;6:python;7:runtime;5:macos;32:/fixture/mise/3.13.8/bin/python3;32:/fixture/mise/3.13.8/bin/python3;32:/fixture/mise/3.13.8/bin/python3;6:3.13.8;5:arm64;",
+      "providerPackage": {
+        "providerId": "mise",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "toolId": "python",
+      "locator": "/fixture/mise/3.13.8/bin/python3",
+      "executablePath": "/fixture/mise/3.13.8/bin/python3",
+      "canonicalExecutablePath": "/fixture/mise/3.13.8/bin/python3",
+      "version": "3.13.8",
+      "architecture": "arm64",
+      "health": "healthy",
+      "ownership": "observed",
+      "evidence": [
+        {
+          "kind": "pythonIsolatedProbe",
+          "path": "/fixture/mise/3.13.8/bin/python3",
+          "detail": "合成契约夹具，不代表本机实测"
+        }
+      ],
+      "stale": false
+    },
+    {
+      "installationId": "installation:v1:6:python;5:pyenv;6:python;7:runtime;5:macos;33:/fixture/pyenv/3.12.9/bin/python3;33:/fixture/pyenv/3.12.9/bin/python3;33:/fixture/pyenv/3.12.9/bin/python3;6:3.12.9;5:arm64;",
+      "providerPackage": {
+        "providerId": "pyenv",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "toolId": "python",
+      "locator": "/fixture/pyenv/3.12.9/bin/python3",
+      "executablePath": "/fixture/pyenv/3.12.9/bin/python3",
+      "canonicalExecutablePath": "/fixture/pyenv/3.12.9/bin/python3",
+      "version": "3.12.9",
+      "architecture": "arm64",
+      "health": "healthy",
+      "ownership": "observed",
+      "evidence": [
+        {
+          "kind": "pythonIsolatedProbe",
+          "path": "/fixture/pyenv/3.12.9/bin/python3",
+          "detail": "合成契约夹具，不代表本机实测"
+        }
+      ],
+      "stale": false
+    },
+    {
+      "installationId": "installation:v1:6:python;4:path;7:python3;10:executable;5:macos;20:/fixture/bin/python3;20:/fixture/bin/python3;32:/fixture/mise/3.13.8/bin/python3;-;-;",
+      "providerPackage": {
+        "providerId": "path",
+        "packageId": "python3",
+        "kind": "executable",
+        "platform": "macos"
+      },
+      "toolId": "python",
+      "locator": "/fixture/bin/python3",
+      "executablePath": "/fixture/bin/python3",
+      "canonicalExecutablePath": "/fixture/mise/3.13.8/bin/python3",
+      "version": null,
+      "architecture": null,
+      "health": "unverified",
+      "ownership": "observed",
+      "evidence": [
+        {
+          "kind": "pythonPathFile",
+          "path": "/fixture/bin/python3",
+          "detail": "合成契约夹具，不代表本机实测"
+        }
+      ],
+      "stale": false
+    }
+  ],
+  "aliases": [
+    {
+      "installationId": "installation:v1:6:python;4:path;7:python3;10:executable;5:macos;20:/fixture/bin/python3;20:/fixture/bin/python3;32:/fixture/mise/3.13.8/bin/python3;-;-;",
+      "targetInstallationId": "installation:v1:6:python;4:mise;6:python;7:runtime;5:macos;32:/fixture/mise/3.13.8/bin/python3;32:/fixture/mise/3.13.8/bin/python3;32:/fixture/mise/3.13.8/bin/python3;6:3.13.8;5:arm64;",
+      "evidence": {
+        "kind": "canonicalExecutable",
+        "canonicalExecutablePath": "/fixture/mise/3.13.8/bin/python3",
+        "version": "3.13.8",
+        "architecture": "arm64"
+      }
+    }
+  ]
+}

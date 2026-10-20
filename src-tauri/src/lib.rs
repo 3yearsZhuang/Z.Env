@@ -1,20 +1,30 @@
 mod cache;
 mod caches;
+mod config;
 mod discover;
 mod doctor;
+pub mod domain;
 mod env;
 mod env_center;
 mod error;
 mod history;
+pub mod inventory;
 mod managed;
 mod mise;
 mod net;
+pub mod operation_plan;
+mod operations;
 mod preset;
+mod process;
+mod project;
+pub mod project_environment;
+pub mod providers;
 mod services;
 mod snapshot;
 mod sources;
 mod syscache;
 mod system;
+pub mod tool_catalog;
 
 use std::sync::Mutex;
 use tauri::{
@@ -28,7 +38,7 @@ use tauri_plugin_autostart::MacosLauncher;
 fn traced<E: std::fmt::Display>(kind: &str, detail: String, r: &Result<String, E>) {
     match r {
         Ok(_) => history::record(kind, detail),
-        Err(e) => history::record(kind, format!("{detail} 失败：{e}")),
+        Err(_) => history::record(kind, format!("{detail} 失败（详情见操作页面）")),
     }
 }
 
@@ -75,6 +85,12 @@ fn system_stats(state: tauri::State<'_, AppData>) -> Result<system::SystemStats,
     ))
 }
 
+/// 纯工具目录与当前平台接入账本，不探测或修改本机。
+#[tauri::command]
+fn tool_catalog() -> tool_catalog::ToolCatalog {
+    tool_catalog::current_catalog()
+}
+
 /// 检测 mise 的安装状态与版本。
 #[tauri::command(async)]
 fn check_mise() -> mise::MiseStatus {
@@ -93,13 +109,18 @@ async fn install_system_package(
     app: tauri::AppHandle,
     manager: String,
     name: String,
+    kind: String,
+    job_id: Option<String>,
 ) -> Result<String, String> {
     let mgr = manager.clone();
     let (m2, n2) = (manager.clone(), name.clone());
-    let r =
-        tauri::async_runtime::spawn_blocking(move || env::install_system_package(&app, &m2, &n2))
-            .await
-            .map_err(|e| e.to_string())?;
+    let r = tauri::async_runtime::spawn_blocking(move || {
+        operations::run(job_id, "安装系统软件", |id| {
+            env::install_system_package(&app, &m2, &n2, &kind, id)
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?;
     // 安装结束后（无论成败）失效该管理器的探测缓存，下次探测拿到真实状态
     syscache::invalidate(&mgr);
     let r = r.map_err(String::from);
@@ -133,7 +154,9 @@ fn detect_system_versions(manager: String) -> Result<Vec<env::SystemPkg>, String
 /// 原生卸载系统软件包（brew/winget/apt/pacman）。
 #[tauri::command(async)]
 fn uninstall_system_package(manager: String, name: String) -> Result<String, String> {
-    let r = env::uninstall_system_package(&manager, &name);
+    let r = operations::run(None, "卸载软件", |_| {
+        env::uninstall_system_package(&manager, &name)
+    });
     // 卸载结束后失效该管理器的探测缓存
     syscache::invalidate(&manager);
     let r = r.map_err(String::from);
@@ -186,7 +209,9 @@ fn list_registry() -> Result<Vec<String>, String> {
 /// 安装指定工具版本。
 #[tauri::command(async)]
 fn install_version(tool: String, version: String) -> Result<String, String> {
-    let r = mise::install_version(&tool, &version);
+    let r = operations::run(None, "安装运行时", |_| {
+        mise::install_version(&tool, &version)
+    });
     traced("install", format!("mise {tool}@{version}"), &r);
     Ok(r?)
 }
@@ -197,10 +222,13 @@ async fn install_version_streaming(
     app: tauri::AppHandle,
     tool: String,
     version: String,
+    job_id: Option<String>,
 ) -> Result<String, String> {
     let (t2, v2) = (tool.clone(), version.clone());
     let inner = tauri::async_runtime::spawn_blocking(move || {
-        mise::install_version_streaming(&app, &t2, &v2)
+        operations::run(job_id, "安装运行时", |id| {
+            mise::install_version_streaming(&app, &t2, &v2, id)
+        })
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -212,7 +240,9 @@ async fn install_version_streaming(
 /// 卸载指定工具版本。
 #[tauri::command(async)]
 fn uninstall_version(tool: String, version: String) -> Result<String, String> {
-    let r = mise::uninstall_version(&tool, &version);
+    let r = operations::run(None, "卸载运行时", |_| {
+        mise::uninstall_version(&tool, &version)
+    });
     traced("uninstall", format!("mise {tool}@{version}"), &r);
     Ok(r?)
 }
@@ -220,7 +250,9 @@ fn uninstall_version(tool: String, version: String) -> Result<String, String> {
 /// 切换（激活）某个工具版本。global 决定是否写入全局配置。
 #[tauri::command(async)]
 fn use_version(tool: String, version: String, global: bool) -> Result<String, String> {
-    let r = mise::use_version(&tool, &version, global);
+    let r = operations::run(None, "激活运行时", |_| {
+        mise::use_version(&tool, &version, global)
+    });
     traced("use", format!("{tool} → {version}（global={global}）"), &r);
     Ok(r?)
 }
@@ -228,7 +260,9 @@ fn use_version(tool: String, version: String, global: bool) -> Result<String, St
 /// 接管：把已存在的外部环境目录链接为 mise 管理版本。
 #[tauri::command(async)]
 fn link_version(tool: String, version: String, path: String) -> Result<String, String> {
-    let r = mise::link_version(&tool, &version, &path);
+    let r = operations::run(None, "接管运行时", |_| {
+        mise::link_version(&tool, &version, &path)
+    });
     traced("adopt", format!("mise link {tool}@{version} ← {path}"), &r);
     Ok(r?)
 }
@@ -236,29 +270,58 @@ fn link_version(tool: String, version: String, path: String) -> Result<String, S
 /// 解除接管：移除某版本与外部目录的链接。
 #[tauri::command(async)]
 fn unlink_version(tool: String, version: String) -> Result<String, String> {
-    let r = mise::unlink_version(&tool, &version);
+    let r = operations::run(None, "解除接管", |_| {
+        mise::unlink_version(&tool, &version)
+    });
     traced("unadopt", format!("mise unlink {tool}@{version}"), &r);
     Ok(r?)
 }
 
 /// 读取项目根目录的 mise 配置文件内容。
 #[tauri::command(async)]
-fn read_project_config(path: String) -> Result<String, String> {
-    Ok(mise::read_project_config(&path)?)
+fn read_project_config(path: String) -> Result<project::ProjectDocument, String> {
+    project::read(&path).map_err(String::from)
 }
 
-/// 将内容写入项目的 mise.toml。
 #[tauri::command(async)]
-fn write_project_config(path: String, content: String) -> Result<String, String> {
-    Ok(mise::write_project_config(&path, &content)?)
+fn write_project_config(
+    path: String,
+    content: String,
+    original: Option<String>,
+) -> Result<String, String> {
+    operations::run(None, "保存项目配置", |_| {
+        project::save(&path, &content, original.as_deref())
+    })
+    .map_err(String::from)
 }
 
-/// 写入配置并在项目内一键安装全套环境。
 #[tauri::command(async)]
-fn install_all_project(path: String, content: String) -> Result<String, String> {
-    let r = mise::install_all_project(&path, &content);
+fn config_bind_path(content: String, path: String) -> Result<String, String> {
+    config::bind_path(&content, &path).map_err(String::from)
+}
+
+#[tauri::command(async)]
+fn config_replace_tools(
+    content: String,
+    tools: std::collections::BTreeMap<String, String>,
+) -> Result<String, String> {
+    config::replace_tools(&content, &tools).map_err(String::from)
+}
+
+#[tauri::command(async)]
+fn install_all_project(
+    app: tauri::AppHandle,
+    path: String,
+    content: String,
+    original: Option<String>,
+    job_id: Option<String>,
+) -> Result<String, String> {
+    let r = operations::run(job_id, "项目安装", |id| {
+        project::save(&path, &content, original.as_deref())?;
+        mise::install_all_project(&app, &path, id)
+    });
     traced("install-all", format!("项目一键安装 {path}"), &r);
-    Ok(r?)
+    r.map_err(String::from)
 }
 
 /// 托管接入：按来源自动选策略（用户级目录直连 / brew 走托管软链），接入后校验 mise 注册结果
@@ -269,7 +332,9 @@ fn managed_adopt(
     manager: String,
     path: String,
 ) -> Result<String, String> {
-    let r = managed::adopt(&tool, &version, &manager, &path);
+    let r = operations::run(None, "托管接入", |_| {
+        managed::adopt(&tool, &version, &manager, &path)
+    });
     traced("adopt", format!("{tool}@{version} ← {manager}:{path}"), &r);
     Ok(r?)
 }
@@ -277,31 +342,32 @@ fn managed_adopt(
 /// 解除托管接入（移除 mise 链接与农场记录）
 #[tauri::command(async)]
 fn managed_unadopt(tool: String, version: String) -> Result<String, String> {
-    let r = managed::unadopt(&tool, &version);
+    let r = operations::run(None, "解除托管", |_| managed::unadopt(&tool, &version));
     traced("unadopt", format!("{tool}@{version}"), &r);
     Ok(r?)
 }
 
-/// 对账：brew 升级/卸载导致的失效接入自动重连到新版本或移除，返回事件供前端展示
+/// 对账：只修复同软件同版本，缺失版本保留待处理，返回事件供前端展示。
 #[tauri::command(async)]
-fn managed_reconcile() -> Vec<managed::ReconcileEvent> {
-    let events = managed::reconcile();
+fn managed_reconcile() -> Result<Vec<managed::ReconcileEvent>, String> {
+    let events =
+        operations::run(None, "托管对账", |_| managed::reconcile()).map_err(String::from)?;
     if !events.is_empty() {
         let rel = events.iter().filter(|e| e.action == "relinked").count();
-        let rem = events.iter().filter(|e| e.action == "removed").count();
+        let pending = events.iter().filter(|e| e.action == "needs-review").count();
         let fail = events.iter().filter(|e| e.action == "failed").count();
         history::record(
             "reconcile",
-            format!("对账自愈：重连 {rel}、移除 {rem}、失败 {fail}"),
+            format!("托管对账：重连 {rel}、待处理 {pending}、失败 {fail}"),
         );
     }
-    events
+    Ok(events)
 }
 
 /// 托管接入清单与健康状态
 #[tauri::command(async)]
-fn managed_list() -> Vec<managed::ManagedEntryHealthy> {
-    managed::list()
+fn managed_list() -> Result<Vec<managed::ManagedEntryHealthy>, String> {
+    managed::list().map_err(String::from)
 }
 
 /// 环境体检：全量巡检整机环境健康度，返回各项结果与修复建议（只读，不做修复动作）
@@ -313,29 +379,37 @@ fn doctor_run() -> Vec<doctor::DoctorCheck> {
 /// 环境体检修复：执行一个检查项的修复动作（托管对账 / shell 集成追加）
 #[tauri::command(async)]
 fn doctor_fix(id: String) -> Result<String, String> {
-    let r = doctor::fix(&id).map_err(String::from);
+    let r = operations::run(None, "环境修复", |_| doctor::fix(&id)).map_err(String::from);
     traced("doctor-fix", format!("体检修复 {id}"), &r);
     r
 }
 
 /// 环境变量中心：全局 mise config 的 [env] 列表 + 系统 env 冲突检测
 #[tauri::command(async)]
-fn env_center_list() -> env_center::EnvCenterSnapshot {
-    env_center::list()
+fn env_center_list() -> Result<env_center::EnvCenterSnapshot, String> {
+    env_center::list().map_err(String::from)
 }
 
-/// 设置一个全局 env（写入全局 mise config 的 [env] 段，文本手术保留其余内容）
+/// 设置一个全局 env（结构化更新全局 mise config 的 [env] 段，保留其余内容）
 #[tauri::command(async)]
 fn env_center_set(key: String, value: String) -> Result<String, String> {
-    let r = env_center::set(&key, &value).map_err(String::from);
-    traced("env-set", format!("{key}={value}"), &r);
+    let r = operations::run(None, "修改环境变量", |_| {
+        env_center::set(&key, &value)
+    })
+    .map_err(String::from);
+    // 不把变量值或可能含值的解析错误复制到历史。
+    history::record(
+        "env-set",
+        format!("{key}：{}", if r.is_ok() { "已更新" } else { "失败" }),
+    );
     r
 }
 
 /// 移除一个全局 env
 #[tauri::command(async)]
 fn env_center_remove(key: String) -> Result<String, String> {
-    let r = env_center::remove(&key).map_err(String::from);
+    let r =
+        operations::run(None, "删除环境变量", |_| env_center::remove(&key)).map_err(String::from);
     traced("env-remove", key.clone(), &r);
     r
 }
@@ -348,8 +422,8 @@ fn history_list() -> Vec<history::HistoryEntry> {
 
 /// 环境快照：导出整机环境清单（mise 工具 + 全局 env + brew 清单）为 TOML
 #[tauri::command(async)]
-fn snapshot_export(path: String) -> Result<snapshot::SnapshotSummary, String> {
-    let r = snapshot::export(&path);
+fn snapshot_export(path: String, include_env: bool) -> Result<snapshot::SnapshotSummary, String> {
+    let r = snapshot::export(&path, include_env);
     match &r {
         Ok(s) => history::record(
             "snapshot-export",
@@ -358,23 +432,37 @@ fn snapshot_export(path: String) -> Result<snapshot::SnapshotSummary, String> {
                 path, s.tools, s.env_vars, s.brew_packages
             ),
         ),
-        Err(e) => history::record("snapshot-export", format!("{path} 失败：{e}")),
+        Err(_) => history::record("snapshot-export", format!("{path} 失败（详情见操作页面）")),
     }
     r.map_err(String::from)
 }
 
 /// 环境快照：重建（全局 env 写入 + mise 工具逐个流式安装 + brew 清单生成 Brewfile）
 #[tauri::command(async)]
-fn snapshot_restore(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let r = snapshot::restore(&app, &path).map_err(String::from);
+fn snapshot_restore(
+    app: tauri::AppHandle,
+    path: String,
+    expected: String,
+    original: Option<String>,
+    job_id: String,
+) -> Result<String, String> {
+    let r = operations::run(Some(job_id), "快照恢复", |id| {
+        snapshot::restore(&app, &path, &expected, original.as_deref(), id)
+    })
+    .map_err(String::from);
     traced("snapshot-restore", path.clone(), &r);
     r
+}
+
+#[tauri::command(async)]
+fn snapshot_preview(path: String) -> Result<snapshot::SnapshotPlan, String> {
+    snapshot::preview(&path).map_err(String::from)
 }
 
 /// 环境预设：从 mise.toml 风格文本提取工具清单（供「装到整机」解析用户预设）
 #[tauri::command(async)]
 fn preset_parse_tools(toml: String) -> Result<Vec<preset::PresetTool>, String> {
-    Ok(preset::parse_tools(&toml))
+    preset::parse_tools(&toml).map_err(String::from)
 }
 
 /// 环境预设：导出为可分享的预设文件（Z.Env 预设 TOML v1）
@@ -401,7 +489,7 @@ fn preset_import(path: String) -> Result<preset::PresetFile, String> {
             "preset-import",
             format!("环境预设「{}」（{} 个工具）← {path}", p.name, p.tools.len()),
         ),
-        Err(e) => history::record("preset-import", format!("{path} 失败：{e}")),
+        Err(_) => history::record("preset-import", format!("{path} 失败（详情见操作页面）")),
     }
     r.map_err(String::from)
 }
@@ -421,7 +509,10 @@ fn service_list() -> services::ServiceOverview {
 /// 对本地服务执行操作（start / stop / restart）
 #[tauri::command(async)]
 fn service_action(manager: String, name: String, act: String) -> Result<String, String> {
-    let r = services::action(&manager, &name, &act).map_err(String::from);
+    let r = operations::run(None, "服务操作", |_| {
+        services::action(&manager, &name, &act)
+    })
+    .map_err(String::from);
     traced("service", format!("{manager} {act} {name}"), &r);
     r
 }
@@ -435,7 +526,7 @@ fn cache_list() -> Vec<caches::CacheInfo> {
 /// 用官方命令清理指定开发缓存
 #[tauri::command(async)]
 fn cache_clean(id: String) -> Result<String, String> {
-    let r = caches::clean(&id).map_err(String::from);
+    let r = operations::run(None, "清理缓存", |_| caches::clean(&id)).map_err(String::from);
     traced("cache-clean", id.clone(), &r);
     r
 }
@@ -446,6 +537,203 @@ fn stable_bin_path(manager: String, name: String, path: String) -> Result<String
     Ok(managed::stable_bin_path(&manager, &name, &path)?
         .display()
         .to_string())
+}
+
+#[tauri::command(async)]
+fn package_catalog() -> Vec<env::ProviderPackage> {
+    env::package_catalog()
+}
+
+#[tauri::command(async)]
+fn operation_list(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+) -> Vec<operations::Operation> {
+    let mut jobs = operations::list();
+    let (records, unavailable) = state.records();
+    for record in records {
+        if let Some(job) = jobs.iter_mut().find(|job| job.id == record.id) {
+            job.steps = Some(record.steps);
+            job.compensation = record.compensation;
+        } else {
+            jobs.push(operations::persisted(record));
+        }
+    }
+    if unavailable {
+        jobs.push(operations::persisted(operation_plan::ExecutionRecord {
+            schema_version: 1,
+            tool_id: crate::inventory::query::InventoryTool::Node,
+            id: "journal-unavailable".into(),
+            action: operation_plan::Action::Verify,
+            status: operation_plan::ExecutionStatus::Failed,
+            created_at: 0,
+            updated_at: 0,
+            steps: vec![],
+            outcome: None,
+            compensation: None,
+        }));
+        if let Some(job) = jobs.last_mut() {
+            job.label = "操作记录不可用".into();
+            job.lines.push_back(
+                "新操作已停止执行，请检查 ~/.zenv/operations-v1.json；旧入口继续保留".into(),
+            );
+        }
+    }
+    jobs
+}
+
+#[tauri::command(async)]
+fn operation_plan(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request: operation_plan::PlanRequest,
+    tool_id: Option<inventory::query::InventoryTool>,
+) -> Result<operation_plan::OperationPlan, String> {
+    let result = match tool_id.unwrap_or_default() {
+        inventory::query::InventoryTool::Node => state.preview_current(&inventory, request),
+        inventory::query::InventoryTool::Python => {
+            state.preview_python_current(&inventory, request)
+        }
+    };
+    result.map_err(|e| e.to_string())
+}
+
+/// v2 明确工具目标和步骤依赖；后端仍在同一服务签发可单次执行的计划。
+#[tauri::command(async)]
+fn operation_plan_v2(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request: operation_plan::PlanRequestV2,
+) -> Result<operation_plan::OperationPlanV2, String> {
+    state
+        .preview_v2_current(&inventory, request)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command(async)]
+fn operation_bindings(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+) -> Result<Vec<operation_plan::BindingSummary>, String> {
+    state.bindings().map_err(|e| e.to_string())
+}
+
+/// 只读项目核对共用清单租约，取消与变更互斥边界保持一致。
+#[tauri::command]
+async fn project_environment(
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request: project_environment::EnvironmentRequest,
+) -> Result<project_environment::ProjectEnvironment, String> {
+    let lease = inventory
+        .begin(request.request_id.clone(), None)
+        .map_err(|e| e.to_string())?;
+    let options =
+        providers::NodeScanOptions::from_environment().map_err(|_| "无法读取扫描上下文")?;
+    let global = env_center::global_config_path().ok_or("无法定位全局配置")?;
+    let expected = request.snapshot_request_id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        lease
+            .read_snapshot(&expected, |snapshot, token| {
+                project_environment::inspect(&request, snapshot, &options, &global, token)
+            })
+            .map_err(|e| e.to_string())?
+    })
+    .await
+    .map_err(|_| "项目核对线程中断，请重试".to_owned())?
+}
+
+#[tauri::command]
+async fn operation_execute(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    plan_id: String,
+) -> Result<operation_plan::ExecutionRecord, String> {
+    let service = state.inner().clone();
+    let query = inventory.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.execute(plan_id, query).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "操作执行线程中断，请查看任务记录".to_string())?
+}
+
+#[tauri::command(async)]
+fn operation_cancel(
+    state: tauri::State<'_, operation_plan::OperationPlanService>,
+    id: String,
+) -> Result<(), String> {
+    match operations::cancel(&id) {
+        Ok(()) => Ok(()),
+        Err(_) if state.cancel_pending(&id) => Ok(()),
+        Err(error) => Err(String::from(error)),
+    }
+}
+
+/// 请求先登记再转后台执行，取消可在工作线程启动前命中同一租约。
+#[tauri::command]
+async fn inventory_snapshot(
+    state: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request_id: String,
+    provider_id: Option<domain::ProviderId>,
+    tool_id: Option<inventory::query::InventoryTool>,
+) -> Result<domain::InventorySnapshot, String> {
+    let tool = tool_id.unwrap_or_default();
+    let lease = state
+        .begin_tool(request_id, provider_id, tool)
+        .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || match tool {
+        inventory::query::InventoryTool::Node => {
+            let options = providers::NodeScanOptions::from_environment()
+                .map_err(|error| error.to_string())?;
+            lease.execute(options).map_err(|error| error.to_string())
+        }
+        inventory::query::InventoryTool::Python => {
+            let options = providers::python::PythonScanOptions::from_environment()
+                .map_err(|error| error.to_string())?;
+            lease
+                .execute_python(options)
+                .map_err(|error| error.to_string())
+        }
+    })
+    .await
+    .map_err(|_| "工具清单刷新异常中断".to_string())?
+}
+
+#[tauri::command(async)]
+fn inventory_cancel(
+    state: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request_id: String,
+) -> Result<bool, String> {
+    state.cancel(&request_id).map_err(|error| error.to_string())
+}
+
+#[tauri::command(async)]
+fn install_preset(
+    app: tauri::AppHandle,
+    tools: Vec<preset::PresetTool>,
+    job_id: String,
+) -> Result<usize, String> {
+    operations::run(Some(job_id), "整机预设安装", |id| {
+        for t in &tools {
+            mise::validate_spec(&t.name, &t.version)?;
+        }
+        let mut ok = 0;
+        for t in &tools {
+            if operations::cancelled(id) {
+                break;
+            }
+            match mise::install_version_streaming(&app, &t.name, &t.version, id) {
+                Ok(_) => {
+                    ok += 1;
+                    operations::log(id, format!("{}@{} 已安装", t.name, t.version));
+                }
+                Err(_) => operations::log(id, format!("{}@{} 安装失败", t.name, t.version)),
+            }
+        }
+        if ok < tools.len() {
+            operations::partial(id);
+        }
+        Ok(ok)
+    })
+    .map_err(String::from)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -461,7 +749,19 @@ pub fn run() {
             None,
         ))
         .manage(AppData::default())
+        .manage(inventory::query::InventoryQueryService::default())
+        .manage(operation_plan::OperationPlanService::new(
+            std::env::var_os("HOME")
+                .or_else(|| std::env::var_os("USERPROFILE"))
+                .map(std::path::PathBuf::from)
+                .unwrap_or_default()
+                .join(".zenv/operations-v1.json"),
+        ))
         .setup(|app| {
+            // 只恢复已有记录；不重放安装，也不在新的只读会话中创建 journal。
+            let _ = app
+                .state::<operation_plan::OperationPlanService>()
+                .recover();
             // 不再在启动时同步采集硬件信息；改为首次 system_stats 时惰性计算，窗口可立即显示，
             // 避免首次安装/启动因 system_profiler / 磁盘扫描（尤其 Windows）导致加载缓慢。
             // macOS：应用“液态玻璃”风格的毛玻璃背景
@@ -524,6 +824,18 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             system_stats,
             check_mise,
+            operation_list,
+            package_catalog,
+            operation_cancel,
+            operation_plan,
+            operation_plan_v2,
+            operation_bindings,
+            operation_execute,
+            inventory_snapshot,
+            tool_catalog,
+            project_environment,
+            inventory_cancel,
+            install_preset,
             get_env_info,
             install_system_package,
             detect_system_installed,
@@ -543,6 +855,8 @@ pub fn run() {
             link_version,
             unlink_version,
             read_project_config,
+            config_bind_path,
+            config_replace_tools,
             write_project_config,
             install_all_project,
             managed_adopt,
@@ -562,6 +876,7 @@ pub fn run() {
             history_list,
             snapshot_export,
             snapshot_restore,
+            snapshot_preview,
             preset_export,
             preset_import,
             preset_parse_tools,

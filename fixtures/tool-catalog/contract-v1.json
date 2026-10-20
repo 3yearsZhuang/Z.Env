@@ -1,0 +1,1958 @@
+[
+  {
+    "schemaVersion": 1,
+    "platform": "macos",
+    "coverageNote": "首批 7 项工具定义；目录收录不表示已安装、渠道可用或拥有执行权限。其他工具仍可在兼容入口查看。",
+    "tools": [
+      {
+        "definition": {
+          "toolId": "node",
+          "displayName": "Node.js",
+          "aliases": [
+            "node",
+            "nodejs",
+            "node.js"
+          ],
+          "executableNames": [
+            "node",
+            "nodejs",
+            "node.exe",
+            "nodejs.exe"
+          ]
+        },
+        "category": "runtime",
+        "description": "JavaScript 运行时",
+        "documentationUrl": "https://nodejs.org/en",
+        "projectCheck": {
+          "state": "integrated",
+          "reason": "声明、候选、选择与受控上下文分别核对；用户终端和复杂继承仍可能未知"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [
+              {
+                "providerId": "mise",
+                "packageId": "node",
+                "kind": "runtime",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "读取来源目录与受限探针，保留健康及归属证据"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "已有计划入口；渠道可用性与版本承诺须在预览中重新核对"
+            },
+            "uninstallPlan": {
+              "state": "integrated",
+              "reason": "已有计划入口；精确目标、归属及影响仍须逐项核对"
+            },
+            "bindingPlan": {
+              "state": "integrated",
+              "reason": "已有绑定计划；健康实例、方式和作用域由计划服务核对"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [
+              {
+                "providerId": "brew",
+                "packageId": "node",
+                "kind": "formula",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "读取来源目录与受限探针，保留健康及归属证据"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "已有计划入口；渠道可用性与版本承诺须在预览中重新核对"
+            },
+            "uninstallPlan": {
+              "state": "integrated",
+              "reason": "已有计划入口；精确目标、归属及影响仍须逐项核对"
+            },
+            "bindingPlan": {
+              "state": "integrated",
+              "reason": "已有绑定计划；健康实例、方式和作用域由计划服务核对"
+            }
+          },
+          {
+            "providerId": "nvm",
+            "packages": [
+              {
+                "providerId": "nvm",
+                "packageId": "node",
+                "kind": "runtime",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "读取来源目录与受限探针，保留健康及归属证据"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源未提供安装计划"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "不从目录观测推导卸载权限"
+            },
+            "bindingPlan": {
+              "state": "integrated",
+              "reason": "已有绑定计划；健康实例、方式和作用域由计划服务核对"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [
+              {
+                "providerId": "path",
+                "packageId": "node",
+                "kind": "executable",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "仅文件观测；未知 PATH 程序不自动执行"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源未提供安装计划"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "不从目录观测推导卸载权限"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "未知 PATH 文件不提供绑定计划"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "python",
+          "displayName": "Python",
+          "aliases": [],
+          "executableNames": [
+            "python",
+            "python3"
+          ]
+        },
+        "category": "runtime",
+        "description": "CPython 3 来源样板，项目虚拟环境单独管理",
+        "documentationUrl": "https://www.python.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [
+              {
+                "providerId": "mise",
+                "packageId": "python",
+                "kind": "runtime",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "只读 CPython 3 来源目录和隔离探针，不加载 site 或项目配置"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "原生 core:python 精确预编译安装；执行前按计划重验来源与副作用"
+            },
+            "uninstallPlan": {
+              "state": "integrated",
+              "reason": "原生管理器记录、收据与精确实例一致后才允许卸载；不删除外部链接"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [
+              {
+                "providerId": "brew",
+                "packageId": "python",
+                "kind": "formula",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "只读 CPython 3 来源目录和隔离探针，不加载 site 或项目配置"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "已有安装计划预览；渠道执行与副作用验证未完成，安装执行未开放"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "pyenv",
+            "packages": [
+              {
+                "providerId": "pyenv",
+                "packageId": "python",
+                "kind": "runtime",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "只读 CPython 3 来源目录和隔离探针，不加载 site 或项目配置"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "已有安装计划预览；渠道执行与副作用验证未完成，安装执行未开放"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "uv",
+            "packages": [
+              {
+                "providerId": "uv",
+                "packageId": "python",
+                "kind": "runtime",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "只读 CPython 3 来源目录和隔离探针，不加载 site 或项目配置"
+            },
+            "installPlan": {
+              "state": "integrated",
+              "reason": "uv 托管 CPython 精确版本，--no-bin 与受控安装目录；执行前重验能力、别名与产物"
+            },
+            "uninstallPlan": {
+              "state": "integrated",
+              "reason": "uv 精确实例、真实目录与探测结果一致后才允许卸载；0 退出不当作删除证明"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [
+              {
+                "providerId": "path",
+                "packageId": "python3",
+                "kind": "executable",
+                "platform": "macos"
+              }
+            ],
+            "inventory": {
+              "state": "integrated",
+              "reason": "仅 Python 文件观测；未知 PATH 程序不执行"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "java",
+          "displayName": "Java",
+          "aliases": [],
+          "executableNames": [
+            "java",
+            "javac"
+          ]
+        },
+        "category": "runtime",
+        "description": "JVM 与 Java 开发工具",
+        "documentationUrl": "https://dev.java/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "go",
+          "displayName": "Go",
+          "aliases": [
+            "golang"
+          ],
+          "executableNames": [
+            "go"
+          ]
+        },
+        "category": "runtime",
+        "description": "Go 工具链",
+        "documentationUrl": "https://go.dev/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "rust",
+          "displayName": "Rust",
+          "aliases": [],
+          "executableNames": [
+            "rustc"
+          ]
+        },
+        "category": "runtime",
+        "description": "Rust 编译器工具链；Cargo 保留独立工具身份",
+        "documentationUrl": "https://rust-lang.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "git",
+          "displayName": "Git",
+          "aliases": [],
+          "executableNames": [
+            "git"
+          ]
+        },
+        "category": "cli",
+        "description": "版本控制命令行工具",
+        "documentationUrl": "https://git-scm.com/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "uv",
+          "displayName": "uv",
+          "aliases": [],
+          "executableNames": [
+            "uv"
+          ]
+        },
+        "category": "cli",
+        "description": "Python 项目与包管理工具",
+        "documentationUrl": "https://docs.astral.sh/uv/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "platform": "windows",
+    "coverageNote": "首批 7 项工具定义；目录收录不表示已安装、渠道可用或拥有执行权限。其他工具仍可在兼容入口查看。",
+    "tools": [
+      {
+        "definition": {
+          "toolId": "node",
+          "displayName": "Node.js",
+          "aliases": [
+            "node",
+            "nodejs",
+            "node.js"
+          ],
+          "executableNames": [
+            "node",
+            "nodejs",
+            "node.exe",
+            "nodejs.exe"
+          ]
+        },
+        "category": "runtime",
+        "description": "JavaScript 运行时",
+        "documentationUrl": "https://nodejs.org/en",
+        "projectCheck": {
+          "state": "unsupported",
+          "reason": "当前平台尚未接入统一 Node 流程"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "nvm",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "python",
+          "displayName": "Python",
+          "aliases": [],
+          "executableNames": [
+            "python",
+            "python3"
+          ]
+        },
+        "category": "runtime",
+        "description": "CPython 3 来源样板，项目虚拟环境单独管理",
+        "documentationUrl": "https://www.python.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "pyenv",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "uv",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "java",
+          "displayName": "Java",
+          "aliases": [],
+          "executableNames": [
+            "java",
+            "javac"
+          ]
+        },
+        "category": "runtime",
+        "description": "JVM 与 Java 开发工具",
+        "documentationUrl": "https://dev.java/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "go",
+          "displayName": "Go",
+          "aliases": [
+            "golang"
+          ],
+          "executableNames": [
+            "go"
+          ]
+        },
+        "category": "runtime",
+        "description": "Go 工具链",
+        "documentationUrl": "https://go.dev/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "rust",
+          "displayName": "Rust",
+          "aliases": [],
+          "executableNames": [
+            "rustc"
+          ]
+        },
+        "category": "runtime",
+        "description": "Rust 编译器工具链；Cargo 保留独立工具身份",
+        "documentationUrl": "https://rust-lang.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "git",
+          "displayName": "Git",
+          "aliases": [],
+          "executableNames": [
+            "git"
+          ]
+        },
+        "category": "cli",
+        "description": "版本控制命令行工具",
+        "documentationUrl": "https://git-scm.com/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "uv",
+          "displayName": "uv",
+          "aliases": [],
+          "executableNames": [
+            "uv"
+          ]
+        },
+        "category": "cli",
+        "description": "Python 项目与包管理工具",
+        "documentationUrl": "https://docs.astral.sh/uv/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schemaVersion": 1,
+    "platform": "linux",
+    "coverageNote": "首批 7 项工具定义；目录收录不表示已安装、渠道可用或拥有执行权限。其他工具仍可在兼容入口查看。",
+    "tools": [
+      {
+        "definition": {
+          "toolId": "node",
+          "displayName": "Node.js",
+          "aliases": [
+            "node",
+            "nodejs",
+            "node.js"
+          ],
+          "executableNames": [
+            "node",
+            "nodejs",
+            "node.exe",
+            "nodejs.exe"
+          ]
+        },
+        "category": "runtime",
+        "description": "JavaScript 运行时",
+        "documentationUrl": "https://nodejs.org/en",
+        "projectCheck": {
+          "state": "unsupported",
+          "reason": "当前平台尚未接入统一 Node 流程"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "nvm",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "uninstallPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            },
+            "bindingPlan": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Node 流程"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "python",
+          "displayName": "Python",
+          "aliases": [],
+          "executableNames": [
+            "python",
+            "python3"
+          ]
+        },
+        "category": "runtime",
+        "description": "CPython 3 来源样板，项目虚拟环境单独管理",
+        "documentationUrl": "https://www.python.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "pyenv",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "uv",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 来源"
+            },
+            "installPlan": {
+              "state": "unsupported",
+              "reason": "此来源或平台尚未提供 Python 安装计划"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "java",
+          "displayName": "Java",
+          "aliases": [],
+          "executableNames": [
+            "java",
+            "javac"
+          ]
+        },
+        "category": "runtime",
+        "description": "JVM 与 Java 开发工具",
+        "documentationUrl": "https://dev.java/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "go",
+          "displayName": "Go",
+          "aliases": [
+            "golang"
+          ],
+          "executableNames": [
+            "go"
+          ]
+        },
+        "category": "runtime",
+        "description": "Go 工具链",
+        "documentationUrl": "https://go.dev/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "rust",
+          "displayName": "Rust",
+          "aliases": [],
+          "executableNames": [
+            "rustc"
+          ]
+        },
+        "category": "runtime",
+        "description": "Rust 编译器工具链；Cargo 保留独立工具身份",
+        "documentationUrl": "https://rust-lang.org/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "git",
+          "displayName": "Git",
+          "aliases": [],
+          "executableNames": [
+            "git"
+          ]
+        },
+        "category": "cli",
+        "description": "版本控制命令行工具",
+        "documentationUrl": "https://git-scm.com/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      },
+      {
+        "definition": {
+          "toolId": "uv",
+          "displayName": "uv",
+          "aliases": [],
+          "executableNames": [
+            "uv"
+          ]
+        },
+        "category": "cli",
+        "description": "Python 项目与包管理工具",
+        "documentationUrl": "https://docs.astral.sh/uv/",
+        "projectCheck": {
+          "state": "notIntegrated",
+          "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+        },
+        "channels": [
+          {
+            "providerId": "mise",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "brew",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          },
+          {
+            "providerId": "path",
+            "packages": [],
+            "inventory": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "installPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "uninstallPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            },
+            "bindingPlan": {
+              "state": "notIntegrated",
+              "reason": "统一来源和计划适配尚未接入；兼容入口不提供同等验证"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

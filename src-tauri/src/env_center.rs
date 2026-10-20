@@ -1,8 +1,5 @@
-// 整机环境变量中心：管理全局 mise config 的 [env] 段，并提供系统 env 的只读展示与冲突检测。
-// 全局 config 是用户可能手工编辑的文件，因此写入采用「文本手术」——只重写 [env] 段内的目标行，
-// 其余内容（含注释与排版）原样保留；不引入 toml 依赖，段解析与编辑均为纯函数便于单测。
-// v1 近似：多行字符串内的 `[`/`#` 等按原文计入结构判断，异常形态提示用户手动编辑。
-use crate::error::AppError;
+// 环境变量使用 TOML 语法树编辑，保留其他配置；文件错误不再伪装成空配置。
+use crate::{config, error::AppError};
 use serde::Serialize;
 
 /// 全局 mise config 路径：MISE_GLOBAL_CONFIG_FILE > MISE_CONFIG_DIR > XDG_CONFIG_HOME > 平台默认。
@@ -77,391 +74,163 @@ pub struct EnvCenterSnapshot {
     pub system_env: Vec<SystemEnvVar>,
 }
 
-/// 汇总读取：全局 [env] 列表 + 与进程环境的同名冲突。
-pub fn list() -> EnvCenterSnapshot {
-    let path = global_config_path();
-    let exists = path.as_ref().map(|p| p.exists()).unwrap_or(false);
-    let content = path
-        .as_ref()
-        .and_then(|p| std::fs::read_to_string(p).ok())
-        .unwrap_or_default();
-    let entries = parse_env_section(&content);
+pub fn list() -> Result<EnvCenterSnapshot, AppError> {
+    let path = global_config_path().ok_or_else(|| AppError::Io("无法定位全局配置".into()))?;
+    let content = config::read_optional(&path)?;
+    let entries = parse_env_section(content.as_deref().unwrap_or(""))?;
     let conflicts = entries
         .iter()
         .filter(|e| e.kind == "simple" && e.key != "PATH")
         .filter_map(|e| {
             std::env::var(&e.key)
                 .ok()
-                .filter(|sys| sys != &e.value)
-                .map(|sys| EnvConflict {
+                .filter(|s| s != &e.value)
+                .map(|system_value| EnvConflict {
                     key: e.key.clone(),
                     mise_value: e.value.clone(),
-                    system_value: sys,
+                    system_value,
                 })
         })
         .collect();
-    let mut system_env: Vec<SystemEnvVar> = std::env::vars()
+    let mut system_env: Vec<_> = std::env::vars()
         .map(|(key, value)| SystemEnvVar { key, value })
         .collect();
     system_env.sort_by(|a, b| a.key.cmp(&b.key));
-    EnvCenterSnapshot {
-        config_path: path.map(|p| p.display().to_string()).unwrap_or_default(),
-        exists,
+    Ok(EnvCenterSnapshot {
+        config_path: path.display().to_string(),
+        exists: content.is_some(),
         entries,
         conflicts,
         system_env,
-    }
+    })
 }
 
-/// 设置一个全局 env：文件不存在则创建，无 [env] 段则追加段，键已存在则替换。
-pub fn set(key: &str, value: &str) -> Result<String, AppError> {
-    let path =
-        global_config_path().ok_or_else(|| AppError::Io("无法定位全局 mise 配置目录".into()))?;
-    let content = std::fs::read_to_string(&path).unwrap_or_default();
-    let new_content = set_env_in_config(&content, key, value)?;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
-    std::fs::write(&path, new_content)?;
-    Ok(format!("已写入 {}（全局 [env]）", key))
-}
-
-/// 删除一个全局 env：键不存在时报错。
-pub fn remove(key: &str) -> Result<String, AppError> {
-    let path =
-        global_config_path().ok_or_else(|| AppError::Io("无法定位全局 mise 配置目录".into()))?;
-    let content = std::fs::read_to_string(&path).unwrap_or_default();
-    let new_content = remove_env_from_config(&content, key)?;
-    std::fs::write(&path, new_content)?;
-    Ok(format!("已移除 {}（全局 [env]）", key))
-}
-
-/// 校验可托管的键名：拒绝空、含空白收尾、等号、换行、`#`/`.`/`[` 开头结构（点分键属高级值，只读）。
-fn validate_key(key: &str) -> Result<(), AppError> {
-    if key.is_empty()
-        || key.trim() != key
-        || key.contains('=')
-        || key.contains('\n')
-        || key.starts_with('#')
-        || key.contains('.')
-        || key.contains('[')
+pub fn validate_key(key: &str) -> Result<(), AppError> {
+    let mut chars = key.chars();
+    if !chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        || !chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        || key == "_"
     {
-        return Err(AppError::Unsupported(format!("不支持的键名: {}", key)));
+        return Err(AppError::Unsupported(
+            "变量名必须由字母、数字、下划线组成，且不能以数字开头".into(),
+        ));
     }
     Ok(())
 }
 
-/// 截取顶层 `[env]` 段行区间 [start, end)：start 为段头行下标，end 为下一个顶层表头行下标或文件尾。
-fn env_section_bounds(lines: &[&str]) -> Option<(usize, usize)> {
-    let start = lines.iter().position(|l| l.trim() == "[env]")?;
-    let mut end = lines.len();
-    for (i, l) in lines.iter().enumerate().skip(start + 1) {
-        if l.trim_start().starts_with('[') {
-            end = i;
-            break;
-        }
-    }
-    Some((start, end))
+pub fn set(key: &str, value: &str) -> Result<String, AppError> {
+    let path = global_config_path().ok_or_else(|| AppError::Io("无法定位全局配置".into()))?;
+    config::update(&path, None, |s| set_env_in_config(s, key, value))?;
+    Ok(format!("已写入 {key}（全局 [env]）"))
 }
 
-/// 一行 env 赋值的解析结果：Simple 可编辑；Complex 只读（表/数组/点分键/多行字符串）。
-#[derive(Debug, PartialEq)]
-enum EnvValue {
-    Simple(String),
-    Complex,
+pub fn remove(key: &str) -> Result<String, AppError> {
+    let path = global_config_path().ok_or_else(|| AppError::Io("无法定位全局配置".into()))?;
+    config::update(&path, None, |s| remove_env_from_config(s, key))?;
+    Ok(format!("已移除 {key}（全局 [env]）"))
 }
 
-/// 解析 `[env]` 段内的一行赋值；空行与注释返回 None。
-fn parse_env_line(line: &str) -> Option<(String, EnvValue)> {
-    let trimmed = line.trim_start();
-    if trimmed.is_empty() || trimmed.starts_with('#') {
-        return None;
-    }
-    let eq = trimmed.find('=')?;
-    let key = trimmed[..eq].trim();
-    if key.is_empty() {
-        return None;
-    }
-    let raw = trimmed[eq + 1..].trim();
-    // 点分键（如 _.path）、表、数组、多行基本字符串一律按高级值只读处理
-    if key.contains('.')
-        || key.contains('[')
-        || raw.starts_with('{')
-        || raw.starts_with('[')
-        || raw.starts_with("\"\"\"")
-    {
-        return Some((key.to_string(), EnvValue::Complex));
-    }
-    if let Some(v) = parse_basic_string(raw) {
-        return Some((key.to_string(), EnvValue::Simple(v)));
-    }
-    if let Some(rest) = raw.strip_prefix('\'') {
-        let end = rest.find('\'')?;
-        return Some((key.to_string(), EnvValue::Simple(rest[..end].to_string())));
-    }
-    if !raw.is_empty() {
-        // 裸标量（数字/布尔等）按原文展示与编辑
-        return Some((key.to_string(), EnvValue::Simple(raw.to_string())));
-    }
-    None
-}
-
-/// 解析 TOML 基本字符串（整行闭合的单引号对 `"..."`），支持 \\、\"、\n、\t 转义。
-fn parse_basic_string(raw: &str) -> Option<String> {
-    if !raw.starts_with('"') {
-        return None;
-    }
-    let bytes = raw.as_bytes();
-    let mut out = String::new();
-    let mut i = 1;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'"' => return Some(out),
-            b'\\' => {
-                i += 1;
-                let c = *bytes.get(i)?;
-                match c {
-                    b'\\' => out.push('\\'),
-                    b'"' => out.push('"'),
-                    b'n' => out.push('\n'),
-                    b't' => out.push('\t'),
-                    _ => return None,
-                }
-            }
-            c => out.push(c as char),
-        }
-        i += 1;
-    }
-    None
-}
-
-/// 从第 i 行起计算一条复杂值占用的行数：方/花括号配平即止（字符串内括号按原文计入，v1 近似）。
-fn complex_span(lines: &[&str], i: usize, end: usize) -> usize {
-    let mut bal: isize = 0;
-    let mut j = i;
-    while j < end {
-        for c in lines[j].chars() {
-            match c {
-                '[' | '{' => bal += 1,
-                ']' | '}' => bal -= 1,
-                _ => {}
-            }
-        }
-        j += 1;
-        if bal <= 0 {
-            break;
-        }
-    }
-    j - i
-}
-
-/// 在 `[env]` 段内查找键所在行：返回 (行下标, 占用行数)。找不到返回 None。
-fn find_key_span(lines: &[&str], start: usize, end: usize, key: &str) -> Option<(usize, usize)> {
-    let mut i = start + 1;
-    while i < end {
-        match parse_env_line(lines[i]) {
-            None => i += 1,
-            Some((k, v)) => {
-                let span = match v {
-                    EnvValue::Complex => complex_span(lines, i, end),
-                    EnvValue::Simple(_) => 1,
-                };
-                if k == key {
-                    return Some((i, span));
-                }
-                i += span;
-            }
-        }
-    }
-    None
-}
-
-/// 重组文件文本：保留原有行内容与结尾换行风格（空文件/以换行结尾 → 补结尾换行）。
-fn join_preserving_tail(original: &str, lines: Vec<String>) -> String {
-    let mut s = lines.join("\n");
-    if original.is_empty() || original.ends_with('\n') {
-        s.push('\n');
-    }
-    s
-}
-
-/// 在 config 文本中设置 `key = "value"`：无 [env] 段则文件尾追加段；其余行原样保留。
 pub fn set_env_in_config(content: &str, key: &str, value: &str) -> Result<String, AppError> {
     validate_key(key)?;
-    let new_line = format!("{} = \"{}\"", key, escape_basic(value));
-    let lines: Vec<String> = content.lines().map(String::from).collect();
-    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
-
-    if let Some((start, end)) = env_section_bounds(&refs) {
-        if let Some((i, span)) = find_key_span(&refs, start, end, key) {
-            let mut out = lines[..i].to_vec();
-            out.push(new_line);
-            out.extend_from_slice(&lines[i + span..]);
-            return Ok(join_preserving_tail(content, out));
-        }
-        // 新键：插到段头之后的第一行
-        let mut out = lines[..start + 1].to_vec();
-        out.push(new_line);
-        out.extend_from_slice(&lines[start + 1..]);
-        return Ok(join_preserving_tail(content, out));
+    let mut doc = config::parse(content)?;
+    let table = config::table(&mut doc, "env")?;
+    if table
+        .get(key)
+        .is_some_and(|i| i.is_table_like() || i.is_array())
+    {
+        return Err(AppError::Unsupported("高级环境变量请在编辑器中修改".into()));
     }
-
-    // 无 [env] 段：文件尾追加（与既有内容间留一空行）
-    let mut out = lines.clone();
-    if let Some(last) = out.last() {
-        if !last.trim().is_empty() {
-            out.push(String::new());
-        }
+    let mut replacement = toml_edit::Value::from(value);
+    if let Some(old) = table.get(key).and_then(toml_edit::Item::as_value) {
+        *replacement.decor_mut() = old.decor().clone();
     }
-    out.push("[env]".to_string());
-    out.push(new_line);
-    Ok(join_preserving_tail(content, out))
+    table.insert(key, toml_edit::Item::Value(replacement));
+    Ok(doc.to_string())
 }
 
-/// 从 config 文本中移除 `[env]` 段内的键（连同其续行）；键不存在时报 Unsupported。
 pub fn remove_env_from_config(content: &str, key: &str) -> Result<String, AppError> {
     validate_key(key)?;
-    let lines: Vec<String> = content.lines().map(String::from).collect();
-    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
-    let (start, end) = env_section_bounds(&refs)
-        .ok_or_else(|| AppError::Unsupported("全局配置中不存在 [env] 段".to_string()))?;
-    let (i, span) = find_key_span(&refs, start, end, key)
-        .ok_or_else(|| AppError::Unsupported(format!("[env] 中不存在键 {}", key)))?;
-    let mut out = lines[..i].to_vec();
-    out.extend_from_slice(&lines[i + span..]);
-    Ok(join_preserving_tail(content, out))
-}
-
-/// 解析 `[env]` 段为条目列表（复杂值整块跳过，只读展示）。
-pub fn parse_env_section(content: &str) -> Vec<GlobalEnvEntry> {
-    let lines: Vec<&str> = content.lines().collect();
-    let Some((start, end)) = env_section_bounds(&lines) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    let mut i = start + 1;
-    while i < end {
-        match parse_env_line(lines[i]) {
-            None => i += 1,
-            Some((key, EnvValue::Simple(v))) => {
-                out.push(GlobalEnvEntry {
-                    key,
-                    value: v,
-                    kind: "simple".into(),
-                });
-                i += 1;
-            }
-            Some((key, EnvValue::Complex)) => {
-                out.push(GlobalEnvEntry {
-                    key,
-                    value: "表/数组等高级值，请在文件中手动编辑".into(),
-                    kind: "complex".into(),
-                });
-                i += complex_span(&lines, i, end);
-            }
-        }
+    let mut doc = config::parse(content)?;
+    let table = config::table(&mut doc, "env")?;
+    if table.remove(key).is_none() {
+        return Err(AppError::Unsupported(format!("变量 {key} 不存在")));
     }
-    out
+    Ok(doc.to_string())
 }
 
-/// TOML 基本字符串转义：反斜杠与双引号（快照导出同样复用）。
+pub fn parse_env_section(content: &str) -> Result<Vec<GlobalEnvEntry>, AppError> {
+    let doc = config::parse(content)?;
+    let Some(item) = doc.get("env") else {
+        return Ok(Vec::new());
+    };
+    let table = item
+        .as_table_like()
+        .ok_or_else(|| AppError::Parse("env 必须为表".into()))?;
+    Ok(table
+        .iter()
+        .map(|(key, value)| {
+            let scalar = value
+                .as_value()
+                .filter(|v| !v.is_array() && !v.is_inline_table());
+            GlobalEnvEntry {
+                key: key.into(),
+                value: scalar
+                    .map(|v| {
+                        v.as_str()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| v.to_string().trim().to_string())
+                    })
+                    .unwrap_or_else(|| "表/数组等高级值，请在文件中手动编辑".into()),
+                kind: if scalar.is_some() && key != "_" {
+                    "simple"
+                } else {
+                    "complex"
+                }
+                .into(),
+            }
+        })
+        .collect())
+}
+
+/// 导出文件使用的基本字符串转义，覆盖控制字符与 Unicode。
 pub(crate) fn escape_basic(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('"', "\\\"")
+    let encoded = serde_json::to_string(value).expect("字符串序列化不会失败");
+    encoded[1..encoded.len() - 1].to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const SAMPLE: &str = "# 全局配置\nmin_version = \"2024.1\"\n\n[tools]\nnode = \"22\"\n\n[env]\n# 注释保留\nEDITOR = \"vim\"\nVERBOSE = 1\n_.path = [\"/opt/bin\"]\nFLAGS = \"-a \\\"x\\\"\"\n\n[settings]\nexperimental = true\n";
-
     #[test]
-    fn parse_env_section_extracts_scalars_and_marks_complex() {
-        let entries = parse_env_section(SAMPLE);
-        let get = |k: &str| entries.iter().find(|e| e.key == k).unwrap();
-        assert_eq!(get("EDITOR").value, "vim");
-        assert_eq!(get("EDITOR").kind, "simple");
-        assert_eq!(get("VERBOSE").value, "1");
-        assert_eq!(get("FLAGS").value, "-a \"x\"");
-        assert_eq!(get("_.path").kind, "complex");
-        // [tools]/[settings] 段不误入
-        assert!(entries
-            .iter()
-            .all(|e| e.key != "node" && e.key != "experimental"));
+    fn editing_roundtrips_unicode_newlines_and_commented_headers() {
+        let original = "[tools]\nnode = '20'\n[env] # 保留\nGREETING = 'old'\n";
+        let text = set_env_in_config(original, "GREETING", "中文\n第二行\t").unwrap();
+        let parsed: toml::Value = toml::from_str(&text).unwrap();
+        assert_eq!(parsed["env"]["GREETING"].as_str(), Some("中文\n第二行\t"));
+        assert_eq!(parse_env_section(&text).unwrap()[0].value, "中文\n第二行\t");
+        assert!(text.contains("# 保留"));
+        assert!(remove_env_from_config(&text, "GREETING")
+            .unwrap()
+            .contains("node = '20'"));
     }
-
     #[test]
-    fn set_replaces_existing_and_preserves_comments_and_other_sections() {
-        let out = set_env_in_config(SAMPLE, "EDITOR", "nvim").unwrap();
-        assert!(out.contains("EDITOR = \"nvim\""));
-        assert!(!out.contains("EDITOR = \"vim\""));
-        assert!(out.contains("# 注释保留"));
-        assert!(out.contains("[tools]"));
-        assert!(out.contains("node = \"22\""));
-        assert!(out.contains("[settings]"));
-        // 复杂值不受影响
-        assert!(out.contains("_.path"));
-    }
-
-    #[test]
-    fn set_new_key_inserts_right_after_section_header() {
-        let out = set_env_in_config(SAMPLE, "HTTP_PROXY", "http://127.0.0.1:7890").unwrap();
-        let env_pos = out.find("[env]").unwrap();
-        let inserted = out.find("HTTP_PROXY = \"http://127.0.0.1:7890\"").unwrap();
-        let editor = out.find("EDITOR").unwrap();
-        assert!(env_pos < inserted && inserted < editor);
-    }
-
-    #[test]
-    fn set_appends_section_when_missing_and_escapes_value() {
-        let out = set_env_in_config("foo = \"bar\"\n", "A", "say \"hi\"\\ok").unwrap();
-        assert!(out.contains("[env]"));
-        assert!(out.contains("A = \"say \\\"hi\\\"\\\\ok\""));
-        assert!(out.starts_with("foo = \"bar\""));
-        assert!(out.ends_with('\n'));
-    }
-
-    #[test]
-    fn set_on_empty_content_creates_minimal_file() {
-        let out = set_env_in_config("", "K", "v").unwrap();
-        assert_eq!(out, "[env]\nK = \"v\"\n");
-    }
-
-    #[test]
-    fn remove_deletes_key_and_reports_missing() {
-        let out = remove_env_from_config(SAMPLE, "EDITOR").unwrap();
-        assert!(!out.contains("EDITOR"));
-        assert!(out.contains("VERBOSE"));
-        assert!(remove_env_from_config(SAMPLE, "NOPE").is_err());
-        assert!(remove_env_from_config("a = 1\n", "A").is_err());
-    }
-
-    #[test]
-    fn roundtrip_set_two_remove_one_leaves_other_intact() {
-        let s1 = set_env_in_config(SAMPLE, "A", "1").unwrap();
-        let s2 = set_env_in_config(&s1, "B", "2").unwrap();
-        let s3 = remove_env_from_config(&s2, "A").unwrap();
-        let entries = parse_env_section(&s3);
-        assert!(entries.iter().any(|e| e.key == "B" && e.value == "2"));
-        assert!(!entries.iter().any(|e| e.key == "A"));
-        assert!(entries.iter().any(|e| e.key == "EDITOR"));
-    }
-
-    #[test]
-    fn validate_key_rejects_unsafe_names() {
-        for bad in ["", " a", "a ", "a=b", "a.b", "#a", "a[0]"] {
-            assert!(validate_key(bad).is_err(), "应拒绝: {bad}");
+    fn malformed_documents_and_unsafe_keys_are_rejected() {
+        assert!(set_env_in_config("[bad", "A", "b").is_err());
+        for key in ["", "A B", "A.B", "1A", "_"] {
+            assert!(set_env_in_config("", key, "x").is_err());
         }
-        assert!(validate_key("GOOD_KEY").is_ok());
+        assert!(set_env_in_config("[env]\nX = { value = 'complex' }", "X", "x").is_err());
     }
-
     #[test]
-    fn complex_multiline_value_is_skipped_whole() {
-        let cfg = "[env]\nMATRIX = [\n  \"a\",\n  \"b\",\n]\nOK = \"1\"\n";
-        let entries = parse_env_section(cfg);
-        assert_eq!(entries.len(), 2);
-        assert_eq!(entries[0].key, "MATRIX");
-        assert_eq!(entries[0].kind, "complex");
-        assert_eq!(entries[1].key, "OK");
+    fn complex_values_and_quoted_keys_are_not_lost() {
+        let text = "[env]\n'A' = '中文'\n_.path = [\n 'one', 'two'\n]\nB = 3\n";
+        let rows = parse_env_section(text).unwrap();
+        assert_eq!(rows[0].key, "A");
+        assert_eq!(rows[1].kind, "complex");
+        let out = set_env_in_config(text, "A", "new").unwrap();
+        let value: toml::Value = toml::from_str(&out).unwrap();
+        assert_eq!(value["env"]["_"]["path"].as_array().unwrap().len(), 2);
     }
 }

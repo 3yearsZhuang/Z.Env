@@ -1,0 +1,114 @@
+{
+  "request": {
+    "requestId": "project-contract",
+    "snapshotRequestId": "inventory-contract",
+    "path": "/fixture/project",
+    "probe": true
+  },
+  "report": {
+    "schemaVersion": 1,
+    "requestId": "project-contract",
+    "snapshotRequestId": "inventory-contract",
+    "projectDirectory": "/fixture/project",
+    "configurationPath": "/fixture/project/mise.toml",
+    "observedAt": 1792339200000,
+    "declarations": [
+      {
+        "source": "mise tools.node",
+        "path": "/fixture/project/mise.toml",
+        "requirement": "22",
+        "supported": true,
+        "reason": null
+      }
+    ],
+    "requirementState": "supported",
+    "candidates": [
+      {
+        "installationId": "mise-22",
+        "providerPackage": {
+          "providerId": "mise",
+          "packageId": "node",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "version": "22.1.0",
+        "locator": "/fixture/mise/22.1.0",
+        "executablePath": "/fixture/mise/22.1.0/bin/node",
+        "requirementMatch": "satisfied",
+        "usable": true,
+        "reason": null
+      },
+      {
+        "installationId": "nvm-20",
+        "providerPackage": {
+          "providerId": "nvm",
+          "packageId": "node",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "version": "20.1.0",
+        "locator": "/fixture/nvm/20.1.0",
+        "executablePath": "/fixture/nvm/20.1.0/bin/node",
+        "requirementMatch": "mismatch",
+        "usable": true,
+        "reason": null
+      }
+    ],
+    "inventoryComplete": true,
+    "selection": {
+      "kind": "mise",
+      "scope": "project",
+      "path": "/fixture/project/mise.toml",
+      "request": "22",
+      "pathEntries": [],
+      "reason": null
+    },
+    "controlled": {
+      "context": "controlledProject",
+      "status": "verified",
+      "version": "22.1.0",
+      "executablePath": "/fixture/mise/22.1.0/bin/node",
+      "canonicalExecutablePath": "/fixture/mise/22.1.0/bin/node",
+      "installationId": "mise-22",
+      "requirementMatch": "satisfied",
+      "selectionMatch": "satisfied",
+      "reason": "受控版本匹配；终端未知"
+    },
+    "applicationPath": {
+      "context": "applicationPath",
+      "status": "verified",
+      "version": "20.1.0",
+      "executablePath": "/fixture/nvm/20.1.0/bin/node",
+      "canonicalExecutablePath": "/fixture/nvm/20.1.0/bin/node",
+      "installationId": "nvm-20",
+      "requirementMatch": "mismatch",
+      "selectionMatch": "unknown",
+      "reason": "应用 PATH 仍解析到 Node 20"
+    },
+    "terminal": {
+      "context": "userTerminal",
+      "status": "unknown",
+      "version": null,
+      "executablePath": null,
+      "canonicalExecutablePath": null,
+      "installationId": null,
+      "requirementMatch": "unknown",
+      "selectionMatch": "unknown",
+      "reason": "用户终端与 IDE 尚未验证"
+    },
+    "issues": [
+      {
+        "code": "runtimeMismatch",
+        "message": "Node 22 要求与应用 PATH Node 20 不一致"
+      }
+    ],
+    "files": [
+      {
+        "path": "/fixture/project/mise.toml",
+        "canonicalPath": "/fixture/project/mise.toml",
+        "exists": true,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ]
+  }
+}

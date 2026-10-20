@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use serde::Serialize;
-use std::io::Read;
-use std::process::{Command, Stdio};
+use std::process::Command;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 /// 操作系统信息
@@ -31,7 +31,7 @@ pub struct EnvInfo {
 
 /// 运行命令并返回首行输出（失败或为空返回 None）。
 fn out(cmd: &str, args: &[&str]) -> Option<String> {
-    let o = Command::new(cmd).args(args).output().ok()?;
+    let o = crate::process::output(Command::new(cmd).args(args), Duration::from_secs(15)).ok()?;
     if !o.status.success() {
         return None;
     }
@@ -124,327 +124,374 @@ pub fn collect_env_info() -> EnvInfo {
     }
 }
 
-/// 在子线程运行命令并带超时返回输出，避免 winget/apt 等首启过慢导致界面卡顿。
-fn run_limited(
-    prog: &str,
-    argv: Vec<String>,
-    label: &str,
-) -> Result<std::process::Output, AppError> {
-    let (prog2, argv2) = (prog.to_string(), argv);
-    let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = tx.send(Command::new(&prog2).args(&argv2).output());
-    });
-    rx.recv_timeout(std::time::Duration::from_secs(15))
-        .map_err(|_| AppError::Other(format!("{} 执行超时（可能环境未就绪）", label)))?
-        .map_err(|e| AppError::Io(format!("无法执行 {}: {}", prog, e)))
+#[derive(Debug, Clone, serde::Deserialize, Serialize)]
+pub struct ProviderPackage {
+    pub tool: String,
+    pub manager: String,
+    pub id: String,
+    pub kind: String,
+    pub platforms: Vec<String>,
 }
 
-/// 包管理器名不在支持列表时的统一错误。
-fn unsupported_manager(manager: &str) -> AppError {
-    AppError::Unsupported(format!("不支持的包管理器: {}", manager))
+pub fn package_catalog() -> Vec<ProviderPackage> {
+    let all: Vec<ProviderPackage> =
+        serde_json::from_str(include_str!("../../src/data/packages.json"))
+            .expect("内置包映射必须有效");
+    all.into_iter()
+        .filter(|p| p.platforms.iter().any(|s| s == std::env::consts::OS))
+        .collect()
 }
 
-/// 探测各系统包管理器当前已安装的软件列表（用于跨启动持久展示“已安装”状态）。
-/// brew 用 `brew list --formula`；winget/apt/pacman 尽力解析首列名称。
-pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, AppError> {
-    let (prog, argv): (String, Vec<String>) = match manager {
-        "brew" => (
-            "brew".to_string(),
-            ["list", "--formula"].map(String::from).to_vec(),
-        ),
-        "winget" => (
-            "winget".to_string(),
-            ["list", "--disable-interactivity"]
-                .map(String::from)
-                .to_vec(),
-        ),
-        "apt" => (
-            "apt".to_string(),
-            ["list", "--installed"].map(String::from).to_vec(),
-        ),
-        "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
-        _ => return Err(unsupported_manager(manager)),
-    };
-    let output = run_limited(&prog, argv, manager)?;
-    if !output.status.success() {
-        return Err(AppError::Other(format!("{} 查询已安装列表失败", manager)));
+pub fn validate_package(name: &str) -> Result<(), AppError> {
+    if name.is_empty()
+        || name.starts_with('-')
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_.+@/".contains(c))
+    {
+        return Err(AppError::Unsupported("软件包标识无效".into()));
     }
-    let out = String::from_utf8_lossy(&output.stdout);
-    let mut names: Vec<String> = Vec::new();
-    for line in out.lines() {
-        let t = line.trim();
-        if t.is_empty() {
-            continue;
-        }
-        // apt 格式为 "pkg/arch version ..."，取 '/' 前部分；其余取首个空白分隔词
-        let word = if manager == "apt" {
-            t.split('/').next().unwrap_or("").trim()
-        } else {
-            t.split_whitespace().next().unwrap_or("").trim()
-        };
-        let name = word.to_string();
-        if name.is_empty() {
-            continue;
-        }
-        // winget 输出前几行是列标题，跳过常见标题词
-        if matches!(
-            name.as_str(),
-            "名称" | "Name" | "Id" | "Version" | "Available" | "package"
-        ) {
-            continue;
-        }
-        names.push(name);
-    }
-    names.sort();
-    names.dedup();
-    Ok(names)
+    Ok(())
 }
 
-/// 系统包管理器已装的一个软件及其版本。
+/// 身份始终保留包管理器的规范 ID，不用显示名首词代替。
 #[derive(Debug, Clone, Serialize)]
 pub struct SystemPkg {
     pub name: String,
     pub version: Option<String>,
+    pub kind: String,
+    pub tool: Option<String>,
 }
 
-/// 探测各系统包管理器已装软件及其版本（供运行时页列出“其他渠道”的版本）。
-/// brew 用 `brew list --versions`；winget/apt/pacman 尽力解析名称与版本列。
+fn identify(manager: &str, name: &str, version: Option<String>, kind: &str) -> SystemPkg {
+    let tool = package_catalog()
+        .into_iter()
+        .find(|p| p.manager == manager && p.id.eq_ignore_ascii_case(name))
+        .map(|p| p.tool);
+    SystemPkg {
+        name: name.into(),
+        version,
+        kind: kind.into(),
+        tool,
+    }
+}
+
+fn checked_output(command: &mut Command) -> Result<std::process::Output, AppError> {
+    let out = crate::process::output(command, Duration::from_secs(120))?;
+    if !out.status.success() {
+        return Err(AppError::Other(
+            String::from_utf8_lossy(&out.stderr).trim().into(),
+        ));
+    }
+    Ok(out)
+}
+
+pub fn detect_system_installed(manager: &str) -> Result<Vec<String>, AppError> {
+    Ok(detect_system_versions(manager)?
+        .into_iter()
+        .map(|p| p.name)
+        .collect())
+}
+
 pub fn detect_system_versions(manager: &str) -> Result<Vec<SystemPkg>, AppError> {
-    let (prog, argv): (String, Vec<String>) = match manager {
-        "brew" => (
-            "brew".to_string(),
-            ["list", "--versions"].map(String::from).to_vec(),
-        ),
-        "winget" => (
-            "winget".to_string(),
-            ["list", "--disable-interactivity"]
-                .map(String::from)
-                .to_vec(),
-        ),
-        "apt" => (
-            "apt".to_string(),
-            ["list", "--installed"].map(String::from).to_vec(),
-        ),
-        "pacman" => ("pacman".to_string(), ["-Q"].map(String::from).to_vec()),
-        _ => return Err(unsupported_manager(manager)),
-    };
-    let output = run_limited(&prog, argv, manager)?;
-    if !output.status.success() {
-        return Err(AppError::Other(format!("{} 查询已装版本失败", manager)));
-    }
-    let out = String::from_utf8_lossy(&output.stdout);
-    let mut pkgs: Vec<SystemPkg> = Vec::new();
-    for line in out.lines() {
-        let t = line.trim();
-        if t.is_empty() {
-            continue;
-        }
-        let tokens: Vec<&str> = t.split_whitespace().collect();
-        if tokens.is_empty() {
-            continue;
-        }
-        let (name, version) = match manager {
-            // apt："pkg/arch version ..." → 名称取 '/' 前，版本取第二列
-            "apt" => (
-                t.split('/').next().unwrap_or("").trim().to_string(),
-                tokens.get(1).map(|s| s.to_string()),
-            ),
-            // winget：列次序 [名称, Id, 版本, ...]，跳过列标题
-            "winget" => {
-                let n = tokens[0].to_string();
-                if matches!(n.as_str(), "名称" | "Name") {
-                    continue;
-                }
-                (n, tokens.get(2).map(|s| s.to_string()))
-            }
-            // brew / pacman："名称 版本 ..."
-            _ => (tokens[0].to_string(), tokens.get(1).map(|s| s.to_string())),
-        };
-        if name.is_empty() {
-            continue;
-        }
-        pkgs.push(SystemPkg { name, version });
-    }
-    pkgs.sort_by(|a, b| a.name.cmp(&b.name));
-    pkgs.dedup_by(|a, b| a.name == b.name);
-    Ok(pkgs)
-}
-
-/// 原生卸载系统软件包（brew/winget/apt/pacman），用于管理其他渠道安装的环境。
-pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, AppError> {
-    let mut prog = manager.to_string();
-    let mut argv: Vec<String> = Vec::new();
     match manager {
-        "brew" => argv.extend(["uninstall", name].map(String::from)),
-        "winget" => argv.extend(["uninstall", "--id", name].map(String::from)),
+        "brew" => {
+            let out =
+                checked_output(Command::new("brew").args(["info", "--json=v2", "--installed"]))?;
+            parse_brew_installed(&String::from_utf8_lossy(&out.stdout))
+        }
+        "winget" => {
+            let dir = tempfile::tempdir()?;
+            let file = dir.path().join("installed.json");
+            checked_output(
+                Command::new("winget")
+                    .args([
+                        "export",
+                        "--include-versions",
+                        "--accept-source-agreements",
+                        "--disable-interactivity",
+                        "--output",
+                    ])
+                    .arg(&file),
+            )?;
+            parse_winget_export(&std::fs::read_to_string(file)?)
+        }
         "apt" => {
-            argv.extend(["remove", "-y", name].map(String::from));
-            prog = "sudo".into();
+            let out = checked_output(Command::new("dpkg-query").args([
+                "-W",
+                "-f=${binary:Package}\t${Version}\t${db:Status-Status}\n",
+            ]))?;
+            Ok(String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .filter_map(|l| {
+                    let v: Vec<_> = l.split('\t').collect();
+                    if v.len() != 3 || v[2] != "installed" {
+                        return None;
+                    }
+                    Some(identify(
+                        manager,
+                        v[0].split(':').next()?,
+                        Some(v[1].into()),
+                        "package",
+                    ))
+                })
+                .collect())
         }
         "pacman" => {
-            argv.extend(["-R", "--noconfirm", name].map(String::from));
-            prog = "sudo".into();
+            let out = checked_output(Command::new("pacman").arg("-Q"))?;
+            Ok(String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .filter_map(|l| {
+                    let mut v = l.split_whitespace();
+                    Some(identify(
+                        manager,
+                        v.next()?,
+                        v.next().map(str::to_string),
+                        "package",
+                    ))
+                })
+                .collect())
         }
-        _ => return Err(unsupported_manager(manager)),
-    }
-    let output = run_limited(&prog, argv, &format!("{manager} uninstall"))?;
-    if output.status.success() {
-        Ok(format!("{} 已卸载", name))
-    } else {
-        Err(AppError::Other(format!(
-            "{} 卸载失败：{}",
-            name,
-            String::from_utf8_lossy(&output.stderr).trim()
-        )))
+        _ => Err(AppError::Unsupported(format!(
+            "不支持的包管理器: {manager}"
+        ))),
     }
 }
 
-/// 原生安装进度事件负载，通过 `sys:install-progress` 事件推送给前端。
+pub fn parse_brew_installed(text: &str) -> Result<Vec<SystemPkg>, AppError> {
+    let value: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| AppError::Parse(e.to_string()))?;
+    let mut out = Vec::new();
+    for (section, field, kind) in [
+        ("formulae", "full_name", "formula"),
+        ("casks", "token", "cask"),
+    ] {
+        let items = value[section]
+            .as_array()
+            .ok_or_else(|| AppError::Parse(format!("brew 输出缺少 {section}")))?;
+        for item in items {
+            let Some(name) = item[field].as_str().or_else(|| item["name"].as_str()) else {
+                continue;
+            };
+            let version = if kind == "formula" {
+                item["installed"]
+                    .as_array()
+                    .and_then(|a| a.first())
+                    .and_then(|v| v["version"].as_str())
+            } else {
+                item["installed"].as_str().or_else(|| {
+                    item["installed"]
+                        .as_array()
+                        .and_then(|a| a.first())
+                        .and_then(|v| v.as_str())
+                })
+            };
+            if let Some(version) = version {
+                out.push(identify("brew", name, Some(version.into()), kind));
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn parse_winget_export(text: &str) -> Result<Vec<SystemPkg>, AppError> {
+    let value: serde_json::Value = serde_json::from_str(text.trim_start_matches('\u{feff}'))
+        .map_err(|e| AppError::Parse(e.to_string()))?;
+    let sources = value["Sources"]
+        .as_array()
+        .ok_or_else(|| AppError::Parse("winget 导出缺少 Sources".into()))?;
+    let mut out = Vec::new();
+    for source in sources {
+        for pkg in source["Packages"].as_array().into_iter().flatten() {
+            if let Some(id) = pkg["PackageIdentifier"].as_str() {
+                out.push(identify(
+                    "winget",
+                    id,
+                    pkg["Version"].as_str().map(str::to_string),
+                    "package",
+                ));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Linux 使用桌面授权代理；不通过无终端的 sudo 请求密码。
+fn package_command(
+    manager: &str,
+    name: &str,
+    kind: &str,
+    install: bool,
+) -> Result<Command, AppError> {
+    validate_package(name)?;
+    let mut command = match manager {
+        "brew" => {
+            let mut c = Command::new("brew");
+            c.arg(if install { "install" } else { "uninstall" });
+            if !matches!(kind, "formula" | "cask") {
+                return Err(AppError::Unsupported("brew 包类型无效".into()));
+            }
+            c.arg(format!("--{kind}")).arg("--").arg(name);
+            c
+        }
+        "winget" => {
+            let mut c = Command::new("winget");
+            c.args([
+                if install { "install" } else { "uninstall" },
+                "--id",
+                name,
+                "--exact",
+                "--disable-interactivity",
+                "--accept-source-agreements",
+            ]);
+            if install {
+                c.arg("--accept-package-agreements");
+            }
+            c
+        }
+        "apt" | "pacman" => {
+            let mut c = Command::new("pkexec");
+            let executable = if manager == "apt" {
+                "/usr/bin/apt-get"
+            } else {
+                "/usr/bin/pacman"
+            };
+            c.arg(executable);
+            if manager == "apt" {
+                c.args([if install { "install" } else { "remove" }, "-y", "--", name]);
+            } else {
+                c.args([if install { "-S" } else { "-R" }, "--noconfirm", "--", name]);
+            }
+            c
+        }
+        _ => {
+            return Err(AppError::Unsupported(format!(
+                "不支持的包管理器: {manager}"
+            )))
+        }
+    };
+    if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+        command.current_dir(home);
+    }
+    Ok(command)
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SysInstallProgress {
+    pub job_id: String,
     pub manager: String,
     pub name: String,
     pub line: String,
 }
 
-/// 当前用户主目录（GUI 从 Finder/Dock 启动时 cwd 可能不可写，统一以 home 为工作目录）。
-fn home() -> Option<std::path::PathBuf> {
-    std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(std::path::PathBuf::from)
-}
-
-/// 原生安装系统软件包：调用当前系统对应的包管理器真实安装，并把输出逐帧推送给前端。
-/// apt / pacman 需要管理员权限，自动用 `sudo` 前置（GUI 场景下可能要求输入密码）。
 pub fn install_system_package(
     app: &AppHandle,
     manager: &str,
     name: &str,
+    kind: &str,
+    job: &str,
 ) -> Result<String, AppError> {
-    let mut prog = manager.to_string();
-    let mut argv: Vec<String> = Vec::new();
-    match manager {
-        "brew" => argv.extend(["install", name].map(String::from)),
-        "winget" => argv.extend(
-            [
-                "install",
-                "--accept-source-agreements",
-                "--accept-package-agreements",
-                name,
-            ]
-            .map(String::from),
-        ),
-        "apt" => {
-            argv.extend(["install", "-y", name].map(String::from));
-            prog = "sudo".into();
-        }
-        "pacman" => {
-            argv.extend(["-S", "--noconfirm", name].map(String::from));
-            prog = "sudo".into();
-        }
-        _ => return Err(unsupported_manager(manager)),
+    if !package_catalog()
+        .iter()
+        .any(|p| p.manager == manager && p.id == name && p.kind == kind)
+    {
+        return Err(AppError::Unsupported(
+            "当前平台未提供该软件的安装映射，请使用官方下载渠道".into(),
+        ));
     }
-
-    let mut command = Command::new(&prog);
-    command
-        .args(&argv)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    if let Some(h) = home() {
-        command.current_dir(h);
+    let mut command = package_command(manager, name, kind, true)?;
+    let out = crate::process::run(&mut command, Duration::from_secs(3600), Some(job), |line| {
+        let _ = app.emit(
+            "sys:install-progress",
+            SysInstallProgress {
+                job_id: job.into(),
+                manager: manager.into(),
+                name: name.into(),
+                line: line.into(),
+            },
+        );
+    })
+    .map_err(|e| {
+        AppError::Other(format!(
+            "{e}{}",
+            if matches!(manager, "apt" | "pacman") {
+                "；Linux 需要 polkit/pkexec 和可用的桌面授权会话"
+            } else {
+                ""
+            }
+        ))
+    })?;
+    if !out.status.success() {
+        return Err(AppError::Other(format!(
+            "安装失败：{}",
+            String::from_utf8_lossy(&out.stderr)
+        )));
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| AppError::Io(format!("无法启动 {} 安装: {}", prog, e)))?;
-
-    let stdout = child.stdout.take().expect("stdout pipe");
-    let stderr = child.stderr.take().expect("stderr pipe");
-    let manager_out = manager.to_string();
-    let name_out = name.to_string();
-    let app_out = app.clone();
-    let t_out = std::thread::spawn(move || {
-        pump_sys_stream(stdout, &app_out, &manager_out, &name_out);
-    });
-    let manager_err = manager.to_string();
-    let name_err = name.to_string();
-    let app_err = app.clone();
-    let t_err = std::thread::spawn(move || {
-        pump_sys_stream(stderr, &app_err, &manager_err, &name_err);
-    });
-
-    let status = child
-        .wait()
-        .map_err(|e| AppError::Io(format!("等待 {} 进程失败: {}", prog, e)))?;
-    let _ = t_out.join();
-    let _ = t_err.join();
-
-    if status.success() {
-        Ok(format!("{} install {}", manager, name))
-    } else {
-        Err(AppError::Other(format!(
-            "{} install {} 失败",
-            manager, name
-        )))
+    let installed = detect_system_installed(manager)?;
+    if !installed.iter().any(|id| id.eq_ignore_ascii_case(name)) {
+        return Err(AppError::Other(
+            "安装命令已结束，但尚未检测到该包，请刷新检查".into(),
+        ));
     }
+    Ok(format!("{name} 已安装并验证"))
 }
 
-/// 逐字节读取子进程输出，按换行切分后推送 `sys:install-progress` 事件。
-fn pump_sys_stream<R: Read>(mut reader: R, app: &AppHandle, manager: &str, name: &str) {
-    let mut byte = [0u8; 1];
-    let mut line = String::new();
-    let flush = |line: &mut String| {
-        if !line.trim().is_empty() {
-            let _ = app.emit(
-                "sys:install-progress",
-                SysInstallProgress {
-                    manager: manager.to_string(),
-                    name: name.to_string(),
-                    line: line.trim_end().to_string(),
-                },
-            );
-        }
-        line.clear();
-    };
-    loop {
-        match reader.read(&mut byte) {
-            Ok(0) => break,
-            Ok(_) => {
-                let c = byte[0] as char;
-                if c == '\n' || c == '\r' {
-                    flush(&mut line);
-                } else {
-                    line.push(c);
-                }
-            }
-            Err(_) => break,
-        }
+pub fn uninstall_system_package(manager: &str, name: &str) -> Result<String, AppError> {
+    let pkgs = detect_system_versions(manager)?;
+    let pkg = pkgs
+        .iter()
+        .find(|p| p.name.eq_ignore_ascii_case(name))
+        .ok_or_else(|| AppError::Other("未找到指定安装包，已取消卸载".into()))?;
+    let mut command = package_command(manager, &pkg.name, &pkg.kind, false)?;
+    let out = crate::process::output(&mut command, Duration::from_secs(600))?;
+    if !out.status.success() {
+        return Err(AppError::Other(format!(
+            "卸载失败：{}",
+            String::from_utf8_lossy(&out.stderr)
+        )));
     }
-    flush(&mut line);
+    Ok(format!("{name} 已卸载"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// 不支持的包管理器在 spawn 任何进程之前就报 Unsupported（install 需要
-    /// AppHandle 不好构造，但与 detect/uninstall 走同一 `unsupported_manager` 分支）。
     #[test]
-    fn unsupported_manager_maps_to_unsupported_variant() {
-        for m in ["npm", "yarn", ""] {
-            assert!(matches!(
-                detect_system_installed(m),
-                Err(AppError::Unsupported(_))
-            ));
-            assert!(matches!(
-                detect_system_versions(m),
-                Err(AppError::Unsupported(_))
-            ));
-            assert!(matches!(
-                uninstall_system_package(m, "foo"),
-                Err(AppError::Unsupported(_))
-            ));
+    fn linux_commands_include_manager_and_authorization() {
+        for (manager, executable, verb) in [
+            ("apt", "/usr/bin/apt-get", "install"),
+            ("pacman", "/usr/bin/pacman", "-S"),
+        ] {
+            let cmd = package_command(manager, "nodejs", "package", true).unwrap();
+            assert_eq!(cmd.get_program(), "pkexec");
+            let args: Vec<_> = cmd.get_args().map(|s| s.to_str().unwrap()).collect();
+            assert_eq!(&args[..2], &[executable, verb]);
+            assert!(package_command(manager, "--root", "package", false).is_err());
+        }
+        let cmd = package_command("apt", "nodejs", "package", false).unwrap();
+        assert_eq!(cmd.get_args().nth(1).unwrap(), "remove");
+    }
+    #[test]
+    fn brew_retains_casks_and_formula_identity() {
+        let parsed = parse_brew_installed(r#"{"formulae":[{"full_name":"node@20","installed":[{"version":"20.1"}]}],"casks":[{"token":"docker-desktop","installed":"4.0"}]}"#).unwrap();
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0].name, "node@20");
+        assert_eq!(parsed[1].kind, "cask");
+    }
+    #[test]
+    fn winget_uses_identifier_not_localized_display_name() {
+        let parsed = parse_winget_export(r#"{"Sources":[{"Packages":[{"PackageIdentifier":"Microsoft.VisualStudioCode","Version":"1.0"}]}]}"#).unwrap();
+        assert_eq!(parsed[0].name, "Microsoft.VisualStudioCode");
+    }
+    #[test]
+    fn catalog_ids_are_safe_and_unique_per_platform() {
+        let rows: Vec<ProviderPackage> =
+            serde_json::from_str(include_str!("../../src/data/packages.json")).unwrap();
+        let mut seen = std::collections::HashSet::new();
+        for row in rows {
+            validate_package(&row.id).unwrap();
+            assert!(seen.insert((row.tool, row.manager)));
         }
     }
 }

@@ -1,0 +1,371 @@
+{
+  "requestId": "contract-node-v1",
+  "observedAt": 1792339200000,
+  "scans": [
+    {
+      "report": {
+        "providerId": "brew",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      },
+      "observations": [
+        {
+          "providerPackage": {
+            "providerId": "brew",
+            "packageId": "node@22",
+            "kind": "formula",
+            "platform": "macos"
+          },
+          "toolId": "node",
+          "locator": "/opt/homebrew/Cellar/node@22/22.11.0",
+          "executablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+          "canonicalExecutablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+          "version": "22.11.0",
+          "architecture": "arm64",
+          "health": "healthy",
+          "ownership": "owned",
+          "evidence": [
+            {
+              "kind": "brewReceipt",
+              "path": "/opt/homebrew/Cellar/node@22/22.11.0/INSTALL_RECEIPT.json",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "providerPackage": {
+            "providerId": "brew",
+            "packageId": "node@22",
+            "kind": "formula",
+            "platform": "macos"
+          },
+          "toolId": "node",
+          "locator": "/usr/local/Cellar/node@22/22.11.0",
+          "executablePath": "/usr/local/Cellar/node@22/22.11.0/bin/node",
+          "canonicalExecutablePath": "/usr/local/Cellar/node@22/22.11.0/bin/node",
+          "version": "22.11.0",
+          "architecture": "x86_64",
+          "health": "healthy",
+          "ownership": "owned",
+          "evidence": [
+            {
+              "kind": "brewReceipt",
+              "path": "/usr/local/Cellar/node@22/22.11.0/INSTALL_RECEIPT.json",
+              "detail": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "report": {
+        "providerId": "path",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      },
+      "observations": [
+        {
+          "providerPackage": {
+            "providerId": "path",
+            "packageId": "node",
+            "kind": "executable",
+            "platform": "macos"
+          },
+          "toolId": "nodejs",
+          "locator": "/opt/homebrew/bin/node",
+          "executablePath": "/opt/homebrew/bin/node",
+          "canonicalExecutablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+          "version": "22.11.0",
+          "architecture": "arm64",
+          "health": "healthy",
+          "ownership": "observed",
+          "evidence": [
+            {
+              "kind": "pathLookup",
+              "path": "/opt/homebrew/bin/node",
+              "detail": "First matching executable on PATH"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "report": {
+        "providerId": "nvm",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      },
+      "observations": [
+        {
+          "providerPackage": {
+            "providerId": "nvm",
+            "packageId": "node",
+            "kind": "runtime",
+            "platform": "macos"
+          },
+          "toolId": "node.js",
+          "locator": "/Users/contract/.nvm/versions/node/v20.18.0",
+          "executablePath": "/Users/contract/.nvm/versions/node/v20.18.0/bin/node",
+          "canonicalExecutablePath": null,
+          "version": null,
+          "architecture": null,
+          "health": "broken",
+          "ownership": "unknown",
+          "evidence": [
+            {
+              "kind": "executableProbe",
+              "path": "/Users/contract/.nvm/versions/node/v20.18.0/bin/node",
+              "detail": "Executable could not be probed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "report": {
+        "providerId": "mise",
+        "status": "timeout",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": false,
+          "truncated": false
+        },
+        "error": {
+          "code": "probeTimeout",
+          "message": "Provider probe exceeded its time budget",
+          "retryable": true
+        }
+      },
+      "observations": []
+    }
+  ],
+  "expectedSnapshot": {
+    "schemaVersion": 1,
+    "requestId": "contract-node-v1",
+    "observedAt": 1792339200000,
+    "tools": [
+      {
+        "toolId": "node",
+        "displayName": "Node.js",
+        "aliases": [
+          "node",
+          "nodejs",
+          "node.js"
+        ],
+        "executableNames": [
+          "node",
+          "nodejs",
+          "node.exe",
+          "nodejs.exe"
+        ]
+      }
+    ],
+    "providers": [
+      {
+        "providerId": "mise",
+        "status": "timeout",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": false,
+          "truncated": false
+        },
+        "error": {
+          "code": "probeTimeout",
+          "message": "Provider probe exceeded its time budget",
+          "retryable": true
+        }
+      },
+      {
+        "providerId": "brew",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      },
+      {
+        "providerId": "nvm",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      },
+      {
+        "providerId": "path",
+        "status": "ok",
+        "observedAt": 1792339200000,
+        "stale": false,
+        "coverage": {
+          "toolIds": [
+            "node"
+          ],
+          "complete": true,
+          "truncated": false
+        },
+        "error": null
+      }
+    ],
+    "installations": [
+      {
+        "installationId": "installation:v1:4:node;4:brew;7:node@22;7:formula;5:macos;36:/opt/homebrew/Cellar/node@22/22.11.0;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;7:22.11.0;5:arm64;",
+        "providerPackage": {
+          "providerId": "brew",
+          "packageId": "node@22",
+          "kind": "formula",
+          "platform": "macos"
+        },
+        "toolId": "node",
+        "locator": "/opt/homebrew/Cellar/node@22/22.11.0",
+        "executablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+        "canonicalExecutablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+        "version": "22.11.0",
+        "architecture": "arm64",
+        "health": "healthy",
+        "ownership": "owned",
+        "evidence": [
+          {
+            "kind": "brewReceipt",
+            "path": "/opt/homebrew/Cellar/node@22/22.11.0/INSTALL_RECEIPT.json",
+            "detail": null
+          }
+        ],
+        "stale": false
+      },
+      {
+        "installationId": "installation:v1:4:node;4:brew;7:node@22;7:formula;5:macos;33:/usr/local/Cellar/node@22/22.11.0;42:/usr/local/Cellar/node@22/22.11.0/bin/node;42:/usr/local/Cellar/node@22/22.11.0/bin/node;7:22.11.0;6:x86_64;",
+        "providerPackage": {
+          "providerId": "brew",
+          "packageId": "node@22",
+          "kind": "formula",
+          "platform": "macos"
+        },
+        "toolId": "node",
+        "locator": "/usr/local/Cellar/node@22/22.11.0",
+        "executablePath": "/usr/local/Cellar/node@22/22.11.0/bin/node",
+        "canonicalExecutablePath": "/usr/local/Cellar/node@22/22.11.0/bin/node",
+        "version": "22.11.0",
+        "architecture": "x86_64",
+        "health": "healthy",
+        "ownership": "owned",
+        "evidence": [
+          {
+            "kind": "brewReceipt",
+            "path": "/usr/local/Cellar/node@22/22.11.0/INSTALL_RECEIPT.json",
+            "detail": null
+          }
+        ],
+        "stale": false
+      },
+      {
+        "installationId": "installation:v1:4:node;3:nvm;4:node;7:runtime;5:macos;43:/Users/contract/.nvm/versions/node/v20.18.0;52:/Users/contract/.nvm/versions/node/v20.18.0/bin/node;-;-;-;",
+        "providerPackage": {
+          "providerId": "nvm",
+          "packageId": "node",
+          "kind": "runtime",
+          "platform": "macos"
+        },
+        "toolId": "node",
+        "locator": "/Users/contract/.nvm/versions/node/v20.18.0",
+        "executablePath": "/Users/contract/.nvm/versions/node/v20.18.0/bin/node",
+        "canonicalExecutablePath": null,
+        "version": null,
+        "architecture": null,
+        "health": "broken",
+        "ownership": "unknown",
+        "evidence": [
+          {
+            "kind": "executableProbe",
+            "path": "/Users/contract/.nvm/versions/node/v20.18.0/bin/node",
+            "detail": "Executable could not be probed"
+          }
+        ],
+        "stale": false
+      },
+      {
+        "installationId": "installation:v1:4:node;4:path;4:node;10:executable;5:macos;22:/opt/homebrew/bin/node;22:/opt/homebrew/bin/node;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;7:22.11.0;5:arm64;",
+        "providerPackage": {
+          "providerId": "path",
+          "packageId": "node",
+          "kind": "executable",
+          "platform": "macos"
+        },
+        "toolId": "node",
+        "locator": "/opt/homebrew/bin/node",
+        "executablePath": "/opt/homebrew/bin/node",
+        "canonicalExecutablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+        "version": "22.11.0",
+        "architecture": "arm64",
+        "health": "healthy",
+        "ownership": "observed",
+        "evidence": [
+          {
+            "kind": "pathLookup",
+            "path": "/opt/homebrew/bin/node",
+            "detail": "First matching executable on PATH"
+          }
+        ],
+        "stale": false
+      }
+    ],
+    "aliases": [
+      {
+        "installationId": "installation:v1:4:node;4:path;4:node;10:executable;5:macos;22:/opt/homebrew/bin/node;22:/opt/homebrew/bin/node;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;7:22.11.0;5:arm64;",
+        "targetInstallationId": "installation:v1:4:node;4:brew;7:node@22;7:formula;5:macos;36:/opt/homebrew/Cellar/node@22/22.11.0;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;45:/opt/homebrew/Cellar/node@22/22.11.0/bin/node;7:22.11.0;5:arm64;",
+        "evidence": {
+          "kind": "canonicalExecutable",
+          "canonicalExecutablePath": "/opt/homebrew/Cellar/node@22/22.11.0/bin/node",
+          "version": "22.11.0",
+          "architecture": "arm64"
+        }
+      }
+    ]
+  }
+}

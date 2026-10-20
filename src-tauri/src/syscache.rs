@@ -87,6 +87,8 @@ mod tests {
         set_versions(
             "brew",
             vec![SystemPkg {
+                kind: "formula".into(),
+                tool: None,
                 name: "git".to_string(),
                 version: Some("2.46.0".to_string()),
             }],

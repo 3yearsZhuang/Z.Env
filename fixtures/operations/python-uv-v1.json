@@ -1,0 +1,232 @@
+{
+  "installPlan": {
+    "schemaVersion": 1,
+    "planId": "python-uv-install-contract",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "python-uv-contract",
+    "action": "install",
+    "target": {
+      "providerPackage": {
+        "providerId": "uv",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": null,
+      "locator": null
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "安装 uv 托管精确 CPython 3.13.15；原生记录与实例结果须独立核对",
+    "configuration": {
+      "path": "/fixture/config.toml",
+      "canonicalPath": "/fixture/config.toml",
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "不修改 Python 版本请求、项目配置、虚拟环境或 shell",
+    "permission": "当前用户；不提权",
+    "rollback": "原生下载、缓存、状态与别名可能保留；失败或取消后重扫，不自动重装",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重验 uv 能力、安装目录与次版本别名",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "command",
+        "title": "安装精确 CPython；不自动激活",
+        "program": "/fixture/bin/uv",
+        "argv": [
+          "--no-config",
+          "--no-progress",
+          "python",
+          "install",
+          "--no-bin",
+          "--install-dir",
+          "/fixture/.local/share/uv/python",
+          "cpython@3.13.15"
+        ],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "命令成功、失败或取消后均重扫 Python 来源",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "核对原生记录、精确实例与 CPython 隔离探针",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      }
+    ],
+    "impact": [
+      "固定 uv 托管 CPython@3.13.15：/fixture/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none",
+      "使用 --no-bin，不向 bin 目录安装入口；不写 Windows 注册表",
+      "uv 可能把同一次版本别名重指向本次安装",
+      "uv 卸载在目标不存在时也退出 0，结果只以重验、重扫和文件证据为准"
+    ],
+    "toolId": "python"
+  },
+  "uninstallPlan": {
+    "schemaVersion": 1,
+    "planId": "python-uv-uninstall-contract",
+    "createdAt": 1792339200000,
+    "expiresAt": 1792339320000,
+    "snapshotGeneration": "1",
+    "snapshotRequestId": "python-uv-contract",
+    "action": "uninstall",
+    "target": {
+      "providerPackage": {
+        "providerId": "uv",
+        "packageId": "python",
+        "kind": "runtime",
+        "platform": "macos"
+      },
+      "installationId": "python-uv-exact-instance",
+      "locator": "/fixture/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none"
+    },
+    "capability": {
+      "canPreview": true,
+      "canExecute": true,
+      "reason": null
+    },
+    "versionPromise": "卸载 uv 托管精确 CPython 3.13.15；不自动改写项目、虚拟环境、终端或 shell 引用",
+    "configuration": {
+      "path": "/fixture/config.toml",
+      "canonicalPath": "/fixture/config.toml",
+      "exists": false,
+      "sha256": null
+    },
+    "configurationChange": "不修改 Python 版本请求、项目配置、虚拟环境或 shell",
+    "permission": "当前用户；不提权",
+    "rollback": "只移除这个精确补丁版；缓存、别名与依赖引用不自动改写",
+    "steps": [
+      {
+        "kind": "preflight",
+        "title": "重验 uv 能力、安装目录与次版本别名",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "command",
+        "title": "移除原生管理器确认的精确 CPython 实例",
+        "program": "/fixture/bin/uv",
+        "argv": [
+          "--no-config",
+          "--no-progress",
+          "python",
+          "uninstall",
+          "--install-dir",
+          "/fixture/.local/share/uv/python",
+          "cpython@3.13.15"
+        ],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "refresh",
+        "title": "命令成功、失败或取消后均重扫 Python 来源",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      },
+      {
+        "kind": "verify",
+        "title": "核对原生记录、精确实例与 CPython 隔离探针",
+        "program": null,
+        "argv": [],
+        "cwd": "/fixture",
+        "environmentKeys": [
+          "HOME",
+          "PATH",
+          "UV_NO_CONFIG",
+          "UV_NO_PROGRESS",
+          "UV_COLOR",
+          "UV_PYTHON_INSTALL_DIR",
+          "UV_CACHE_DIR"
+        ]
+      }
+    ],
+    "impact": [
+      "仅移除 uv 托管精确 CPython 3.13.15；别名会重指向剩余补丁版",
+      "依赖它的虚拟环境、项目和终端可能失效，不自动改写这些引用",
+      "uv 卸载在目标不存在时也退出 0，结果只以重验、重扫和文件证据为准"
+    ],
+    "toolId": "python"
+  }
+}

@@ -1,0 +1,2641 @@
+{
+  "oracle": "npm/node-semver",
+  "oracleVersion": "6.3.1",
+  "cases": [
+    {
+      "range": "*",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "range": "22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "v22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "22.1",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "22.1.x",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "22.x",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "22.*.*",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "=22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "=22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": ">=20",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "range": ">22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "range": ">22.1",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "range": ">22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "range": "<=22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "<=22.1",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "<=22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "<22.1",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": true
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": true
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^0.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": true
+        },
+        {
+          "version": "0.0.2",
+          "matches": true
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": true
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^0.0.3",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": true
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^0.2",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^0.2.3",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": true
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^1.2.3",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": true
+        },
+        {
+          "version": "1.9.0",
+          "matches": true
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "^22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "~22",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "~22.1",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "~22.1.0",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": ">=20 <23",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.0.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": ">=22 <20",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.1.0",
+          "matches": false
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.1",
+          "matches": false
+        },
+        {
+          "version": "22.1.9",
+          "matches": false
+        },
+        {
+          "version": "22.2.0",
+          "matches": false
+        },
+        {
+          "version": "22.9.0",
+          "matches": false
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    },
+    {
+      "range": "20 || >=22.1.0 <23",
+      "results": [
+        {
+          "version": "0.0.0",
+          "matches": false
+        },
+        {
+          "version": "0.0.2",
+          "matches": false
+        },
+        {
+          "version": "0.0.3",
+          "matches": false
+        },
+        {
+          "version": "0.0.4",
+          "matches": false
+        },
+        {
+          "version": "0.1.0",
+          "matches": false
+        },
+        {
+          "version": "0.2.3",
+          "matches": false
+        },
+        {
+          "version": "0.3.0",
+          "matches": false
+        },
+        {
+          "version": "1.2.3",
+          "matches": false
+        },
+        {
+          "version": "1.9.0",
+          "matches": false
+        },
+        {
+          "version": "2.0.0",
+          "matches": false
+        },
+        {
+          "version": "20.0.0",
+          "matches": true
+        },
+        {
+          "version": "20.1.0",
+          "matches": true
+        },
+        {
+          "version": "21.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.0.0",
+          "matches": false
+        },
+        {
+          "version": "22.1.0",
+          "matches": true
+        },
+        {
+          "version": "22.1.1",
+          "matches": true
+        },
+        {
+          "version": "22.1.9",
+          "matches": true
+        },
+        {
+          "version": "22.2.0",
+          "matches": true
+        },
+        {
+          "version": "22.9.0",
+          "matches": true
+        },
+        {
+          "version": "23.0.0",
+          "matches": false
+        }
+      ]
+    }
+  ]
+}
