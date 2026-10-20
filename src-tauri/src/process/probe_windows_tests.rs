@@ -181,8 +181,9 @@ fn timeout_reaps_descendants_holding_pipes_after_parent_exits() {
 }
 
 #[test]
-#[ignore = "Windows 原生 Job/管道继承场景待复核；见 docs/cross-platform-foundation.md"]
 fn successful_parent_also_reaps_descendants_that_closed_output() {
+    // 后代把标准输出接到 NUL 后退出父进程；Windows 上后代仍可能继承探针管道写端，
+    // 因此 EOF 不能作为唯一完成条件，需要 Job 计数确认没有存活后代。
     let (result, child) = watched_probe("parent-detached-output", limits(), false);
     assert_stopped(child);
     assert!(result.unwrap().status.success());
