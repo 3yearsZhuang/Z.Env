@@ -18,13 +18,20 @@ export interface PresetDraft {
 
 interface Props {
   draft: PresetDraft | null;
+  saving?: boolean;
   /** 提示该预设保留了 [tools] 以外的配置段 */
   hasExtraSections?: boolean;
   onClose: () => void;
   onSave: (values: { name: string; description: string; tools: PresetTool[] }) => void;
 }
 
-export default function PresetEditorDialog({ draft, hasExtraSections, onClose, onSave }: Props) {
+export default function PresetEditorDialog({
+  draft,
+  saving,
+  hasExtraSections,
+  onClose,
+  onSave,
+}: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tools, setTools] = useState<PresetTool[]>([]);
@@ -71,8 +78,8 @@ export default function PresetEditorDialog({ draft, hasExtraSections, onClose, o
   }
 
   return (
-    <Dialog open={draft !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[560px] p-0">
+    <Dialog open={draft !== null} onOpenChange={(o) => !o && !saving && onClose()}>
+      <DialogContent className="w-[560px] p-0" showClose={!saving}>
         <div className="dialog-head">
           <DialogTitle>{draft?.isNew ? "新建预设" : "修改预设"}</DialogTitle>
           <DialogDescription className="setting-desc">
@@ -154,12 +161,12 @@ export default function PresetEditorDialog({ draft, hasExtraSections, onClose, o
         </div>
 
         <div className="dialog-foot">
-          <button className="btn-ghost" onClick={onClose}>
+          <button className="btn-ghost" onClick={onClose} disabled={saving}>
             取消
           </button>
           <span style={{ flex: 1 }} />
-          <button className="btn primary" onClick={handleSave}>
-            保存
+          <button className="btn primary" onClick={handleSave} disabled={saving}>
+            {saving ? "保存中…" : "保存"}
           </button>
         </div>
       </DialogContent>

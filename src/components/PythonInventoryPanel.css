@@ -1,0 +1,97 @@
+.python-inventory {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.python-inventory-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.python-inventory h2 {
+  margin: 0;
+}
+.python-inventory p {
+  margin: 6px 0;
+}
+.python-inventory-heading p,
+.python-inventory-note {
+  color: var(--muted-foreground);
+}
+.python-inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: start;
+}
+.python-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.python-source-grid section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.python-source-grid h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.python-inventory button {
+  white-space: normal;
+}
+.python-inventory p,
+.python-inventory dd,
+.python-inventory li,
+.python-inventory code {
+  overflow-wrap: anywhere;
+}
+.python-inventory code {
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: normal;
+}
+.python-instance-list {
+  padding: 0;
+  list-style: none;
+}
+.python-instance-list > li {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.python-instance-list summary {
+  cursor: pointer;
+}
+.python-instance-list summary span,
+.python-instance-list summary code {
+  display: block;
+  margin-top: 5px;
+}
+.python-instance-list summary span {
+  color: var(--muted-foreground);
+}
+.python-instance-list dd {
+  margin-left: 0;
+}
+.python-instance-list dt {
+  color: var(--muted-foreground);
+  margin-top: 8px;
+}
+.python-instance-list summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+@media (max-width: 520px) {
+  .python-inventory {
+    padding: 12px;
+  }
+}

@@ -32,8 +32,10 @@ export default function EnvPanel({ snap, reload }: Props) {
       setNotice(await envCenterSet(key, value));
       setEditing(null);
       reload();
+      return true;
     } catch (e) {
       setError(errorMessage(e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,8 @@ export default function EnvPanel({ snap, reload }: Props) {
   function handleAdd() {
     const k = newKey.trim();
     if (!k) return;
-    handleSet(k, newValue).then(() => {
+    handleSet(k, newValue).then((saved) => {
+      if (!saved) return;
       setNewKey("");
       setNewValue("");
     });
@@ -199,7 +202,7 @@ export default function EnvPanel({ snap, reload }: Props) {
       <section className="panel">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <h2 className="panel-title" style={{ margin: 0 }}>
-            系统 / 用户级环境变量（只读）
+            应用进程继承的环境变量（只读）
           </h2>
           <span className="pill muted">{snap?.systemEnv.length ?? 0} 项</span>
           <span style={{ flex: 1 }} />

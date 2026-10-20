@@ -15,7 +15,7 @@ function levelView(level: DoctorCheck["level"]): { color: string; label: string 
 
 /** 环境健康区：doctor 巡检的紧凑呈现——chips 一行总览，异常项给详情与就地修复。
  *  挂载即自动巡检；修复成功后自动重跑刷新。 */
-export default function DoctorPanel() {
+export default function DoctorPanel({ onFixed }: { onFixed?: () => void } = {}) {
   const [checks, setChecks] = useState<DoctorCheck[] | null>(null);
   const [running, setRunning] = useState(false);
   const [msg, setMsg] = useState("");
@@ -37,6 +37,7 @@ export default function DoctorPanel() {
     setMsg("");
     try {
       setMsg(await doctorFix(id));
+      onFixed?.();
       setChecks(await doctorRun());
     } catch (e) {
       setMsg(`修复失败：${errorMessage(e)}`);

@@ -12,7 +12,7 @@ export function tomlKey(name: string): string {
 
 /** 转义为 TOML 基本字符串内容（反斜杠与双引号） */
 export function tomlString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return JSON.stringify(value).slice(1, -1);
 }
 
 /** 工具表 → mise.toml 文本（内置预设与导入预设落盘时共用） */
@@ -30,64 +30,9 @@ export function toolsOf(tools: PresetTool[]): Record<string, string> {
   return out;
 }
 
-/** `[tools]` 段文本（不含结尾换行） */
-function toolsBlock(tools: Record<string, string>): string {
-  const rows = Object.entries(tools)
-    .map(([k, v]) => `${tomlKey(k)} = "${tomlString(v)}"`)
-    .join("\n");
-  return rows ? `[tools]\n${rows}` : "[tools]";
-}
-
-/** `[tools.<name>]` 子表头（mise 工具表的另一种写法） */
+/** 此判定只用于 UI 提示，实际配置修改由后端 TOML 解析器完成。 */
 function isToolsSubTable(line: string): boolean {
-  const t = line.trim();
-  return t.startsWith("[tools.") && t.endsWith("]");
-}
-
-/** 删除所有 `[tools.<name>]` 子表块：其工具已并入新的 `[tools]` 段，留着会造成键重复 */
-function dropToolsSubTables(lines: string[]): string[] {
-  const out: string[] = [];
-  let skipping = false;
-  for (const l of lines) {
-    const t = l.trim();
-    if (t.startsWith("[")) {
-      // 任何表头都终结上一个块；`[tools.*]` 自身进入跳过态
-      skipping = isToolsSubTable(t);
-    }
-    if (skipping && t !== "") continue; // 子表头与属性行丢弃，空行留待统一压缩
-    out.push(l);
-  }
-  return out;
-}
-
-/**
- * 用新的工具表替换 mise.toml 文本里的 `[tools]` 段，其余内容（`[env]`、`_.path`、注释等）
- * 原样保留——用户在编辑器里存下的预设可能带这些配置，改写时不能丢。
- * 原文本没有 `[tools]` 段时追加到末尾。
- * `[tools.<name>]` 子表与 `[tools]` 段表达同一份工具，替换后一并重建为内联写法，
- * 否则新内联键与旧子表同名会构成非法 TOML（键重复）。
- */
-export function replaceToolsSection(toml: string, tools: Record<string, string>): string {
-  const block = toolsBlock(tools);
-  const lines = toml.split("\n");
-  const start = lines.findIndex((l) => l.trim() === "[tools]");
-  if (start < 0) {
-    const head = dropToolsSubTables(lines).join("\n").replace(/^\n+/, "").replace(/\s+$/, "");
-    return head ? `${head}\n\n${block}\n` : `${block}\n`;
-  }
-  // 段范围：`[tools]` 行到下一个顶层表头；末尾空行留给后面，保住与下一段之间的分隔
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (lines[i].trim().startsWith("[")) {
-      end = i;
-      break;
-    }
-  }
-  while (end > start + 1 && lines[end - 1].trim() === "") end--;
-  return dropToolsSubTables([...lines.slice(0, start), ...block.split("\n"), ...lines.slice(end)])
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/^\n+/, "");
+  return /^\[tools\./.test(line.trim());
 }
 
 /** 文本是否含 `[tools]` 以外的顶层表（这些段在编辑时会被保留，仅用于提示） */
@@ -182,13 +127,12 @@ export function presetNameClash(
  *
  * 修改既有条目时**原地替换**：卡片顺序不变，改完不会跳到列表末尾。
  */
-export function applyPresetEdit(list: UserPreset[], edit: PresetEdit): UserPreset[] {
+export function applyPresetEdit(
+  list: UserPreset[],
+  edit: PresetEdit,
+  content: string,
+): UserPreset[] {
   const name = edit.name.trim();
-  const tools = toolsOf(edit.tools);
-  // 修改只替换 [tools] 段，保住 [env] / _.path 等既有配置；新建直接生成
-  const content = edit.original
-    ? replaceToolsSection(edit.original.content, tools)
-    : presetToToml(tools);
   const description = edit.description?.trim();
   const entry: UserPreset = { name, content, ...(description ? { description } : {}) };
 

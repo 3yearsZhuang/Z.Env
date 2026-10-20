@@ -1,0 +1,863 @@
+[
+  {
+    "tool": "node",
+    "manager": "brew",
+    "id": "node",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "node",
+    "manager": "winget",
+    "id": "OpenJS.NodeJS.LTS",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "node",
+    "manager": "apt",
+    "id": "nodejs",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "node",
+    "manager": "pacman",
+    "id": "nodejs",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "python",
+    "manager": "brew",
+    "id": "python@3.13",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "python",
+    "manager": "winget",
+    "id": "Python.Python.3.13",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "python",
+    "manager": "apt",
+    "id": "python3",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "python",
+    "manager": "pacman",
+    "id": "python",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "java",
+    "manager": "brew",
+    "id": "openjdk@21",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "java",
+    "manager": "winget",
+    "id": "EclipseAdoptium.Temurin.21.JDK",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "java",
+    "manager": "apt",
+    "id": "openjdk-21-jdk",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "java",
+    "manager": "pacman",
+    "id": "jdk21-openjdk",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "go",
+    "manager": "brew",
+    "id": "go",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "go",
+    "manager": "winget",
+    "id": "GoLang.Go",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "go",
+    "manager": "apt",
+    "id": "golang-go",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "go",
+    "manager": "pacman",
+    "id": "go",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "rust",
+    "manager": "brew",
+    "id": "rust",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "rust",
+    "manager": "winget",
+    "id": "Rustlang.Rustup",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "rust",
+    "manager": "apt",
+    "id": "rustc",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "rust",
+    "manager": "pacman",
+    "id": "rust",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "ruby",
+    "manager": "brew",
+    "id": "ruby",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "ruby",
+    "manager": "winget",
+    "id": "RubyInstallerTeam.Ruby.3.3",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "ruby",
+    "manager": "apt",
+    "id": "ruby",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "ruby",
+    "manager": "pacman",
+    "id": "ruby",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "php",
+    "manager": "brew",
+    "id": "php",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "php",
+    "manager": "apt",
+    "id": "php",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "php",
+    "manager": "pacman",
+    "id": "php",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "bun",
+    "manager": "brew",
+    "id": "oven-sh/bun/bun",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "bun",
+    "manager": "winget",
+    "id": "Oven-sh.Bun.Baseline",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "deno",
+    "manager": "brew",
+    "id": "deno",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "deno",
+    "manager": "winget",
+    "id": "DenoLand.Deno",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "deno",
+    "manager": "pacman",
+    "id": "deno",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "pnpm",
+    "manager": "brew",
+    "id": "pnpm",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "pnpm",
+    "manager": "winget",
+    "id": "pnpm.pnpm",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "pnpm",
+    "manager": "pacman",
+    "id": "pnpm",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "uv",
+    "manager": "brew",
+    "id": "uv",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "uv",
+    "manager": "winget",
+    "id": "astral-sh.uv",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "uv",
+    "manager": "pacman",
+    "id": "uv",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "git",
+    "manager": "brew",
+    "id": "git",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "git",
+    "manager": "winget",
+    "id": "Git.Git",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "git",
+    "manager": "apt",
+    "id": "git",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "git",
+    "manager": "pacman",
+    "id": "git",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "gh",
+    "manager": "brew",
+    "id": "gh",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "gh",
+    "manager": "winget",
+    "id": "GitHub.cli",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "gh",
+    "manager": "apt",
+    "id": "gh",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "gh",
+    "manager": "pacman",
+    "id": "github-cli",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "git-lfs",
+    "manager": "brew",
+    "id": "git-lfs",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "git-lfs",
+    "manager": "winget",
+    "id": "GitHub.GitLFS",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "git-lfs",
+    "manager": "apt",
+    "id": "git-lfs",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "git-lfs",
+    "manager": "pacman",
+    "id": "git-lfs",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "docker",
+    "manager": "brew",
+    "id": "docker-desktop",
+    "kind": "cask",
+    "platforms": ["macos"]
+  },
+  {
+    "tool": "docker",
+    "manager": "winget",
+    "id": "Docker.DockerDesktop",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "kubectl",
+    "manager": "brew",
+    "id": "kubernetes-cli",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "kubectl",
+    "manager": "winget",
+    "id": "Kubernetes.kubectl",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "kubectl",
+    "manager": "pacman",
+    "id": "kubectl",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "kind",
+    "manager": "brew",
+    "id": "kind",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "kind",
+    "manager": "winget",
+    "id": "Kubernetes.kind",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "k3d",
+    "manager": "brew",
+    "id": "k3d",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "k3d",
+    "manager": "winget",
+    "id": "k3d.k3d",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "minikube",
+    "manager": "brew",
+    "id": "minikube",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "minikube",
+    "manager": "winget",
+    "id": "Kubernetes.minikube",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "minikube",
+    "manager": "pacman",
+    "id": "minikube",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "k9s",
+    "manager": "brew",
+    "id": "k9s",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "k9s",
+    "manager": "winget",
+    "id": "derailed.k9s",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "k9s",
+    "manager": "pacman",
+    "id": "k9s",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "helm",
+    "manager": "brew",
+    "id": "helm",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "helm",
+    "manager": "winget",
+    "id": "Helm.Helm",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "helm",
+    "manager": "pacman",
+    "id": "helm",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "helmfile",
+    "manager": "brew",
+    "id": "helmfile",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "helmfile",
+    "manager": "pacman",
+    "id": "helmfile",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "kubeconform",
+    "manager": "brew",
+    "id": "kubeconform",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "argocd",
+    "manager": "brew",
+    "id": "argocd",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "argocd",
+    "manager": "winget",
+    "id": "ArgoCD.ArgoCD",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "istioctl",
+    "manager": "brew",
+    "id": "istioctl",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "istioctl",
+    "manager": "winget",
+    "id": "Istio.Istio",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "mysql",
+    "manager": "brew",
+    "id": "mysql",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "mysql",
+    "manager": "winget",
+    "id": "Oracle.MySQL",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "mysql",
+    "manager": "apt",
+    "id": "mysql-server",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "postgresql",
+    "manager": "brew",
+    "id": "postgresql@17",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "postgresql",
+    "manager": "winget",
+    "id": "PostgreSQL.PostgreSQL.17",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "postgresql",
+    "manager": "apt",
+    "id": "postgresql",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "postgresql",
+    "manager": "pacman",
+    "id": "postgresql",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "redis",
+    "manager": "brew",
+    "id": "redis",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "redis",
+    "manager": "apt",
+    "id": "redis-server",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "redis",
+    "manager": "pacman",
+    "id": "redis",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "sqlite",
+    "manager": "brew",
+    "id": "sqlite",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "sqlite",
+    "manager": "winget",
+    "id": "SQLite.SQLite",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "sqlite",
+    "manager": "apt",
+    "id": "sqlite3",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "sqlite",
+    "manager": "pacman",
+    "id": "sqlite",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "mariadb",
+    "manager": "brew",
+    "id": "mariadb",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "mariadb",
+    "manager": "winget",
+    "id": "MariaDB.Server",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "mariadb",
+    "manager": "apt",
+    "id": "mariadb-server",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "mariadb",
+    "manager": "pacman",
+    "id": "mariadb",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "awscli",
+    "manager": "brew",
+    "id": "awscli",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "awscli",
+    "manager": "winget",
+    "id": "Amazon.AWSCLI",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "awscli",
+    "manager": "apt",
+    "id": "awscli",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "awscli",
+    "manager": "pacman",
+    "id": "aws-cli",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "gcloud",
+    "manager": "brew",
+    "id": "gcloud-cli",
+    "kind": "cask",
+    "platforms": ["macos"]
+  },
+  {
+    "tool": "gcloud",
+    "manager": "winget",
+    "id": "Google.CloudSDK",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "az",
+    "manager": "brew",
+    "id": "azure-cli",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "az",
+    "manager": "winget",
+    "id": "Microsoft.AzureCLI",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "age",
+    "manager": "brew",
+    "id": "age",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "age",
+    "manager": "winget",
+    "id": "FiloSottile.age",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "age",
+    "manager": "apt",
+    "id": "age",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "age",
+    "manager": "pacman",
+    "id": "age",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "wget",
+    "manager": "brew",
+    "id": "wget",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "wget",
+    "manager": "apt",
+    "id": "wget",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "wget",
+    "manager": "pacman",
+    "id": "wget",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "curl",
+    "manager": "brew",
+    "id": "curl",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "curl",
+    "manager": "winget",
+    "id": "cURL.cURL",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "curl",
+    "manager": "apt",
+    "id": "curl",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "curl",
+    "manager": "pacman",
+    "id": "curl",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "jq",
+    "manager": "brew",
+    "id": "jq",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "jq",
+    "manager": "winget",
+    "id": "jqlang.jq",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "jq",
+    "manager": "apt",
+    "id": "jq",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "jq",
+    "manager": "pacman",
+    "id": "jq",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "cmake",
+    "manager": "brew",
+    "id": "cmake",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "cmake",
+    "manager": "winget",
+    "id": "Kitware.CMake",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "cmake",
+    "manager": "apt",
+    "id": "cmake",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "cmake",
+    "manager": "pacman",
+    "id": "cmake",
+    "kind": "package",
+    "platforms": ["linux"]
+  },
+  {
+    "tool": "mise",
+    "manager": "brew",
+    "id": "mise",
+    "kind": "formula",
+    "platforms": ["macos", "linux"]
+  },
+  {
+    "tool": "mise",
+    "manager": "winget",
+    "id": "jdx.mise",
+    "kind": "package",
+    "platforms": ["windows"]
+  },
+  {
+    "tool": "mise",
+    "manager": "pacman",
+    "id": "mise",
+    "kind": "package",
+    "platforms": ["linux"]
+  }
+]

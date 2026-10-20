@@ -1,5 +1,5 @@
 // 用户预设库：存 localStorage，由「项目配置」与「环境」两页共用。
-// 两页在 App 里是互斥挂载的（切换 tab 即卸载），因此挂载时读取一次即可保持一致。
+// 页面保留挂载，通过应用事件和 storage 事件同步预设库。
 import { useCallback, useEffect, useState } from "react";
 import { parseStoredPresets, presetToToml, toolsOf, upsertPreset, type UserPreset } from "./preset";
 import type { PresetFile } from "../api";
@@ -23,13 +23,21 @@ export function useUserPresets(): UserPresetsApi {
   const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
 
   useEffect(() => {
-    setUserPresets(parseStoredPresets(localStorage.getItem(STORAGE_KEY)));
+    const reload = () => setUserPresets(parseStoredPresets(localStorage.getItem(STORAGE_KEY)));
+    reload();
+    window.addEventListener("zenv:presets", reload);
+    window.addEventListener("storage", reload);
+    return () => {
+      window.removeEventListener("zenv:presets", reload);
+      window.removeEventListener("storage", reload);
+    };
   }, []);
 
   const persist = useCallback((list: UserPreset[]) => {
     setUserPresets(list);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      window.dispatchEvent(new Event("zenv:presets"));
     } catch {
       /* 存储满等忽略 */
     }

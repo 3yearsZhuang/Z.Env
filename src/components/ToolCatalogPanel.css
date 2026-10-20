@@ -1,0 +1,142 @@
+.tool-catalog {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  background: var(--card);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.tool-catalog-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tool-catalog h2,
+.tool-catalog h3 {
+  margin: 0;
+}
+.tool-catalog p {
+  margin: 6px 0;
+}
+.tool-catalog-note,
+.tool-catalog-heading p,
+.tool-catalog-card > p:not(.tool-catalog-evidence) {
+  color: var(--muted-foreground);
+}
+.tool-catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.tool-catalog-controls label {
+  display: grid;
+  gap: 5px;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.tool-catalog .input {
+  width: 100%;
+  min-width: 0;
+}
+.tool-catalog-grid {
+  align-items: start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.tool-catalog-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 9px;
+}
+.tool-catalog-card h3 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+.tool-catalog-card h3 span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+.tool-catalog p,
+.tool-catalog li,
+.tool-catalog code,
+.tool-catalog summary {
+  overflow-wrap: anywhere;
+}
+.tool-catalog code {
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: normal;
+}
+.tool-catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+.tool-catalog-actions button {
+  white-space: normal;
+}
+.tool-catalog a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.tool-catalog details {
+  margin-top: 12px;
+}
+.tool-catalog summary {
+  cursor: pointer;
+}
+.tool-catalog summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.tool-catalog details section {
+  margin: 12px 0;
+}
+.tool-catalog h4 {
+  margin: 0;
+}
+.tool-catalog details ul {
+  padding-left: 18px;
+}
+.tool-catalog details li p {
+  color: var(--muted-foreground);
+}
+@media (max-width: 900px) {
+  .tool-catalog-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .tool-catalog {
+    padding: 12px;
+  }
+}
+
+.tool-catalog-capabilities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding-left: 0 !important;
+}
+@media (max-width: 520px) {
+  .tool-catalog-capabilities {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

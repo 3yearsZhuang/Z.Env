@@ -1,0 +1,162 @@
+.task-panel.task-center {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px #182c471a;
+}
+
+.task-panel.task-center[open] {
+  max-height: min(520px, 65dvh);
+}
+
+.task-center .task-center-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  color: var(--text-dim);
+  list-style: none;
+}
+
+.task-center-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.task-center-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-center-count {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-soft);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-center[open] > .task-center-toggle {
+  border-bottom: 1px solid var(--border);
+}
+
+.task-center[open] .task-center-chevron {
+  transform: rotate(180deg);
+}
+
+.task-center-body {
+  padding: 0 16px 4px;
+}
+
+.task-center section.task-center-entry {
+  margin: 0;
+  padding: 14px 0;
+}
+
+.task-center-entry + .task-center-entry {
+  border-top: 1px solid var(--border);
+}
+
+.task-center-entry-head,
+.task-center-status,
+.task-center-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-center-entry-head {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.task-center-entry-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-center-status {
+  flex-shrink: 0;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.task-center-status.running {
+  color: var(--primary);
+}
+
+.task-center-status.completed {
+  color: var(--success);
+}
+
+.task-center-status.failed,
+.task-center-error {
+  color: var(--destructive);
+}
+
+.task-center-status.partial,
+.task-center-warning {
+  color: var(--warning);
+}
+
+.task-center-warning,
+.task-center-error {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.task-center-error span {
+  flex: 1;
+}
+
+.task-center-actions {
+  position: relative;
+  margin-top: 12px;
+  min-height: 28px;
+}
+
+.task-center-log summary {
+  padding: 5px 100px 5px 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.task-center .terminal {
+  margin: 10px 0 0;
+  max-height: 180px;
+  font-size: 11px;
+}
+
+.task-center-cancel {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.task-center-spinner {
+  color: var(--primary);
+  animation: task-center-spin 1s linear infinite;
+}
+
+@keyframes task-center-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-center-spinner {
+    animation: none;
+  }
+}

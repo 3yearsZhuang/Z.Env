@@ -1,0 +1,56 @@
+.workspace-loading {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.workspace-spinner {
+  animation: workspace-spin 1s linear infinite;
+}
+
+@keyframes workspace-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.workspace-skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  transform: translateY(-180%);
+}
+
+.workspace-skip-link:focus {
+  transform: translateY(0);
+}
+
+.workspace-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .workspace-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    border: 0;
+    background: #0005;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-spinner {
+    animation: none;
+  }
+}

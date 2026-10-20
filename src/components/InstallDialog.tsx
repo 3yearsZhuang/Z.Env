@@ -8,6 +8,7 @@ import {
   managedAdopt,
   managedUnadopt,
   onInstallProgress,
+  operationCancel,
   errorMessage,
   ToolInfo,
   ToolSource,
@@ -64,6 +65,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>("");
   const [finished, setFinished] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [adopted, setAdopted] = useState<string[]>(loadAdopted);
   const [toast, setToast] = useState<string | null>(null);
   const [showCli, setShowCli] = useState(false);
@@ -121,6 +123,8 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     };
   }, [tool, source]);
 
+  const jobId = useRef<string | null>(null);
+
   // 订阅安装进度事件；只在安装期捕获当前工具相关行
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -128,10 +132,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     (async () => {
       unlisten = await onInstallProgress((p) => {
         if (!alive) return;
-        if (p.tool === tool.name) {
+        if (p.jobId === jobId.current) {
           setProgress(p.line);
         }
       });
+      if (!alive) unlisten?.();
     })();
     return () => {
       alive = false;
@@ -160,11 +165,13 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
     setBusy(true);
     setAdopting(null);
     setFinished(false);
+    setCancelling(false);
     setProgress("");
     setError(null);
     try {
       // 流式安装：await 期间事件会持续更新 progress
-      await installVersionStreaming(tool.name, versionToInstall);
+      jobId.current = crypto.randomUUID();
+      await installVersionStreaming(tool.name, versionToInstall, jobId.current);
       setFinished(true);
       setProgress("安装完成 ✓");
       setTimeout(() => {
@@ -173,7 +180,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
       }, 500);
     } catch (e) {
       setError(errorMessage(e));
-      setFinished(true);
+      setFinished(false);
     } finally {
       setBusy(false);
     }
@@ -386,6 +393,19 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
         </div>
 
         <div className="dialog-foot">
+          {busy && !adopting && jobId.current && (
+            <button
+              className="btn"
+              disabled={cancelling}
+              onClick={() => {
+                operationCancel(jobId.current!)
+                  .then(() => setCancelling(true))
+                  .catch((e) => setError(errorMessage(e)));
+              }}
+            >
+              {cancelling ? "正在取消…" : "取消安装"}
+            </button>
+          )}
           <button className="btn" onClick={onClose} disabled={busy}>
             {busy ? "安装中…" : "取消"}
           </button>

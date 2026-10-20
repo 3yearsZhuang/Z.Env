@@ -56,7 +56,9 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
       // 已装状态仅供预览参考，取不到就不标注
       try {
         const all = await listTools();
-        setInstalledNames(new Set(all.map((t) => t.name)));
+        setInstalledNames(
+          new Set(all.filter((t) => t.versions.some((v) => v.installed)).map((t) => t.name)),
+        );
       } catch {
         setInstalledNames(new Set());
       }
@@ -72,7 +74,8 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
     if (!pending) return;
     const total = pendingTools.length;
     const ok = await install(pendingTools);
-    setNotice(`「${pending.name}」整机安装完成：成功 ${ok}/${total}`);
+    if (ok === total) setNotice(`「${pending.name}」整机安装完成：成功 ${ok}/${total}`);
+    else setError(`「${pending.name}」安装未全部完成：成功 ${ok}/${total}，成功的工具已保留`);
     if (ok < total) {
       setInstallLog((prev) => [...prev, `⚠ ${total - ok} 个工具未装成功，详见上方日志`]);
     }
@@ -136,7 +139,7 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
             {pending && (
               <>
                 <div className="dialog-tip">
-                  这些运行时会装进 mise 全局存储，任何项目都能直接用；不会改动任何项目的
+                  这些运行时会装进 mise 存储；使用前请在项目中指定版本或设为全局默认。不会改动项目的
                   mise.toml。已装状态按本机现状标注，已装的会重新校验版本。
                 </div>
                 <div className="adopt-list">
@@ -146,7 +149,7 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
                         {t.name} @ {t.version}
                       </span>
                       {installedNames.has(t.name) ? (
-                        <span className="pill active">已装</span>
+                        <span className="pill active">存在已装版本，待校验</span>
                       ) : (
                         <span className="pill muted">未装</span>
                       )}
@@ -162,6 +165,15 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
             )}
           </div>
           <div className="dialog-foot">
+            {installBusy && (
+              <button
+                className="btn"
+                disabled={installApi.cancelRequested}
+                onClick={() => void installApi.cancel()}
+              >
+                {installApi.cancelRequested ? "正在取消…" : "取消安装"}
+              </button>
+            )}
             <button className="btn-ghost" onClick={() => setPending(null)} disabled={installBusy}>
               关闭
             </button>

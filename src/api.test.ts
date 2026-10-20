@@ -21,3 +21,16 @@ describe("errorMessage", () => {
     expect(errorMessage(42)).toBe("42");
   });
 });
+
+import { onInstallProgress, type InstallProgressPayload } from "./api";
+import { listen } from "@tauri-apps/api/event";
+it("安装日志按 jobId 隔离，不能串入另一个安装", async () => {
+  const receive = vi.fn();
+  await onInstallProgress(receive, "job-A");
+  const calls = vi.mocked(listen).mock.calls;
+  const callback = calls[calls.length - 1][1] as (e: { payload: InstallProgressPayload }) => void;
+  callback({ payload: { jobId: "job-B", tool: "node", version: "20", line: "other" } });
+  callback({ payload: { jobId: "job-A", tool: "node", version: "20", line: "own" } });
+  expect(receive).toHaveBeenCalledTimes(1);
+  expect(receive.mock.calls[0][0].line).toBe("own");
+});

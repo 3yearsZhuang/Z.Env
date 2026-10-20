@@ -1,4 +1,4 @@
-// 共享目录数据：工具图标映射、运行时清单、分类标签、软件渠道。
+// 兼容入口的历史候选、图标与渠道数据；不代表统一目录的接入能力或机器安装状态。
 // 从 ToolsView.tsx 抽出，供“运行时工具 / 支持列表 / 设置”等页共用；仅数据与纯函数，无 UI。
 /** 常见运行时对应的官方 SVG 图标（存放于 public/tools/） */
 export const TOOL_ICON_PATHS: Record<string, string> = {
@@ -69,7 +69,7 @@ export const TOOL_ICON_PATHS: Record<string, string> = {
   react: "/tools/react.svg",
 };
 
-/** 常用支持的工具候选（用于展示未安装项）；同时供设置页自检覆盖使用 */
+/** 兼容入口的历史候选（非安装状态或可执行能力证明）；同时供设置页自检使用 */
 export const KNOWN_TOOLS = [
   // 语言 / 运行时
   "node",
@@ -264,7 +264,7 @@ export const KNOWN_TOOLS = [
   "logo",
 ];
 
-/** 工具分类（支持列表页复用） */
+/** 兼容入口的工具分类 */
 export const TOOL_CATS: Record<string, string[]> = {
   语言运行时: [
     "node",

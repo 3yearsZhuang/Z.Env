@@ -1,6 +1,31 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 
+export { inventorySnapshot, inventoryCancel } from "./api/inventoryQuery";
+
+// 清单契约与查询独立导出，不改动其他工具的既有命令。
+export type {
+  ToolId,
+  InstallationId,
+  ProviderId,
+  Platform,
+  PackageKind,
+  Health,
+  Ownership,
+  ProviderStatus,
+  ToolDefinition,
+  ProviderPackage as InventoryProviderPackage,
+  ObservationEvidence,
+  Observation,
+  Installation,
+  ProviderCoverage,
+  ProviderError,
+  ProviderReport,
+  AliasEvidence,
+  InstallationAlias,
+  InventorySnapshot,
+} from "./api/inventory";
+
 // ---------- 与 Rust 后端数据结构对应的类型 ----------
 
 /** 单个已安装工具版本 */
@@ -97,6 +122,7 @@ export function getEnvInfo(): Promise<EnvInfo> {
 
 /** 其他工具托管的一个运行时版本 */
 export interface ToolSource {
+  packageId?: string | null;
   tool: string;
   version: string;
   manager: string;
@@ -147,21 +173,29 @@ export function installVersion(tool: string, version: string): Promise<string> {
 
 /** 安装进度事件负载 */
 export interface InstallProgressPayload {
+  jobId: string;
   tool: string;
   version: string;
   line: string;
 }
 
 /** 以流式方式安装，安装期间通过事件实时推送进度 */
-export function installVersionStreaming(tool: string, version: string): Promise<string> {
-  return invoke("install_version_streaming", { tool, version });
+export function installVersionStreaming(
+  tool: string,
+  version: string,
+  jobId: string,
+): Promise<string> {
+  return invoke("install_version_streaming", { tool, version, jobId });
 }
 
 /** 订阅安装进度事件，返回取消监听的函数 */
 export function onInstallProgress(
   cb: (payload: InstallProgressPayload) => void,
+  jobId?: string,
 ): Promise<UnlistenFn> {
-  return listen<InstallProgressPayload>("mise:install-progress", (e) => cb(e.payload));
+  return listen<InstallProgressPayload>("mise:install-progress", (e) => {
+    if (!jobId || e.payload.jobId === jobId) cb(e.payload);
+  });
 }
 
 /** 卸载指定版本 */
@@ -184,24 +218,51 @@ export function unlinkVersion(tool: string, version: string): Promise<string> {
   return invoke("unlink_version", { tool, version });
 }
 
+export interface ProjectDocument {
+  path: string;
+  content: string;
+  original: string | null;
+}
+
+export function bindProjectPath(content: string, path: string): Promise<string> {
+  return invoke("config_bind_path", { content, path });
+}
+
+export function replaceTools(content: string, tools: Record<string, string>): Promise<string> {
+  return invoke("config_replace_tools", { content, tools });
+}
+
 /** 读取项目配置文件内容 */
-export function readProjectConfig(path: string): Promise<string> {
+export function readProjectConfig(path: string): Promise<ProjectDocument> {
   return invoke("read_project_config", { path });
 }
 
 /** 写入项目配置 */
-export function writeProjectConfig(path: string, content: string): Promise<string> {
-  return invoke("write_project_config", { path, content });
+export function writeProjectConfig(
+  path: string,
+  content: string,
+  original: string | null,
+): Promise<string> {
+  return invoke("write_project_config", { path, content, original });
 }
 
 /** 写入配置并在项目内一键安装全套环境 */
-export function installAllProject(path: string, content: string): Promise<string> {
-  return invoke("install_all_project", { path, content });
+export function installAllProject(
+  path: string,
+  content: string,
+  original: string | null,
+): Promise<string> {
+  return invoke("install_all_project", { path, content, original });
 }
 
 /** 通过系统包管理器（brew/winget/apt/pacman）原生安装指定软件 */
-export function installSystemPackage(manager: string, name: string): Promise<string> {
-  return invoke("install_system_package", { manager, name });
+export function installSystemPackage(
+  manager: string,
+  name: string,
+  kind: string,
+  jobId: string,
+): Promise<string> {
+  return invoke("install_system_package", { manager, name, kind, jobId });
 }
 
 /** 探测指定系统包管理器当前已安装的软件名列表 */
@@ -212,6 +273,8 @@ export function detectSystemInstalled(manager: string): Promise<string[]> {
 /** 系统包管理器已装的一个软件及其版本 */
 export interface SystemPkg {
   name: string;
+  kind: string;
+  tool: string | null;
   version: string | null;
 }
 
@@ -227,6 +290,7 @@ export function uninstallSystemPackage(manager: string, name: string): Promise<s
 
 /** 原生安装进度事件负载 */
 export interface SysInstallProgressPayload {
+  jobId: string;
   manager: string;
   name: string;
   line: string;
@@ -250,12 +314,12 @@ export interface ManagedEntry {
   healthy: boolean;
 }
 
-/** 对账事件：brew 升级/卸载后的自动重连或移除 */
+/** 对账事件：来源变动后的同版本修复或待处理提示 */
 export interface ReconcileEvent {
   tool: string;
   from: string;
   to: string | null;
-  action: "relinked" | "removed" | "failed";
+  action: "relinked" | "removed" | "failed" | "needs-review";
   message: string;
 }
 
@@ -274,7 +338,7 @@ export function managedUnadopt(tool: string, version: string): Promise<string> {
   return invoke("managed_unadopt", { tool, version });
 }
 
-/** 对账：失效接入自动重连或移除，返回事件列表 */
+/** 对账：失效接入按同软件同版本修复，无法修复的保留待处理，返回事件列表 */
 export function managedReconcile(): Promise<ReconcileEvent[]> {
   return invoke("managed_reconcile");
 }
@@ -359,7 +423,7 @@ export function envCenterRemove(key: string): Promise<string> {
 
 // ---------- 项目发现 ----------
 
-/** 发现的项目：tools 为指纹/mise.toml 推断，missingTools 为其中本机未安装的 */
+/** 项目指纹只推断工具；missingTools 保留兼容，不据名称推断缺失或版本满足。 */
 export interface DiscoveredProject {
   name: string;
   path: string;
@@ -448,13 +512,18 @@ export interface SnapshotSummary {
 }
 
 /** 导出环境快照（mise 工具 + 全局 env + brew 清单）为 TOML */
-export function snapshotExport(path: string): Promise<SnapshotSummary> {
-  return invoke("snapshot_export", { path });
+export function snapshotExport(path: string, includeEnv = false): Promise<SnapshotSummary> {
+  return invoke("snapshot_export", { path, includeEnv });
 }
 
 /** 从快照重建：写入全局 env + 逐个安装 mise 工具 + 生成 Brewfile（brew 不自动执行） */
-export function snapshotRestore(path: string): Promise<string> {
-  return invoke("snapshot_restore", { path });
+export function snapshotRestore(path: string, plan: SnapshotPlan, jobId: string): Promise<string> {
+  return invoke("snapshot_restore", {
+    path,
+    expected: plan.source,
+    original: plan.original,
+    jobId,
+  });
 }
 
 // ---------- 环境预设（可分享的编程环境配置） ----------
@@ -498,4 +567,44 @@ export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+export interface SnapshotPlan {
+  source: string;
+  original: string | null;
+  tools: Record<string, string[]>;
+  envKeys: string[];
+  brewPackages: number;
+  warnings: string[];
+}
+export function snapshotPreview(path: string): Promise<SnapshotPlan> {
+  return invoke("snapshot_preview", { path });
+}
+export function installPreset(tools: PresetTool[], jobId: string): Promise<number> {
+  return invoke("install_preset", { tools, jobId });
+}
+export interface Operation {
+  id: string;
+  label: string;
+  status: "running" | "completed" | "partial" | "failed" | "cancelled" | "interrupted";
+  lines: string[];
+  cancelRequested: boolean;
+  steps?: import("./api/operationPlan").ExecutionRecord["steps"];
+  compensation?: import("./api/operationPlan").ExecutionRecord["compensation"];
+}
+export function operationList(): Promise<Operation[]> {
+  return invoke("operation_list");
+}
+export function operationCancel(id: string): Promise<void> {
+  return invoke("operation_cancel", { id });
+}
+export interface ProviderPackage {
+  tool: string;
+  manager: string;
+  id: string;
+  kind: string;
+  platforms: string[];
+}
+export function packageCatalog(): Promise<ProviderPackage[]> {
+  return invoke("package_catalog");
 }

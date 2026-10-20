@@ -1,4 +1,4 @@
-/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（zinc 中性色 + 蓝色主色）。
+/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（冷灰中性色 + 蓝色主色）。
  * 明/暗两套令牌在此集中定义；styles.css 的旧变量（--bg/--accent 等）全部映射到这里，
  * 明暗切换由 App.tsx 解析（auto 跟随系统）后切换 <html> 上的 .dark 类。 */
 @import "tailwindcss";
@@ -6,25 +6,30 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
+  --background: #f6f8fb;
+  --foreground: #202b3d;
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #202b3d;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
-  --primary: #2563eb;
-  --primary-foreground: #f8fafc;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  --popover-foreground: #202b3d;
+  --primary: #3666e8;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f8;
+  --secondary-foreground: #202b3d;
+  --muted: #eef2f8;
+  --muted-foreground: #66758c;
+  --accent: #eef2f8;
+  --accent-foreground: #202b3d;
   --destructive: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
+  --success: #178263;
+  --warning: #a66b13;
+  --border: #e3e9f1;
+  --input: #dce3ed;
+  --chart-cpu: #4874ee;
+  --chart-memory: #8570d7;
+  --chart-disk: #be8b35;
+  --chart-network: #199b91;
+  --surface-shadow: 0 2px 8px #263a5b04;
   --ring: #93c5fd;
   --radius: 0.625rem;
   color-scheme: light;
@@ -51,6 +56,11 @@
   --border: #262a33;
   --input: #262a33;
   --ring: #2f6bd8;
+  --chart-cpu: #79a4ff;
+  --chart-memory: #b19bf1;
+  --chart-disk: #dab36d;
+  --chart-network: #50c4b9;
+  --surface-shadow: 0 2px 8px #0000000a;
   color-scheme: dark;
 }
 

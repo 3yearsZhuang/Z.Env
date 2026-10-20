@@ -1,3 +1,4 @@
+import { replaceTools } from "../api";
 // 环境预设库区块：内置技术栈卡片 + 我的预设卡片 + 新建 / 导入 / 编辑 / 导出。
 // 「项目配置」页用它把预设载入项目，「环境」页用它把预设装到整机；
 // 两页共用同一个 localStorage 预设库（经 useUserPresets）。
@@ -48,6 +49,7 @@ export default function PresetLibrary({
 
   // 编辑器草稿：null = 关闭；isNew 区分新建与修改
   const [draft, setDraft] = useState<PresetDraft | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function handleImport() {
     const picked = await open({
@@ -105,25 +107,40 @@ export default function PresetLibrary({
    * 落库。新建 / 同名覆盖 / 改名三种情况都在 applyPresetEdit 里一次算完，
    * 避免 save 与 remove 连调时各自基于同一份过期快照互相覆盖。
    */
-  function handleEditorSave(values: {
+  async function handleEditorSave(values: {
     name: string;
     description: string;
     tools: { name: string; version: string }[];
   }) {
-    if (!draft) return;
+    if (!draft || saving) return;
     const clash = presetNameClash(userPresets, values.name, draft.originalName);
     if (clash && !window.confirm(`已存在同名预设「${values.name}」，覆盖它吗？`)) return;
-    persist(
-      applyPresetEdit(userPresets, {
-        name: values.name,
-        description: values.description,
-        tools: values.tools,
-        ...(draft.originalContent && draft.originalName
-          ? { original: { name: draft.originalName, content: draft.originalContent } }
-          : {}),
-      }),
-    );
-    setDraft(null);
+    setSaving(true);
+    try {
+      const content = await replaceTools(
+        draft.originalContent ?? "",
+        Object.fromEntries(values.tools.map((t) => [t.name, t.version])),
+      );
+      persist(
+        applyPresetEdit(
+          userPresets,
+          {
+            name: values.name,
+            description: values.description,
+            tools: values.tools,
+            ...(draft.originalContent && draft.originalName
+              ? { original: { name: draft.originalName, content: draft.originalContent } }
+              : {}),
+          },
+          content,
+        ),
+      );
+      setDraft(null);
+    } catch (e) {
+      onError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -245,8 +262,11 @@ export default function PresetLibrary({
 
       <PresetEditorDialog
         draft={draft}
+        saving={saving}
         hasExtraSections={draft?.originalContent ? hasOtherSections(draft.originalContent) : false}
-        onClose={() => setDraft(null)}
+        onClose={() => {
+          if (!saving) setDraft(null);
+        }}
         onSave={handleEditorSave}
       />
     </>

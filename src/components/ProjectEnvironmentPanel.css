@@ -1,0 +1,115 @@
+.project-environment {
+  min-width: 0;
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.project-env-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.project-env-heading h3 {
+  margin: 0;
+}
+.project-env-heading p,
+.project-env-note {
+  color: var(--muted-foreground);
+}
+.project-env-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.project-environment section {
+  min-width: 0;
+  margin-top: 16px;
+}
+.project-environment h4 {
+  margin: 0 0 6px;
+}
+.project-environment p {
+  margin: 5px 0;
+}
+.project-environment code,
+.project-environment p,
+.project-environment li {
+  overflow-wrap: anywhere;
+}
+.project-environment code {
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: normal;
+}
+.project-environment ul {
+  padding-left: 20px;
+}
+.project-env-warning,
+.project-env-mismatch strong {
+  color: var(--warning);
+}
+.project-env-candidates {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0 !important;
+  max-height: 430px;
+  overflow-y: auto;
+}
+.project-env-candidates > li {
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.project-env-candidates > li > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.project-env-candidates span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.project-env-candidates code {
+  display: block;
+  margin: 5px 0;
+}
+.project-env-contexts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.project-env-context {
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 7px;
+}
+.project-env-mismatch {
+  border-color: var(--warning);
+}
+.project-env-stale {
+  opacity: 0.78;
+}
+@media (max-width: 900px) {
+  .project-env-contexts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 460px) {
+  .project-environment {
+    padding: 12px;
+  }
+  .project-env-actions > button {
+    white-space: normal;
+  }
+}
+.project-env-context code {
+  display: block;
+  margin: 6px 0;
+}

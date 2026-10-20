@@ -1,0 +1,83 @@
+.operation-plan-dialog {
+  width: 650px;
+}
+.operation-plan-dialog header {
+  padding: 24px 42px 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.operation-plan-dialog header p {
+  margin: 10px 0 0;
+  line-height: 1.7;
+}
+.operation-plan-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.operation-plan-scroll label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.operation-plan-scroll input,
+.operation-plan-scroll select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.operation-plan-scroll dl {
+  margin: 14px 0;
+}
+.operation-plan-scroll dl > div {
+  margin: 12px 0;
+}
+.operation-plan-scroll dt {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.operation-plan-scroll dd {
+  margin: 0;
+}
+.operation-plan-scroll code {
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: normal;
+}
+.operation-plan-scroll p,
+.operation-plan-scroll code,
+.operation-plan-scroll dd,
+.operation-plan-scroll li {
+  overflow-wrap: anywhere;
+}
+.operation-plan-scroll ol {
+  padding-left: 20px;
+}
+.operation-plan-scroll li {
+  margin: 12px 0;
+}
+.operation-plan-scroll li p {
+  margin: 2px 0;
+}
+.operation-plan-error {
+  color: var(--destructive);
+}
+.operation-plan-warning {
+  color: var(--warning);
+}
+.operation-plan-dialog footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
