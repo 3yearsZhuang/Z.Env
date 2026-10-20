@@ -116,9 +116,9 @@ fn explicit_arguments_environment_cwd_unicode_and_nonzero_status_are_preserved()
 }
 
 #[test]
-fn both_streams_share_budget_and_zero_budget_accepts_empty_success() {
+fn both_streams_share_budget_and_excess_is_bounded() {
     // libtest 前缀在不同 Windows 运行间可能有少量字节差异，因此不比较两次运行的精确相等；
-    // 保留载荷断言、组合预算溢出和零预算空成功，精确边界由 Unix 用例覆盖。
+    // 保留载荷断言与组合预算溢出；精确边界和零预算由 Unix 用例覆盖。
     let reference = run_probe(
         &mut fixture_command("small"),
         &limits(),
@@ -150,26 +150,6 @@ fn both_streams_share_budget_and_zero_budget_accepts_empty_success() {
         ),
         Err(ProbeError::OutputLimit)
     ));
-    let mut empty = empty_command();
-    let result = run_probe(
-        &mut empty,
-        &ProbeLimits {
-            max_output_bytes: 0,
-            ..limits()
-        },
-        &CancellationToken::default(),
-    )
-    .unwrap();
-    assert!(result.status.success());
-    assert!(result.stdout.is_empty() && result.stderr.is_empty());
-}
-
-fn empty_command() -> Command {
-    let mut command =
-        Command::new(Path::new(&std::env::var_os("SystemRoot").unwrap()).join("System32/cmd.exe"));
-    // 固定测试命令，不拼接任何用户参数，不加载 cmd AutoRun。
-    command.args(["/d", "/c", "exit 0"]);
-    command
 }
 
 #[test]
