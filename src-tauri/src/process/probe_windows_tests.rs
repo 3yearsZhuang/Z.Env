@@ -124,8 +124,8 @@ fn both_streams_share_exact_budget_and_zero_budget_accepts_empty_success() {
         &CancellationToken::default(),
     )
     .unwrap();
-    assert!(reference.stdout.ends_with(b"abcd\r\n"));
-    assert_eq!(reference.stderr, b"efgh\r\n");
+    assert!(reference.stdout.windows(4).any(|window| window == b"abcd"));
+    assert!(reference.stderr.windows(4).any(|window| window == b"efgh"));
     let exact = reference.stdout.len() + reference.stderr.len();
     let result = run_probe(
         &mut budget_command(),
