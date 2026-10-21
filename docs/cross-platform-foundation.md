@@ -43,7 +43,7 @@
 | Rust 格式、all-targets clippy、构建 | 通过，使用当前锁文件 |
 | 前端版本、lint、格式、构建、依赖审计 | 通过，审计报告 0 漏洞 |
 | Windows 目标隔离检查 | 真实进程/探针源码与真实文件守卫及其 Windows tests 分别 `check --tests`、clippy `-D warnings` 通过；外围类型使用小型 stub，不是完整应用编译 |
-| Windows 原生场景（2026-10-20 CI） | 首次 128 通过 / 3 失败 / 2 ignored；修复预算边界与 Command 复用用例后为 **129 通过 / 0 失败 / 3 ignored**。正常成功后代回收场景因 Job/管道继承语义待复核保持 ignored，不计作通过 |
+| Windows 原生场景（2026-10-21 CI） | **132 通过 / 0 失败 / 2 ignored**；ignored 仅为子进程 fixture 与需要 Windows 符号链接权限的文件守卫测试。直接进程退出后终止 Job 后代并返回父状态，超时用例改为直接进程慢启动 |
 
 Windows 探针 fixture 由测试二进制派生；在输出洪泛、取消和超时之前先取得观察句柄，
 再通过确认文件让 fixture 继续运行，避免用已回收的 PID 猜测终态。断言失败时先兜底清理。

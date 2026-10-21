@@ -12,7 +12,7 @@
 > P9–P14 的实现已按批次提交并合入 `main`，但各条目的测试数字仍是当时基线，不作为当前结果。
 
 - ✅ **接手与对话汇总**：398 条恢复包已校验；实时翻完归档列表 3 页，10 个其他对话均已归档，本轮仅核实归档结果。当前对话为唯一未归档入口，见 [接手记录](./docs/archive/workspace-handoff-2026-10-20.md)。
-- 🚧 **完成线扩展与跨平台底座**：用户确认七类工具三平台写闭环；Python 覆盖解释器与已有虚拟环境，pyenv 加受控编译。Windows 有界探针、稳定文件身份和显式环境策略已接入，统一计划 v2 的 Node/Python 传输入口也已接入；本机 Rust 245 项及静态/构建检查通过，Windows 原生探针已在 CI 运行（最终 129 通过、0 失败、3 ignored，含 1 个待复核的 Job/管道继承场景）。工作包 02 的 launcher、provider 受控环境与 Windows 完整实机验收仍未完成；见 [实施路线](./docs/cross-platform-implementation.md)和 [底座切片](./docs/cross-platform-foundation.md)。下列已完成标记保留其原有限定范围，不代表三平台扩展完成。
+- 🚧 **完成线扩展与跨平台底座**：用户确认七类工具三平台写闭环；Python 覆盖解释器与已有虚拟环境，pyenv 加受控编译。Windows 有界探针、稳定文件身份和显式环境策略已接入，统一计划 v2 的 Node/Python 传输入口也已接入；本机 Rust 245 项及静态/构建检查通过，Windows 原生探针已在 CI 全部跑通（132 通过、0 失败、2 ignored，均为 fixture/符号链接权限等明确跳过项）。工作包 02 的 launcher、provider 受控环境与 Windows 完整实机验收仍未完成；见 [实施路线](./docs/cross-platform-implementation.md)和 [底座切片](./docs/cross-platform-foundation.md)。下列已完成标记保留其原有限定范围，不代表三平台扩展完成。
 
 - 工作区版本字段为 **v0.7.1**；P9–P14 已按 5 个批次提交并合入 `main`（2026-10-20 收口），本轮未执行发布。
 - 收口时修复 5 个失败 Rust 测试（计划错误保真、探针测试不再依赖 setuid `/bin/ps`），并新增文档索引与 `npm run check:docs` 链接检查。
