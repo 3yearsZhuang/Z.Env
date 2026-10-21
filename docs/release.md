@@ -21,11 +21,11 @@
 
 1. **三处版本号同步升位**：`package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml`
    （Cargo.lock 随之更新）。`npm run check:version` 门禁校验，CI 首步执行。
-2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台：
+2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台。审计以生产依赖阻断，devDependencies 的 Vite/launch-editor 通告暂无修复，完整审计仅作报告：
    ```bash
    npm ci
    npm run check:version && npm run check:docs && npm run lint && npm test && npm run format:check
-   npm run build && npm audit --audit-level=high
+   npm run build && npm audit --omit=dev --audit-level=high
    cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
    cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
    cargo test --manifest-path src-tauri/Cargo.toml
