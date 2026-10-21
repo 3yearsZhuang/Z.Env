@@ -289,7 +289,7 @@ export default function OperationPlanDialog({
           <DialogTitle>{displayName} 操作计划</DialogTitle>
           <DialogDescription>
             {python
-              ? "重新验证只确认所选实例。mise 的精确安装、卸载与项目/全局绑定按计划核验；其他渠道安装仅预览。"
+              ? "重新验证只确认所选实例。mise/uv 精确安装、mise 绑定与 Homebrew core formula 安装/卸载按计划核验；其他来源安装仅预览。"
               : "先核对目标、配置差异与来源影响，再执行计划。失败或取消后的补偿单独记录。"}
           </DialogDescription>
         </header>

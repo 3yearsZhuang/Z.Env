@@ -1,5 +1,5 @@
 # P14 / 43 — Python 计划预览与实例重新验证（工作包 03）
-> 2026-10-20 后续：mise 写渠道见 [工作包 04](./p14-python-mise.md)，uv 见 [工作包 05](./p14-python-uv.md)。
+> 2026-10-20 后续：mise 写渠道见 [工作包 04](./p14-python-mise.md)，uv 见 [工作包 05](./p14-python-uv.md)，Homebrew 见 [工作包 07](./p14-python-brew.md)。
 
 日期：2026-10-19（Asia/Shanghai），分支 `codex/inventory-contracts`。
 状态：**macOS Python 受控重新验证、四渠道安装计划预览与工具范围隔离完成；P14 继续进行**。

@@ -7,36 +7,42 @@ use crate::providers::python::{scan_python_provider, PythonScanOptions};
 pub(super) enum WriteSpec {
     Mise(python_mise::WriteSpec),
     Uv(python_uv::WriteSpec),
+    Brew(python_brew::WriteSpec),
 }
 impl WriteSpec {
     fn program(&self) -> &PathBuf {
         match self {
             Self::Mise(spec) => &spec.program,
             Self::Uv(spec) => &spec.program,
+            Self::Brew(spec) => &spec.program,
         }
     }
     fn argv(&self) -> &[String] {
         match self {
             Self::Mise(spec) => &spec.argv,
             Self::Uv(spec) => &spec.argv,
+            Self::Brew(spec) => &spec.argv,
         }
     }
     fn version(&self) -> &str {
         match self {
             Self::Mise(spec) => &spec.version,
             Self::Uv(spec) => &spec.version,
+            Self::Brew(spec) => &spec.formula,
         }
     }
     fn impact(&self) -> &[String] {
         match self {
             Self::Mise(spec) => &spec.impact,
             Self::Uv(spec) => &spec.impact,
+            Self::Brew(spec) => &spec.impact,
         }
     }
     fn environment_keys(&self) -> Vec<String> {
         match self {
             Self::Mise(_) => python_mise::environment_keys(),
             Self::Uv(_) => python_uv::environment_keys(),
+            Self::Brew(_) => python_brew::environment_keys(),
         }
     }
     fn revalidate(
@@ -48,12 +54,14 @@ impl WriteSpec {
         match self {
             Self::Mise(spec) => spec.revalidate(target, snapshot, options),
             Self::Uv(spec) => spec.revalidate(target, snapshot, options),
+            Self::Brew(spec) => spec.revalidate(target, snapshot, options),
         }
     }
     fn run(&self, options: &PythonScanOptions, token: &CancellationToken) -> Result<(), PlanError> {
         match self {
             Self::Mise(spec) => spec.run(options, token),
             Self::Uv(spec) => spec.run(options, token),
+            Self::Brew(spec) => spec.run(options, token),
         }
     }
     fn verify(
@@ -64,6 +72,7 @@ impl WriteSpec {
         match self {
             Self::Mise(spec) => spec.verify(snapshot, options),
             Self::Uv(spec) => spec.verify(snapshot, options),
+            Self::Brew(spec) => spec.verify(snapshot, options),
         }
     }
 }
@@ -132,7 +141,7 @@ pub(super) fn install(
             "仅预览 core formula；版本由执行时渠道决定，不承诺精确补丁版".into(),
             vec![
                 impact,
-                "Homebrew 可能改变依赖、链接和其他 keg；真实影响门禁尚未实现".into(),
+                "Homebrew 可能改变依赖、链接和其他 keg；真实写入验收待补，执行前按 formula、keg 与依赖重验".into(),
             ],
         ));
     }
@@ -500,6 +509,15 @@ impl OperationPlanService {
                     &options,
                 )
                 .map(WriteSpec::Uv),
+                ProviderId::Brew => python_brew::prepare(
+                    action,
+                    &package,
+                    target.as_ref(),
+                    requested_version.as_deref(),
+                    &snapshot,
+                    &options,
+                )
+                .map(WriteSpec::Brew),
                 _ => Err(PlanError::Unsupported),
             };
             match prepared {
@@ -523,10 +541,10 @@ impl OperationPlanService {
                     steps = vec![
                         step(
                             StepKind::Preflight,
-                            if package.provider_id == ProviderId::Mise {
-                                "重验 core:python 收据、安装记录与受控设置"
-                            } else {
-                                "重验 uv 能力、安装目录与次版本别名"
+                            match package.provider_id {
+                                ProviderId::Mise => "重验 core:python 收据、安装记录与受控设置",
+                                ProviderId::Uv => "重验 uv 能力、安装目录与次版本别名",
+                                _ => "重验 core formula、依赖与归属",
                             },
                             &options.common.home,
                         ),
@@ -546,15 +564,14 @@ impl OperationPlanService {
                     for step in &mut steps {
                         step.environment_keys = keys.clone();
                     }
-                    let channel = if package.provider_id == ProviderId::Mise {
-                        "精确预编译"
-                    } else {
-                        "uv 托管精确"
+                    let (channel, subject) = match package.provider_id {
+                        ProviderId::Mise => ("精确预编译", format!("CPython {}", spec.version())),
+                        ProviderId::Uv => ("uv 托管精确", format!("CPython {}", spec.version())),
+                        _ => ("Homebrew core", format!("formula {}", spec.version())),
                     };
                     promise = format!(
-                        "{}{channel} CPython {}；原生记录与实例结果须独立核对，不改写版本请求，实际解析需另行核对",
+                        "{}{channel} {subject}；原生记录与实例结果须独立核对，不改写版本请求，实际解析需另行核对",
                         if action == Action::Install { "安装" } else { "卸载" },
-                        spec.version()
                     );
                     impact = spec.impact().to_vec();
                     python_write = Some(spec);

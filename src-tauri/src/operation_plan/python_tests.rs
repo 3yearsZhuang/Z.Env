@@ -243,12 +243,12 @@ fn four_install_previews_keep_channel_identity_and_can_never_execute() {
     assert!(matches!(f.execute(&p), Err(PlanError::Disabled)));
     // 绑定必须显式给出作用域与项目路径，缺省请求不再落到 Node 或猜测默认值。
     assert!(f.preview(f.request(Action::Bind)).is_err());
-    // 预览只允许读能力证据（--version / --help）；不能执行安装或卸载。
+    // 预览允许读能力证据（--help/--version/--prefix/info/list/uses）；不能执行安装或卸载。
     let calls = fs::read_to_string(f.dir.path().join("manager-calls")).unwrap_or_default();
     assert!(
         calls
             .lines()
-            .all(|line| line.contains("--help") || line.contains("--version")),
+            .all(|line| !line.starts_with("install") && !line.starts_with("uninstall")),
         "preview must not execute a write command: {calls}"
     );
     assert!(!f.dir.path().join("journal").exists());

@@ -46,6 +46,8 @@
 - 🚧 **P14 工作包 06 — Python 项目环境与绑定**：已完成 `mise.toml`/`.python-version`/`pyproject.toml` `requires-python`/`.tool-versions` 声明解析、PEP 440 子集约束、候选匹配与只读报告；并完成 mise 项目/全局绑定写入、私有收据、解绑与失败回滚（差异预览、外部修改拒绝、写入后重扫核验、Python 详情绑定/解绑入口）。真实临时项目核对、真实 mise 3.13.15 绑定/解绑均通过；`mise which` 实际解析核验待继续，见 [实施记录](./docs/p14-python-project.md)。
 
 
+- 🚧 **P14 工作包 07 — Python Homebrew 写渠道**：core `python`/`python@3.N` 白名单、formula 身份与 keg/反向依赖门禁、安装/卸载 argv 与结果核验已接入；伪 brew 5 项场景通过。真实 Homebrew 写入、依赖/链接副作用与取消后残留验收待补，见 [实施记录](./docs/p14-python-brew.md)。
+
 ## 已排定的重构路线
 
 阶段状态在本表维护；后续范围与工作包统一见 [三平台实施方案](./docs/cross-platform-implementation.md)。首个 **macOS + Node.js** 样板保留为已完成基线，mise 为可选 provider。
@@ -55,11 +57,11 @@
 | 🚧 | P11 / 40 多来源只读清单及三平台扩展 | PR-01–03 的 macOS Node 样板完成；新增 Windows/Linux 和其余工具来源逐项接入 |
 | 🚧 | P12 / 41 统一操作与验证 | PR-04–06 限定实现完成；Homebrew 真实安装/卸载及托管、打包桌面 IPC 验收待补 |
 | 🚧 | P13 / 42 项目环境及三平台扩展 | macOS Node 限定范围完成；Python、其他工具与 Windows/Linux 作用域核对待扩；复杂隐式解析保持未知 |
-| 🚧 | P14 / 43 工具目录与配方 | 目录/导航、Python 五来源、计划及 mise/uv 写渠道完成；Python 项目声明、mise 绑定/解绑/回滚完成，其余渠道、其他工具适配及项目配方待实现 |
+| 🚧 | P14 / 43 工具目录与配方 | 目录/导航、Python 五来源、计划及 mise/uv 写渠道完成；Python 项目声明、mise 绑定/解绑/回滚完成，Homebrew 写渠道代码完成但真实写入待补；pyenv、其他工具适配及项目配方待实现 |
 | ⬜ | P15 / 44 诊断与运维 | doctor v2、PATH 治理、服务与缓存归属及能力；手动流程稳定后做定时巡检 |
 | ⬜ | P16 / 45 快照迁移与收口 | 跨来源迁移意图、旧格式兼容、旧入口退出、三平台及发布产物验收 |
 
-**下一步：原生 launcher shim 与归属、P14 Python Homebrew/pyenv 写渠道**；工作包 02 的 launcher、provider 受控环境与 Windows 实机继续推进，再完成 Node 三平台、其余五工具、配方和 P15/P16。P12 的 Homebrew 真实写入/托管及打包桌面 IPC 门槛保留；完整工作包顺序见三平台方案。收口批次位于 `codex/inventory-contracts` 并已合入 `main`。
+**下一步：P14 Python Homebrew 真实写入验收与 pyenv 写渠道，随后原生 launcher shim 归属**；工作包 02 的 launcher、provider 受控环境与 Windows 实机继续推进，再完成 Node 三平台、其余五工具、配方和 P15/P16。P12 的 Homebrew 真实写入/托管及打包桌面 IPC 门槛保留；完整工作包顺序见三平台方案。收口批次位于 `codex/inventory-contracts` 并已合入 `main`。
 
 ## 保留的候选与平台约束
 

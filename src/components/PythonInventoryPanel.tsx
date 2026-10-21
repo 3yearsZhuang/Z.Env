@@ -144,8 +144,8 @@ export default function PythonInventoryPanel({
         </p>
       )}
       <p className="python-inventory-note">
-        页面读取不调用安装器或修复；mise 与 uv 托管安装/卸载以计划中的能力、归属和影响为准；
-        其他来源安装仅预览，绑定和项目解析尚未开放。
+        页面读取不调用安装器或修复；mise/uv 精确安装与 Homebrew core formula
+        安装/卸载以计划中的能力、归属和影响为准； 其他来源安装仅预览，绑定和项目解析尚未开放。
       </p>
       <div className="python-source-grid">
         {SOURCES.map((source) => {
