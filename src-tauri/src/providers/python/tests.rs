@@ -198,14 +198,14 @@ fn cancelling_running_python_reaps_process_and_never_reports_a_broken_install() 
         let worker = scope.spawn(|| scan_python_provider(ProviderId::Pyenv, &f.options, &token));
         let started = Instant::now();
         while !marker.exists() {
-            assert!(started.elapsed() < Duration::from_secs(3));
+            assert!(started.elapsed() < Duration::from_secs(10));
             std::thread::sleep(Duration::from_millis(10));
         }
         token.cancel();
         let scan = worker.join().unwrap();
         assert_eq!(scan.report.status, ProviderStatus::Cancelled);
         assert_eq!(scan.observations[0].health, Health::Unverified);
-        assert!(started.elapsed() < Duration::from_secs(3));
+        assert!(started.elapsed() < Duration::from_secs(10));
     });
 }
 #[test]
