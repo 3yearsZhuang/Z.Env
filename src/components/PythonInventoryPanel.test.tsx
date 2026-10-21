@@ -4,19 +4,22 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import fixture from "../../fixtures/python-inventory/contract-v1.json";
 import { useInventory, type InventoryState } from "../lib/useInventory";
 import PythonInventoryPanel from "./PythonInventoryPanel";
+import { pythonBindings } from "../api/pythonProject";
 vi.mock("../lib/useInventory", () => ({ useInventory: vi.fn() }));
+vi.mock("../api/pythonProject", () => ({ pythonBindings: vi.fn() }));
 vi.mock("./OperationPlanDialog", () => ({
   default: (p: {
     toolId: string;
     snapshotRequestId: string;
     installationId: string | null;
     initialAction?: string;
+    initialBindingId?: string;
     onFinished: () => void;
     onClose: () => void;
   }) => (
     <div role="dialog" aria-label="测试计划">
       {p.toolId} · {p.snapshotRequestId} · {p.installationId ?? "install"} ·{" "}
-      {p.initialAction ?? "default"}
+      {p.initialAction ?? "default"} · {p.initialBindingId ?? "no-binding"}
       <button onClick={p.onFinished}>完成并刷新</button>
       <button onClick={p.onClose}>关闭测试计划</button>
     </div>
@@ -36,6 +39,7 @@ beforeEach(() => {
     cancel: vi.fn(),
   };
   vi.mocked(useInventory).mockImplementation(() => state);
+  vi.mocked(pythonBindings).mockResolvedValue([]);
 });
 afterEach(cleanup);
 it("Python 读取不复用 Node 范围，来源和隔离探针分开，绑定与安装入口显式", async () => {
@@ -118,4 +122,24 @@ it("未知 PATH、过期及异常实例没有重新验证入口能力", () => {
       .getAllByRole("button", { name: "预览重新验证此 Python 实例" })
       .every((b) => (b as HTMLButtonElement).disabled),
   ).toBe(true);
+});
+
+it("已有 Python 绑定时可打开解除绑定计划", async () => {
+  vi.mocked(pythonBindings).mockResolvedValue([
+    {
+      bindingId: "python-binding-1",
+      installationId: "instance-1",
+      version: "3.13.15",
+      locator: "/fixture/python",
+      configPath: "/work/project/mise.toml",
+      scope: "project",
+      state: "bound",
+    },
+  ]);
+  render(<PythonInventoryPanel {...props} />);
+  const button = await screen.findByRole("button", { name: "解除绑定" });
+  fireEvent.click(button);
+  const dialog = await screen.findByRole("dialog", { name: "测试计划" });
+  expect(dialog.textContent).toContain("unbind");
+  expect(dialog.textContent).toContain("python-binding-1");
 });

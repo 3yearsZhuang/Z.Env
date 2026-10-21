@@ -1,8 +1,8 @@
 # P14 / 43 — Python 项目环境与绑定（工作包 06）
 
 日期：2026-10-21（Asia/Shanghai），分支 `main`。
-状态：**声明解析、候选匹配与 mise 项目/全局绑定写入完成；解绑、收据、补偿与实际解析核验待继续。**
-声明与候选是只读能力；绑定切片只在用户确认的计划内写目标 mise 配置，不执行解释器、不安装依赖。
+状态：**声明解析、候选匹配、mise 项目/全局绑定写入、私有收据、解绑与失败回滚完成；`mise which` 实际解析核验待继续。**
+声明与候选是只读能力；绑定/解绑只在用户确认的计划内写目标 mise 配置，不执行解释器、不安装依赖。
 
 ## 动因
 
@@ -63,7 +63,18 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
   写入后重扫 Python 来源、核对配置值与实例仍健康。
 - 写入沿用配置服务的同目录原子替换与 `.zenv-backup`；不改 shell、不卸载实例。
 - 前端 Python 详情新增“绑定此实例到项目”，计划弹窗对 Python 隐藏不支持的注册/托管/PATH
-  策略，作用域只提供全局/项目；`unbind` 在 Python 下仍隐藏。
+  策略，作用域只提供全局/项目。
+
+### 收据、解绑与回滚
+
+- 绑定成功后在 `~/.zenv/python-bindings-v1.json` 写入私有收据：安装身份、包、版本、
+  配置路径、键、绑定前值与状态（`pending`/`bound`）；最多 32 条，原子写并带备份。
+- `python_bindings` 命令只读返回本应用的 `bound` 收据；Python 详情列出“已有 Python 绑定”，
+  可打开解除计划。Python 弹窗的解除入口使用显式收据 ID，不读取 Node 绑定列表。
+- 解绑预览重读配置，要求当前值与收据一致才允许；执行只恢复收据记录的原值/移除键盘，
+  成功后删除收据；外部修改时返回 `BindingConflict` 并保留收据。
+- 失败回滚：绑定写入后核验失败时恢复预览前内容并删除收据；解绑失败时按收据重新写回绑定值，
+  恢复 `bound` 收据；外部冲突不覆盖。执行器已接入通用补偿步骤，模块单测覆盖两个方向。
 
 ## 验证记录
 
@@ -73,14 +84,15 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
 | 前端 | Python 项目 API 4 项：契约、IPC 调用、未来版本/未知状态/跨来源/超预算拒绝 |
 | 真实 macOS 只读核对 | 临时项目 `mise.toml`（`3.13`）+ `pyproject.toml`（`>=3.10,<3.14`）：状态 `supported`，mise 3.13.15 与 uv 3.13.14 `satisfied`，uv 3.12.13/3.14.6 `mismatch`，PATH 实例不可用；`inventoryComplete=false`（PATH/其他来源未完整读取）如实上报 |
 | 真实 mise 绑定 | 临时项目 `mise.toml` 含 `node = "22"` 与 `[env] A = "1"`；真实 mise CPython 3.13.15 预览 → 执行 → 重扫核验：`completed/bound`，写入 `python = "3.13.15"`，node 与环境段原样保留，差异仅 `tools.python` |
+| 真实 mise 解绑 | 同一项目继续解绑：`completed/unbound`，配置恢复为绑定前内容，收据移除；私有账本与项目均在可丢弃目录 |
 | 静态/构建 | Rust fmt、clippy `-D warnings`、构建；前端 lint、Prettier、构建、版本与文档链接检查 |
 
 真实核对只读：未写项目配置、未执行解释器、未安装依赖；未把候选可匹配写成项目实际生效。
 
 ## 边界与后续
 
-- 绑定已写入项目/全局 `mise.toml`，但解绑、绑定收据、失败自动补偿与“写入后 mise 实际解析”
-  尚未实现；`mise which python`/终端/IDE 生效仍标未知。
+- 绑定/解绑已写入项目/全局 `mise.toml` 并带私有收据与失败回滚；但“写入后 mise 实际解析”
+  尚未执行 `mise which python`，终端/IDE 生效仍标未知。
 - 绑定仅限 mise 实例；uv/brew/PATH 实例不能直接作为 mise 配置目标，需先由 mise 管理或链接。
 - 未处理 poetry/uv workspace 动态依赖、多版本 `.python-version`、已有 `.venv` 的基础解释器引用。
-- 下一步：绑定收据与解绑/补偿、`mise which` 实际解析核验；随后已有 `.venv` 解释器判断与配方。
+- 下一步：`mise which python` 实际解析核验、已有 `.venv` 解释器判断与配方。

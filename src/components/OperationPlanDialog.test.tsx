@@ -498,6 +498,39 @@ it("Python 绑定预览提交项目作用域与精确实例", async () => {
     "python",
   );
 });
+it("Python 解除绑定使用显式收据并跳过 Node 绑定列表", async () => {
+  const user = userEvent.setup();
+  vi.mocked(operationPlan).mockImplementation(async () => {
+    const value = pythonPlan();
+    value.action = "unbind";
+    value.capability = { canPreview: true, canExecute: true, reason: null };
+    return value;
+  });
+  render(
+    <OperationPlanDialog
+      toolId="python"
+      snapshotRequestId="snapshot"
+      installationId="instance"
+      initialAction="unbind"
+      initialBindingId="python-binding-1"
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  expect((screen.getByRole("combobox", { name: "计划操作" }) as HTMLSelectElement).value).toBe(
+    "unbind",
+  );
+  expect(screen.queryByRole("combobox", { name: "已有 Node 绑定" })).toBeNull();
+  expect(screen.getByText(/将解除本应用写入的绑定并恢复原配置/)).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "生成预览" }));
+  expect(operationPlan).toHaveBeenLastCalledWith(
+    {
+      snapshotRequestId: "snapshot",
+      intent: { action: "unbind", bindingId: "python-binding-1" },
+    },
+    "python",
+  );
+});
 it("Python 四渠道预览区分精确版本和 formula，没有写执行入口", async () => {
   const user = userEvent.setup();
   vi.mocked(operationPlan).mockImplementation(async (request) => {

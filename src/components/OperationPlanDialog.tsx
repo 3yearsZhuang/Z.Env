@@ -24,6 +24,7 @@ interface Props {
   onFinished: () => void;
   initialAction?: "install" | "unbind" | "bind";
   initialBinding?: BindingOptions;
+  initialBindingId?: string;
 }
 const ACTIONS: { value: PlanAction; label: string }[] = [
   { value: "verify", label: "重新验证此实例" },
@@ -46,6 +47,7 @@ export default function OperationPlanDialog({
   onFinished,
   initialAction,
   initialBinding,
+  initialBindingId,
 }: Props) {
   const python = toolId === "python";
   const displayName = python ? "Python" : "Node.js";
@@ -57,7 +59,7 @@ export default function OperationPlanDialog({
   const [scope, setScope] = useState<BindingScope>(initialBinding?.scope ?? "registration");
   const [projectPath, setProjectPath] = useState(initialBinding?.projectPath ?? "");
   const [bindings, setBindings] = useState<BindingSummary[]>([]);
-  const [bindingId, setBindingId] = useState("");
+  const [bindingId, setBindingId] = useState(initialBindingId ?? "");
   const [bindingsLoading, setBindingsLoading] = useState(false);
   const [provider, setProvider] = useState<ProviderId>("mise");
   const [packageId, setPackageId] = useState(packageName);
@@ -105,6 +107,12 @@ export default function OperationPlanDialog({
   }, [action, provider, packageId, version, installationId, strategy, scope, projectPath, toolId]);
   useEffect(() => {
     if (action !== "unbind") return;
+    if (python && initialBindingId) {
+      setBindings([]);
+      setBindingId(initialBindingId);
+      setBindingsLoading(false);
+      return;
+    }
     let stopped = false;
     setBindingsLoading(true);
     setBindings([]);
@@ -125,7 +133,7 @@ export default function OperationPlanDialog({
     return () => {
       stopped = true;
     };
-  }, [action, snapshotRequestId]);
+  }, [action, snapshotRequestId, python, initialBindingId]);
   useEffect(() => {
     sequence.current += 1;
     previewing.current = false;
@@ -300,7 +308,8 @@ export default function OperationPlanDialog({
                     !python ||
                     a.value === "verify" ||
                     a.value === "uninstall" ||
-                    a.value === "bind",
+                    a.value === "bind" ||
+                    (a.value === "unbind" && Boolean(initialBindingId)),
                 ).map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
@@ -324,39 +333,45 @@ export default function OperationPlanDialog({
           )}
           {action === "unbind" && (
             <>
-              <label>
-                已有绑定
-                <select
-                  aria-label="已有 Node 绑定"
-                  value={bindingId}
-                  disabled={executing || bindingsLoading}
-                  onChange={(e) => {
-                    setBindingId(e.target.value);
-                    sequence.current += 1;
-                    previewing.current = false;
-                    setLoading(false);
-                    setPlan(null);
-                    setError("");
-                    setMessage("");
-                  }}
-                >
-                  {bindings.map((b) => (
-                    <option key={b.bindingId} value={b.bindingId}>
-                      {b.providerPackage.providerId} · {b.version} · {b.strategy} / {b.scope} ·{" "}
-                      {b.state === "bound" ? "已确认" : "中断或待确认"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {bindingsLoading ? (
-                <p role="status">正在读取绑定记录…</p>
-              ) : bindings.length === 0 ? (
-                <p>没有可解除的 Node 绑定记录。</p>
-              ) : (
-                <p>
-                  原安装：<code>{bindings.find((b) => b.bindingId === bindingId)?.locator}</code>
-                </p>
+              {!python && (
+                <label>
+                  已有绑定
+                  <select
+                    aria-label="已有 Node 绑定"
+                    value={bindingId}
+                    disabled={executing || bindingsLoading}
+                    onChange={(e) => {
+                      setBindingId(e.target.value);
+                      sequence.current += 1;
+                      previewing.current = false;
+                      setLoading(false);
+                      setPlan(null);
+                      setError("");
+                      setMessage("");
+                    }}
+                  >
+                    {bindings.map((b) => (
+                      <option key={b.bindingId} value={b.bindingId}>
+                        {b.providerPackage.providerId} · {b.version} · {b.strategy} / {b.scope} ·{" "}
+                        {b.state === "bound" ? "已确认" : "中断或待确认"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               )}
+              {python && initialBindingId && (
+                <p>将解除本应用写入的绑定并恢复原配置；外部修改会停止。</p>
+              )}
+              {!python &&
+                (bindingsLoading ? (
+                  <p role="status">正在读取绑定记录…</p>
+                ) : bindings.length === 0 ? (
+                  <p>没有可解除的 Node 绑定记录。</p>
+                ) : (
+                  <p>
+                    原安装：<code>{bindings.find((b) => b.bindingId === bindingId)?.locator}</code>
+                  </p>
+                ))}
             </>
           )}
           {action === "bind" && (

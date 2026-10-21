@@ -267,3 +267,15 @@ pub struct ExecutionRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compensation: Option<CompensationOutcome>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PythonBinding {
+    pub binding_id: String,
+    pub installation_id: InstallationId,
+    pub version: String,
+    pub locator: String,
+    pub config_path: String,
+    pub scope: BindingScope,
+    pub state: String,
+}

@@ -653,3 +653,64 @@ fn python_bind_preview_rejects_stale_target_and_unknown_scope() {
         assert!(f.preview(request).is_err());
     }
 }
+
+#[test]
+fn python_unbind_plan_restores_previous_configuration_and_receipt() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    fs::write(&config, "[tools]\npython = \"3.12\"\n").unwrap();
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap()
+        .clone();
+    let bind = f
+        .preview(PlanRequest {
+            snapshot_request_id: snapshot.request_id.clone(),
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(BindingOptions {
+                    strategy: BindingStrategy::Direct,
+                    scope: BindingScope::Project,
+                    project_path: Some(project.path().to_string_lossy().into()),
+                }),
+            },
+        })
+        .unwrap();
+    assert_eq!(f.execute(&bind).unwrap().outcome, Some(Outcome::Bound));
+    let ledger = python_binding::ledger(&f.options);
+    let receipt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&ledger).unwrap()).unwrap();
+    let binding_id = receipt["records"][0]["id"].as_str().unwrap().to_owned();
+    let (_, current) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let unbind = f
+        .preview(PlanRequest {
+            snapshot_request_id: current.request_id,
+            intent: PlanIntent::Unbind { binding_id },
+        })
+        .unwrap();
+    assert_eq!(unbind.action, Action::Unbind);
+    assert!(unbind.capability.can_execute);
+    assert_eq!(unbind.steps.len(), 3);
+    assert_eq!(
+        unbind.configuration_diff[0].before.as_deref(),
+        Some("3.13.15")
+    );
+    assert_eq!(unbind.configuration_diff[0].after.as_deref(), Some("3.12"));
+    assert_eq!(f.execute(&unbind).unwrap().outcome, Some(Outcome::Unbound));
+    assert_eq!(
+        fs::read_to_string(&config).unwrap(),
+        "[tools]\npython = \"3.12\"\n"
+    );
+    assert!(fs::read_to_string(&ledger)
+        .unwrap()
+        .contains("\"records\": []"));
+}

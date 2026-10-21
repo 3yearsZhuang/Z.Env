@@ -393,8 +393,13 @@ impl OperationPlanService {
                     .cloned()
                     .ok_or(PlanError::Stale)?;
                 let binding = binding.ok_or(PlanError::Unsupported)?;
-                let spec =
-                    python_binding::prepare_bind(&target, &snapshot, &binding, &config_path)?;
+                let spec = python_binding::prepare_bind(
+                    &target,
+                    &snapshot,
+                    &binding,
+                    &config_path,
+                    &python_binding::ledger(&options),
+                )?;
                 let scope = if binding.scope == BindingScope::Global {
                     "全局"
                 } else {
@@ -439,7 +444,41 @@ impl OperationPlanService {
                     },
                 )
             }
-            PlanIntent::Unbind { .. } => return Err(PlanError::Unsupported),
+            PlanIntent::Unbind { binding_id } => {
+                let spec =
+                    python_binding::prepare_unbind(&binding_id, &python_binding::ledger(&options))?;
+                let package = spec.provider_package.clone();
+                steps = vec![
+                    step(
+                        StepKind::Preflight,
+                        "重验 Python 绑定收据与目标配置",
+                        &options.common.home,
+                    ),
+                    step(
+                        StepKind::Command,
+                        "恢复绑定前的 [tools] Python 选择",
+                        &options.common.home,
+                    ),
+                    step(
+                        StepKind::Verify,
+                        "核对配置恢复与收据移除",
+                        &options.common.home,
+                    ),
+                ];
+                impact = spec.impact.clone();
+                python_binding = Some(spec);
+                (
+                    Action::Unbind,
+                    None,
+                    package,
+                    "解除本应用写入的项目/全局 Python 绑定；不改 shell，也不卸载实例".into(),
+                    Capability {
+                        can_preview: true,
+                        can_execute: true,
+                        reason: None,
+                    },
+                )
+            }
         };
         let mut python_write = None;
         if matches!(action, Action::Install | Action::Uninstall) {
@@ -540,16 +579,18 @@ impl OperationPlanService {
             steps.clear();
         }
         let mut files = vec![];
-        if capability.can_execute && action != Action::Install {
+        if capability.can_execute && matches!(action, Action::Verify | Action::Uninstall) {
             let item = target.as_ref().ok_or(PlanError::Unsupported)?;
+            let mut stamps = 0;
             for path in [&item.executable_path, &item.canonical_executable_path]
                 .into_iter()
                 .flatten()
             {
                 let path = PathBuf::from(path);
                 files.push((path.clone(), file_stamp(&path)?));
+                stamps += 1;
             }
-            if files.len() != 2 {
+            if stamps != 2 {
                 return Err(PlanError::EvidenceUnavailable);
             }
         }
@@ -575,8 +616,18 @@ impl OperationPlanService {
                 action,
                 target: PlanTarget {
                     provider_package: package,
-                    installation_id: target.as_ref().map(|i| i.installation_id.clone()),
-                    locator: target.as_ref().map(|i| i.locator.clone()),
+                    installation_id: target
+                        .as_ref()
+                        .map(|item| item.installation_id.clone())
+                        .or_else(|| {
+                            python_binding
+                                .as_ref()
+                                .map(|spec| spec.installation_id.clone())
+                        }),
+                    locator: target
+                        .as_ref()
+                        .map(|item| item.locator.clone())
+                        .or_else(|| python_binding.as_ref().map(|spec| spec.locator.clone())),
                 },
                 capability,
                 version_promise: promise,
@@ -638,7 +689,11 @@ impl OperationPlanService {
                 if stored.view.tool_id != InventoryTool::Python
                     || !matches!(
                         stored.view.action,
-                        Action::Verify | Action::Install | Action::Uninstall | Action::Bind
+                        Action::Verify
+                            | Action::Install
+                            | Action::Uninstall
+                            | Action::Bind
+                            | Action::Unbind
                     )
                     || stored.write.is_some()
                     || stored.binding.is_some()
@@ -757,12 +812,19 @@ impl OperationPlanService {
                             )
                         }
                     }
-                    _ => Err(PlanError::Disabled),
+                    StepKind::Compensate => {
+                        let binding = stored.python_binding.as_ref().ok_or(PlanError::Disabled)?;
+                        binding.rollback()
+                    }
                 }
             },
         )
     }
 }
+pub(super) fn list_bindings(options: &PythonScanOptions) -> Result<Vec<PythonBinding>, PlanError> {
+    python_binding::list(&python_binding::ledger(options))
+}
+
 fn request_action(intent: &PlanIntent) -> Option<Action> {
     match intent {
         PlanIntent::Verify { .. } => Some(Action::Verify),

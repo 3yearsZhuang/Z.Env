@@ -36,6 +36,16 @@ export interface PythonSelection {
   reason: string | null;
 }
 
+export interface PythonBinding {
+  bindingId: string;
+  installationId: string;
+  version: string;
+  locator: string;
+  configPath: string;
+  scope: "project" | "global";
+  state: string;
+}
+
 export interface PythonProjectEnvironment {
   schemaVersion: 1;
   requestId: string;
@@ -152,4 +162,28 @@ export function pythonProject(request: PythonProjectRequest): Promise<PythonProj
     const value = await invoke("python_project_environment", { request });
     return validatePythonProject(value);
   });
+}
+
+/** 私有绑定收据；只返回本应用写入的 Python 配置绑定。 */
+export function validatePythonBindings(value: unknown): PythonBinding[] {
+  if (!Array.isArray(value) || value.length > 32) throw new Error("Python 绑定列表超出预算");
+  for (const item of value) {
+    if (
+      !record(item) ||
+      !text(item.bindingId, 128) ||
+      !text(item.installationId, 128) ||
+      !text(item.version, 128) ||
+      !text(item.locator, 4096) ||
+      !text(item.configPath, 4096) ||
+      (item.scope !== "project" && item.scope !== "global") ||
+      item.state !== "bound"
+    ) {
+      throw new Error("Python 绑定记录无效");
+    }
+  }
+  return value as unknown as PythonBinding[];
+}
+
+export async function pythonBindings(): Promise<PythonBinding[]> {
+  return validatePythonBindings(await invoke("python_bindings"));
 }

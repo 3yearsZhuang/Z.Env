@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { pythonBindings, type PythonBinding } from "../api/pythonProject";
 import { useInventory } from "../lib/useInventory";
 import type { CatalogReadState } from "../lib/catalogEvidence";
 import type { ProviderReport, ProviderId } from "../api/inventory";
@@ -39,8 +40,10 @@ export default function PythonInventoryPanel({
   const state = useInventory(active, "python");
   const [planning, setPlanning] = useState<{
     installationId: string | null;
-    action?: "verify" | "bind";
+    action?: "verify" | "bind" | "unbind";
+    bindingId?: string;
   } | null>(null);
+  const [bindings, setBindings] = useState<PythonBinding[]>([]);
   useEffect(() => {
     if (!active) setPlanning(null);
   }, [active]);
@@ -72,6 +75,20 @@ export default function PythonInventoryPanel({
       void state.refresh();
     }
   }, [active, refreshRequest, state.loading, state.waiting, state.cancelling, state.refresh]);
+  useEffect(() => {
+    if (!active || !state.snapshot) return;
+    let stopped = false;
+    void pythonBindings()
+      .then((items) => {
+        if (!stopped) setBindings(items);
+      })
+      .catch(() => {
+        if (!stopped) setBindings([]);
+      });
+    return () => {
+      stopped = true;
+    };
+  }, [active, state.snapshot]);
   const records = state.snapshot?.installations.filter((i) => i.toolId === "python") ?? [];
   const providers = state.snapshot?.providers ?? [];
   const stale = !active || state.loading || Boolean(state.error);
@@ -258,18 +275,52 @@ export default function PythonInventoryPanel({
           </li>
         ))}
       </ul>
+      {bindings.length > 0 && (
+        <section className="python-bindings" aria-label="Python 项目绑定">
+          <h3>已有 Python 绑定</h3>
+          <ul>
+            {bindings.map((binding) => (
+              <li key={binding.bindingId}>
+                <p>
+                  <code>{binding.version}</code> · {binding.scope === "global" ? "全局" : "项目"} ·{" "}
+                  <code>{binding.configPath}</code>
+                </p>
+                <button
+                  className="btn"
+                  onClick={() =>
+                    setPlanning({
+                      installationId: binding.installationId,
+                      action: "unbind",
+                      bindingId: binding.bindingId,
+                    })
+                  }
+                >
+                  解除绑定
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {planning && state.snapshot && (
         <Suspense fallback={<p role="status">正在加载 Python 操作计划…</p>}>
           <OperationPlanDialog
             toolId="python"
             snapshotRequestId={state.snapshot.requestId}
             installationId={planning.installationId}
-            initialAction={planning.action === "bind" ? "bind" : undefined}
+            initialAction={
+              planning.action === "bind"
+                ? "bind"
+                : planning.action === "unbind"
+                  ? "unbind"
+                  : undefined
+            }
             initialBinding={
               planning.action === "bind"
                 ? { strategy: "direct", scope: "project", projectPath: "" }
                 : undefined
             }
+            initialBindingId={planning.bindingId}
             onClose={() => setPlanning(null)}
             onFinished={() => {
               if (active) void state.refresh();

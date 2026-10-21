@@ -1,7 +1,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  pythonBindings,
   pythonProject,
+  validatePythonBindings,
   validatePythonProject,
   type PythonProjectEnvironment,
 } from "./pythonProject";
@@ -114,3 +116,44 @@ function mutateEmpty() {
   value.candidates = [{}];
   return value;
 }
+
+it("Python 绑定列表通过校验并按后端原样返回", async () => {
+  const list = [
+    {
+      bindingId: "python-binding-1",
+      installationId: "python-mise-3.13.15",
+      version: "3.13.15",
+      locator: "/fixture/.local/share/mise/installs/python/3.13.15",
+      configPath: "/work/project/mise.toml",
+      scope: "project" as const,
+      state: "bound",
+    },
+  ];
+  expect(validatePythonBindings(list)).toEqual(list);
+  vi.mocked(invoke).mockResolvedValue(list);
+  await expect(pythonBindings()).resolves.toEqual(list);
+  expect(invoke).toHaveBeenCalledWith("python_bindings");
+});
+
+it("拒绝未来版本、跨作用域和缺失字段的 Python 绑定", () => {
+  for (const value of [
+    {},
+    [
+      {
+        ...{
+          bindingId: "b",
+          installationId: "i",
+          version: "3.13.15",
+          locator: "/l",
+          configPath: "/c",
+          scope: "registration",
+          state: "bound",
+        },
+      },
+    ],
+    [{}],
+    new Array(33).fill({}),
+  ]) {
+    expect(() => validatePythonBindings(value)).toThrow();
+  }
+});

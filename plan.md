@@ -43,7 +43,7 @@
 - ✅ **P14 工作包 04 — Python mise 安装/卸载**：原生 core:python 精确预编译安装、受控默认包设置、结果核验和取消后重扫已接入。前端 177 项、Rust 227 项、浏览器 34 场景通过；真实 mise + CPython 3.12.12 在可丢弃目录中完成 4 步安装及 4 步卸载，24 个正式保护路径未变，见 [实施记录](./docs/p14-python-mise.md)。其他 Python 渠道、绑定和项目配方仍待实现。
 
 - ✅ **P14 工作包 05 — Python uv 安装/卸载**：uv 托管 CPython 精确版本、`--no-bin`/`--install-dir`、受控缓存、次版本别名识别与执行前后重验已接入；卸载只处理真实精确目录，结果不以退出码为准。Rust 245 项、前端 218 项与静态/构建检查通过；真实 uv 0.12.1 在可丢弃目录完成安装 3.12.13 → 重扫健康实例 → 卸载 → 目录移除，真实 HOME/uv 目录/bin 未被写入，见 [实施记录](./docs/p14-python-uv.md)。uv 自身安装/升级、Windows/Linux 布局、Python 绑定与配方仍待实现。
-- 🚧 **P14 工作包 06 — Python 项目环境与绑定**：已完成 `mise.toml`/`.python-version`/`pyproject.toml` `requires-python`/`.tool-versions` 声明解析、PEP 440 子集约束、候选匹配与只读报告；并完成 mise 项目/全局绑定写入（差异预览、外部修改拒绝、写入后重扫核验、Python 详情入口）。真实临时项目核对与真实 mise 3.13.15 绑定均通过；解绑、绑定收据、自动补偿与 `mise which` 实际解析核验待继续，见 [实施记录](./docs/p14-python-project.md)。
+- 🚧 **P14 工作包 06 — Python 项目环境与绑定**：已完成 `mise.toml`/`.python-version`/`pyproject.toml` `requires-python`/`.tool-versions` 声明解析、PEP 440 子集约束、候选匹配与只读报告；并完成 mise 项目/全局绑定写入、私有收据、解绑与失败回滚（差异预览、外部修改拒绝、写入后重扫核验、Python 详情绑定/解绑入口）。真实临时项目核对、真实 mise 3.13.15 绑定/解绑均通过；`mise which` 实际解析核验待继续，见 [实施记录](./docs/p14-python-project.md)。
 
 
 ## 已排定的重构路线
@@ -55,7 +55,7 @@
 | 🚧 | P11 / 40 多来源只读清单及三平台扩展 | PR-01–03 的 macOS Node 样板完成；新增 Windows/Linux 和其余工具来源逐项接入 |
 | 🚧 | P12 / 41 统一操作与验证 | PR-04–06 限定实现完成；Homebrew 真实安装/卸载及托管、打包桌面 IPC 验收待补 |
 | 🚧 | P13 / 42 项目环境及三平台扩展 | macOS Node 限定范围完成；Python、其他工具与 Windows/Linux 作用域核对待扩；复杂隐式解析保持未知 |
-| 🚧 | P14 / 43 工具目录与配方 | 目录/导航、Python 五来源、计划及 mise/uv 写渠道完成；Python 项目声明与 mise 绑定写入完成，解绑/补偿、其余渠道、其他工具适配及项目配方待实现 |
+| 🚧 | P14 / 43 工具目录与配方 | 目录/导航、Python 五来源、计划及 mise/uv 写渠道完成；Python 项目声明、mise 绑定/解绑/回滚完成，其余渠道、其他工具适配及项目配方待实现 |
 | ⬜ | P15 / 44 诊断与运维 | doctor v2、PATH 治理、服务与缓存归属及能力；手动流程稳定后做定时巡检 |
 | ⬜ | P16 / 45 快照迁移与收口 | 跨来源迁移意图、旧格式兼容、旧入口退出、三平台及发布产物验收 |
 

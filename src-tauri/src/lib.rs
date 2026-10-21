@@ -667,6 +667,14 @@ async fn python_project_environment(
     .map_err(|_| "Python 项目核对线程中断，请重试".to_owned())?
 }
 
+/// Python 绑定收据列表；只读私有账本，不探测安装或改写配置。
+#[tauri::command(async)]
+fn python_bindings() -> Result<Vec<operation_plan::PythonBinding>, String> {
+    let options = providers::python::PythonScanOptions::from_environment()
+        .map_err(|_| "无法读取 Python 扫描上下文")?;
+    operation_plan::python_bindings(&options).map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 async fn operation_execute(
     state: tauri::State<'_, operation_plan::OperationPlanService>,
@@ -862,6 +870,7 @@ pub fn run() {
             tool_catalog,
             project_environment,
             python_project_environment,
+            python_bindings,
             inventory_cancel,
             install_preset,
             get_env_info,

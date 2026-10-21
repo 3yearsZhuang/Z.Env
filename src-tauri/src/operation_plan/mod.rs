@@ -1060,7 +1060,10 @@ impl OperationPlanService {
                         },
                     );
                 }
-                if failure.is_some() && changed && stored.binding.is_some() {
+                if failure.is_some()
+                    && changed
+                    && (stored.binding.is_some() || stored.python_binding.is_some())
+                {
                     let _ = self.record(id, |r| {
                         r.steps.push(ExecutionStep {
                             kind: StepKind::Compensate,
@@ -1251,6 +1254,12 @@ impl Drop for CancelWatch {
         }
     }
 }
+pub fn python_bindings(
+    options: &crate::providers::python::PythonScanOptions,
+) -> Result<Vec<PythonBinding>, PlanError> {
+    python::list_bindings(options)
+}
+
 #[cfg(test)]
 mod tests;
 
