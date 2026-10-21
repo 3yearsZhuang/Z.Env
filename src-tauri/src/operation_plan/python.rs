@@ -8,6 +8,7 @@ pub(super) enum WriteSpec {
     Mise(python_mise::WriteSpec),
     Uv(python_uv::WriteSpec),
     Brew(python_brew::WriteSpec),
+    Pyenv(python_pyenv::WriteSpec),
 }
 impl WriteSpec {
     fn program(&self) -> &PathBuf {
@@ -15,6 +16,7 @@ impl WriteSpec {
             Self::Mise(spec) => &spec.program,
             Self::Uv(spec) => &spec.program,
             Self::Brew(spec) => &spec.program,
+            Self::Pyenv(spec) => &spec.program,
         }
     }
     fn argv(&self) -> &[String] {
@@ -22,6 +24,7 @@ impl WriteSpec {
             Self::Mise(spec) => &spec.argv,
             Self::Uv(spec) => &spec.argv,
             Self::Brew(spec) => &spec.argv,
+            Self::Pyenv(spec) => &spec.argv,
         }
     }
     fn version(&self) -> &str {
@@ -29,6 +32,7 @@ impl WriteSpec {
             Self::Mise(spec) => &spec.version,
             Self::Uv(spec) => &spec.version,
             Self::Brew(spec) => &spec.formula,
+            Self::Pyenv(spec) => &spec.version,
         }
     }
     fn impact(&self) -> &[String] {
@@ -36,6 +40,7 @@ impl WriteSpec {
             Self::Mise(spec) => &spec.impact,
             Self::Uv(spec) => &spec.impact,
             Self::Brew(spec) => &spec.impact,
+            Self::Pyenv(spec) => &spec.impact,
         }
     }
     fn environment_keys(&self) -> Vec<String> {
@@ -43,6 +48,7 @@ impl WriteSpec {
             Self::Mise(_) => python_mise::environment_keys(),
             Self::Uv(_) => python_uv::environment_keys(),
             Self::Brew(_) => python_brew::environment_keys(),
+            Self::Pyenv(_) => python_pyenv::environment_keys(),
         }
     }
     fn revalidate(
@@ -55,6 +61,7 @@ impl WriteSpec {
             Self::Mise(spec) => spec.revalidate(target, snapshot, options),
             Self::Uv(spec) => spec.revalidate(target, snapshot, options),
             Self::Brew(spec) => spec.revalidate(target, snapshot, options),
+            Self::Pyenv(spec) => spec.revalidate(target, snapshot, options),
         }
     }
     fn run(&self, options: &PythonScanOptions, token: &CancellationToken) -> Result<(), PlanError> {
@@ -62,6 +69,7 @@ impl WriteSpec {
             Self::Mise(spec) => spec.run(options, token),
             Self::Uv(spec) => spec.run(options, token),
             Self::Brew(spec) => spec.run(options, token),
+            Self::Pyenv(spec) => spec.run(options, token),
         }
     }
     fn verify(
@@ -73,6 +81,7 @@ impl WriteSpec {
             Self::Mise(spec) => spec.verify(snapshot, options),
             Self::Uv(spec) => spec.verify(snapshot, options),
             Self::Brew(spec) => spec.verify(snapshot, options),
+            Self::Pyenv(spec) => spec.verify(snapshot, options),
         }
     }
 }
@@ -518,6 +527,14 @@ impl OperationPlanService {
                     &options,
                 )
                 .map(WriteSpec::Brew),
+                ProviderId::Pyenv => python_pyenv::prepare(
+                    action,
+                    target.as_ref(),
+                    requested_version.as_deref(),
+                    &snapshot,
+                    &options,
+                )
+                .map(WriteSpec::Pyenv),
                 _ => Err(PlanError::Unsupported),
             };
             match prepared {
@@ -544,7 +561,8 @@ impl OperationPlanService {
                             match package.provider_id {
                                 ProviderId::Mise => "重验 core:python 收据、安装记录与受控设置",
                                 ProviderId::Uv => "重验 uv 能力、安装目录与次版本别名",
-                                _ => "重验 core formula、依赖与归属",
+                                ProviderId::Brew => "重验 core formula、依赖与归属",
+                                _ => "重验 pyenv 根目录、插件与构建依赖",
                             },
                             &options.common.home,
                         ),
@@ -567,7 +585,10 @@ impl OperationPlanService {
                     let (channel, subject) = match package.provider_id {
                         ProviderId::Mise => ("精确预编译", format!("CPython {}", spec.version())),
                         ProviderId::Uv => ("uv 托管精确", format!("CPython {}", spec.version())),
-                        _ => ("Homebrew core", format!("formula {}", spec.version())),
+                        ProviderId::Brew => {
+                            ("Homebrew core", format!("formula {}", spec.version()))
+                        }
+                        _ => ("pyenv 源码编译", format!("CPython {}", spec.version())),
                     };
                     promise = format!(
                         "{}{channel} {subject}；原生记录与实例结果须独立核对，不改写版本请求，实际解析需另行核对",

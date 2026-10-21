@@ -7,6 +7,7 @@ mod python;
 mod python_binding;
 mod python_brew;
 mod python_mise;
+mod python_pyenv;
 mod python_uv;
 mod v2;
 mod writes;

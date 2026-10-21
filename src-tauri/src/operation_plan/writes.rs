@@ -127,6 +127,33 @@ pub(super) fn uv_command(
         .env("UV_CACHE_DIR", options.home.join(".cache/uv"));
     cmd
 }
+/// pyenv 受控编译：固定根目录与工具链 PATH，不加载用户 shell 或项目配置。
+pub(super) fn pyenv_command(program: &Path, options: &NodeScanOptions, root: &Path) -> Command {
+    let mut cmd = base_command(program, options);
+    let path = std::env::join_paths([
+        root.join("bin"),
+        root.join("shims"),
+        PathBuf::from("/opt/homebrew/bin"),
+        PathBuf::from("/usr/local/bin"),
+        PathBuf::from("/usr/bin"),
+        PathBuf::from("/bin"),
+        PathBuf::from("/usr/sbin"),
+        PathBuf::from("/sbin"),
+    ])
+    .unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".into());
+    cmd.env("PYENV_ROOT", root)
+        .env("PYENV_YES", "1")
+        .env("PATH", path);
+    cmd
+}
+pub(super) fn pyenv_environment_keys() -> Vec<String> {
+    vec![
+        "HOME".into(),
+        "PATH".into(),
+        "PYENV_ROOT".into(),
+        "PYENV_YES".into(),
+    ]
+}
 pub(super) fn environment_keys(provider: ProviderId) -> Vec<String> {
     let mut keys = vec!["HOME".into(), "PATH".into()];
     let names: &[&str] = match provider {
