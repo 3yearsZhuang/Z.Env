@@ -70,22 +70,26 @@ mod tests {
 
     #[test]
     fn installed_cache_roundtrip_and_invalidate() {
-        set_installed("brew", vec!["git".to_string(), "wget".to_string()]);
+        // 独立键避免与 versions 用例并行时互相 invalidate。
+        set_installed(
+            "brew-test-installed",
+            vec!["git".to_string(), "wget".to_string()],
+        );
         assert_eq!(
-            get_installed("brew"),
+            get_installed("brew-test-installed"),
             Some(vec!["git".to_string(), "wget".to_string()])
         );
         // 其他管理器未写入
         assert_eq!(get_installed("apt"), None);
         // 失效后返回 None
-        invalidate("brew");
-        assert_eq!(get_installed("brew"), None);
+        invalidate("brew-test-installed");
+        assert_eq!(get_installed("brew-test-installed"), None);
     }
 
     #[test]
     fn versions_cache_roundtrip_and_invalidate() {
         set_versions(
-            "brew",
+            "brew-test-versions",
             vec![SystemPkg {
                 kind: "formula".into(),
                 tool: None,
@@ -93,11 +97,11 @@ mod tests {
                 version: Some("2.46.0".to_string()),
             }],
         );
-        let got = get_versions("brew").unwrap();
+        let got = get_versions("brew-test-versions").unwrap();
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].name, "git");
         assert_eq!(got[0].version.as_deref(), Some("2.46.0"));
-        invalidate("brew");
-        assert!(get_versions("brew").is_none());
+        invalidate("brew-test-versions");
+        assert!(get_versions("brew-test-versions").is_none());
     }
 }
