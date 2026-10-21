@@ -365,6 +365,7 @@ list) [ -f "$ROOT/list" ] && /bin/cat "$ROOT/list"; exit 0;;
 uses) [ -f "$ROOT/uses" ] && /bin/cat "$ROOT/uses"; exit 0;;
 install)
   [ -f "$ROOT/zero" ] && exit 0
+  if [ -f "$ROOT/slow" ]; then /usr/bin/touch "$ROOT/started"; /bin/sleep 30; fi
   /bin/mkdir -p "$ROOT/prefix/Cellar/python@3.13/3.13.5/bin"
   printf '%s\n' 'python@3.13 3.13.5' > "$ROOT/list"
   exit 0;;
@@ -566,6 +567,34 @@ exit 99
             &options,
         )
         .is_err());
+    }
+
+    #[test]
+    fn cancelled_install_reaps_manager_before_keg() {
+        let (directory, options) = options();
+        std::fs::write(directory.path().join("slow"), "").unwrap();
+        let spec = prepare(
+            Action::Install,
+            &package(),
+            None,
+            None,
+            &snapshot(vec![], true),
+            &options,
+        )
+        .unwrap();
+        let token = CancellationToken::default();
+        std::thread::scope(|scope| {
+            let worker = scope.spawn(|| spec.run(&options, &token));
+            let started = directory.path().join("started");
+            let waited = std::time::Instant::now();
+            while !started.exists() {
+                assert!(waited.elapsed() < std::time::Duration::from_secs(5));
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            token.cancel();
+            assert!(matches!(worker.join().unwrap(), Err(PlanError::Cancelled)));
+        });
+        assert!(!directory.path().join("prefix/Cellar/python@3.13").exists());
     }
 
     #[test]

@@ -30,7 +30,7 @@ pyenv 与 mise/uv 不同：它通过 python-build 现场编译 CPython，需要 
 
 | 检查 | 结果与边界 |
 | --- | --- |
-| Rust 单测 | pyenv 4 项：安装编译并核验、卸载并重扫、缺构建工具/插件/已有版本拒绝、0 退出无目录不算成功 |
+| Rust 单测 | pyenv 5 项：安装编译并核验、卸载并重扫、缺构建工具/插件/已有版本拒绝、0 退出无目录不算成功、取消回收且不落版本目录 |
 | 伪管理器 | 固定 pyenv 脚本覆盖 version/root/commands/install/uninstall；构建工具为本地空脚本 |
 | 真实 pyenv 编译 | **未执行**；本机无 pyenv，且真实编译需要构建依赖与较长耗时，需独立可丢弃环境验收 |
 | 静态/构建 | 随本轮全量门禁执行 fmt、clippy `-D warnings`、测试与构建 |

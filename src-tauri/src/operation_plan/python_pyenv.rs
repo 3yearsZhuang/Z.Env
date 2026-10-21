@@ -349,6 +349,7 @@ root) printf '%s\n' "$ROOT"; exit 0;;
 commands) printf 'install\nuninstall\nversions\n'; exit 0;;
 install)
   [ -f "{root}/zero" ] && exit 0
+  if [ -f "{root}/slow" ]; then /usr/bin/touch "{root}/started"; /bin/sleep 30; fi
   /bin/mkdir -p "$ROOT/versions/$2/bin"
   printf '#!/bin/sh\nexit 0\n' > "$ROOT/versions/$2/bin/python3"
   /bin/chmod 755 "$ROOT/versions/$2/bin/python3"
@@ -515,6 +516,33 @@ exit 99
             &options,
         )
         .is_err());
+    }
+
+    #[test]
+    fn cancelled_pyenv_install_reaps_build_process() {
+        let (_directory, options) = options();
+        fs::write(options.pyenv_root.join("slow"), "").unwrap();
+        let spec = prepare(
+            Action::Install,
+            None,
+            Some("3.13.15"),
+            &snapshot(&options, vec![]),
+            &options,
+        )
+        .unwrap();
+        let token = CancellationToken::default();
+        std::thread::scope(|scope| {
+            let worker = scope.spawn(|| spec.run(&options, &token));
+            let started = options.pyenv_root.join("started");
+            let waited = std::time::Instant::now();
+            while !started.exists() {
+                assert!(waited.elapsed() < std::time::Duration::from_secs(5));
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            token.cancel();
+            assert!(matches!(worker.join().unwrap(), Err(PlanError::Cancelled)));
+        });
+        assert!(!options.pyenv_root.join("versions/3.13.15").exists());
     }
 
     #[test]

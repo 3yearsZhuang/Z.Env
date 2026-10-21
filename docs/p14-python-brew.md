@@ -31,7 +31,7 @@ Homebrew 的版本承诺与 mise/uv 不同：formula 随渠道更新，不能承
 
 | 检查 | 结果与边界 |
 | --- | --- |
-| Rust 单测 | Homebrew 5 项：formula 白名单、安装写 keg 并核验、已有 keg/精确版本/不完整来源拒绝、卸载单 keg/无依赖/归属、0 退出无产物与外部变化 |
+| Rust 单测 | Homebrew 6 项：formula 白名单、安装写 keg 并核验、已有 keg/精确版本/不完整来源拒绝、卸载单 keg/无依赖/归属、0 退出无产物与外部变化、取消回收且不落 keg |
 | 伪管理器 | 固定 `brew` 脚本覆盖 prefix/cellar/info/list/uses/install/uninstall；不访问真实 Homebrew |
 | 真实 Homebrew 写入 | **未执行**；本机真实 `brew install/uninstall` 会改变用户环境，需独立可丢弃或专用前缀验收 |
 | 静态/构建 | 随本轮全量门禁执行 fmt、clippy `-D warnings`、测试与构建 |
