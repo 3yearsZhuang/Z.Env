@@ -3,6 +3,7 @@ mod constraint;
 mod context;
 mod files;
 pub mod model;
+mod python;
 #[cfg(all(test, unix))]
 mod tests;
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
 use constraint::{Constraint, Version};
 use files::Reader;
 pub use model::*;
+pub use python::inspect_python;
 use std::path::Path;
 
 pub(super) fn now() -> u64 {

@@ -640,6 +640,32 @@ async fn project_environment(
     .map_err(|_| "项目核对线程中断，请重试".to_owned())?
 }
 
+/// Python 项目声明、候选匹配与当前选择只读核对；不写配置、不执行解释器。
+#[tauri::command]
+async fn python_project_environment(
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    request: project_environment::PythonProjectRequest,
+) -> Result<project_environment::PythonProjectEnvironment, String> {
+    let lease = inventory
+        .begin_tool(
+            request.request_id.clone(),
+            None,
+            inventory::query::InventoryTool::Python,
+        )
+        .map_err(|e| e.to_string())?;
+    let expected = request.snapshot_request_id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        lease
+            .read_snapshot(&expected, |snapshot, _| {
+                project_environment::inspect_python(snapshot, &request)
+            })
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "Python 项目核对线程中断，请重试".to_owned())?
+}
+
 #[tauri::command]
 async fn operation_execute(
     state: tauri::State<'_, operation_plan::OperationPlanService>,
@@ -834,6 +860,7 @@ pub fn run() {
             inventory_snapshot,
             tool_catalog,
             project_environment,
+            python_project_environment,
             inventory_cancel,
             install_preset,
             get_env_info,

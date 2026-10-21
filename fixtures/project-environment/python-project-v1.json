@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "requestId": "python-project-contract",
+  "snapshotRequestId": "python-inventory-contract",
+  "projectDirectory": "/fixture/project",
+  "observedAt": 1792512000000,
+  "declarations": [
+    {
+      "source": "mise tools.python",
+      "path": "/fixture/project/mise.toml",
+      "requirement": "3.13",
+      "supported": true,
+      "reason": null
+    },
+    {
+      "source": "pyproject requires-python",
+      "path": "/fixture/project/pyproject.toml",
+      "requirement": ">=3.10,<3.14",
+      "supported": true,
+      "reason": null
+    }
+  ],
+  "requirementState": "supported",
+  "candidates": [
+    {
+      "installationId": "python-mise-3.13.15",
+      "providerId": "mise",
+      "version": "3.13.15",
+      "locator": "/fixture/.local/share/mise/installs/python/3.13.15",
+      "requirementMatch": "satisfied",
+      "usable": true,
+      "reason": null
+    },
+    {
+      "installationId": "python-uv-3.14.6",
+      "providerId": "uv",
+      "version": "3.14.6",
+      "locator": "/fixture/.local/share/uv/python/cpython-3.14.6-macos-aarch64-none",
+      "requirementMatch": "mismatch",
+      "usable": true,
+      "reason": null
+    },
+    {
+      "installationId": "python-path-3.13.15",
+      "providerId": "path",
+      "version": "3.13.15",
+      "locator": "/fixture/.local/bin/python3",
+      "requirementMatch": "satisfied",
+      "usable": false,
+      "reason": "PATH 记录只作观测，不能作为项目绑定目标"
+    }
+  ],
+  "inventoryComplete": true,
+  "selection": {
+    "kind": "mise",
+    "path": "/fixture/project/mise.toml",
+    "requirement": "3.13",
+    "reason": null
+  },
+  "issues": [],
+  "files": [
+    {
+      "path": "/fixture/project/mise.toml",
+      "canonicalPath": "/fixture/project/mise.toml",
+      "exists": true,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "path": "/fixture/project/pyproject.toml",
+      "canonicalPath": "/fixture/project/pyproject.toml",
+      "exists": true,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ]
+}

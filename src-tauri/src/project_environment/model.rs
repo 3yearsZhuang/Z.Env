@@ -102,3 +102,49 @@ pub struct ProjectEnvironment {
     pub issues: Vec<Issue>,
     pub files: Vec<FileEvidence>,
 }
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PythonProjectRequest {
+    pub request_id: String,
+    pub snapshot_request_id: String,
+    pub path: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PythonSelection {
+    pub kind: String,
+    pub path: Option<String>,
+    pub requirement: Option<String>,
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PythonCandidate {
+    pub installation_id: InstallationId,
+    pub provider_id: crate::domain::ProviderId,
+    pub version: Option<String>,
+    pub locator: String,
+    pub requirement_match: Match,
+    pub usable: bool,
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PythonProjectEnvironment {
+    pub schema_version: u32,
+    pub request_id: String,
+    pub snapshot_request_id: String,
+    pub project_directory: String,
+    pub observed_at: u64,
+    pub declarations: Vec<Declaration>,
+    pub requirement_state: RequirementState,
+    pub candidates: Vec<PythonCandidate>,
+    pub inventory_complete: bool,
+    pub selection: PythonSelection,
+    pub issues: Vec<Issue>,
+    pub files: Vec<FileEvidence>,
+}
