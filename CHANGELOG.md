@@ -11,7 +11,7 @@
 - 安装/卸载/绑定/重新验证统一由后端签发短期单次计划：执行前按快照、目标、配置指纹与文件证据重验，支持取消、超时、补偿与重启后中断识别；安装成功不等于环境已生效。
 - 统一操作计划 v2 增加 tagged subject（当前开放 Node/Python）与步骤图投影，旧 v1 预览与 journal 保持可读；执行仍只提交计划 ID，不接受前端拼接命令。
 - Node：mise/Homebrew 精确安装、受支持卸载、直连/托管/项目 PATH 绑定与解除、项目环境声明与候选解析。
-- Python：mise 精确预编译安装/卸载；uv 托管精确安装/卸载，固定 `--no-bin` 与受控安装目录，识别次版本别名；Homebrew core formula 安装/卸载带 formula/keg/反向依赖门禁，pyenv 受控源码编译带根目录/插件/构建工具门禁（真实写入与编译验收待补）；`uv uninstall` 的 0 退出不作为删除成功证据。
+- Python：mise 精确预编译安装/卸载；uv 托管精确安装/卸载，固定 `--no-bin` 与受控安装目录，识别次版本别名；Homebrew core formula 安装/卸载带 formula/keg/反向依赖门禁，pyenv 受控源码编译带根目录/插件/构建工具门禁，并完成真实 CPython 3.12.13 编译/卸载（Homebrew 真实写入待补）；`uv uninstall` 的 0 退出不作为删除成功证据。
 - 工具目录与导航：七项工具定义、来源接入账本、实例投影与五个主入口；Python/Node 详情可查看来源、实例与计划。
 - Python 项目声明与 mise 绑定：解析 mise.toml、.python-version、pyproject requires-python 与 .tool-versions，按 PEP 440 子集匹配候选；健康 mise 实例可预览并写入项目/全局 [tools] python，保留其他工具与注释、拒绝外部修改；私有收据支持解绑并恢复原值，失败时回滚，写入后用 `mise which` 核对实际解析路径。
 

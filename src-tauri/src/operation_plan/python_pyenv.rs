@@ -255,7 +255,7 @@ impl WriteSpec {
             &mut cmd,
             &ProbeLimits {
                 timeout: Duration::from_secs(3600),
-                max_output_bytes: 1024 * 1024,
+                max_output_bytes: 8 * 1024 * 1024,
             },
             token,
         )

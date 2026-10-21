@@ -917,8 +917,26 @@ fn python_mise_mutation_invalidates_only_python_source_and_preserves_tool_scope(
     drop(lease);
     let lease = service
         .begin_tool(
-            "forbidden-python-brew-write".into(),
+            "allowed-python-brew-write".into(),
             Some(ProviderId::Brew),
+            InventoryTool::Python,
+        )
+        .unwrap();
+    lease.mark_mutating().unwrap();
+    drop(lease);
+    let lease = service
+        .begin_tool(
+            "allowed-python-pyenv-write".into(),
+            Some(ProviderId::Pyenv),
+            InventoryTool::Python,
+        )
+        .unwrap();
+    lease.mark_mutating().unwrap();
+    drop(lease);
+    let lease = service
+        .begin_tool(
+            "forbidden-python-path-write".into(),
+            Some(ProviderId::Path),
             InventoryTool::Python,
         )
         .unwrap();

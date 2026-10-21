@@ -294,9 +294,14 @@ impl QueryLease {
             .provider_id
             .ok_or(QueryError::InvalidScan("变更必须限定单来源"))?;
         if self.tool == InventoryTool::Python
-            && !matches!(provider, ProviderId::Mise | ProviderId::Uv)
+            && !matches!(
+                provider,
+                ProviderId::Mise | ProviderId::Uv | ProviderId::Brew | ProviderId::Pyenv
+            )
         {
-            return Err(QueryError::InvalidScan("Python 仅开放 mise 与 uv 变更租约"));
+            return Err(QueryError::InvalidScan(
+                "Python 仅开放 mise/uv/brew/pyenv 变更租约",
+            ));
         }
         let mut state = lock_state(&self.state);
         if !self.owns_active(&state) {

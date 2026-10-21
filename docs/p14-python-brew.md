@@ -42,4 +42,4 @@ Homebrew 的版本承诺与 mise/uv 不同：formula 随渠道更新，不能承
   宣称 Homebrew 渠道已实机闭环。
 - 卸载只处理唯一 keg 且无反向依赖的 formula；不自动卸载共享依赖，也不改写 venv/项目引用。
 - 第三方 tap、精确补丁版、Homebrew Python 的 `python3` 别名与多 keg 选择未开放。
-- 下一步：真实 Homebrew 可丢弃验收、pyenv 受控编译渠道；随后项目配方与 P15/P16。
+- 下一步：真实 Homebrew 可丢弃验收；pyenv 真实编译已另行完成；随后项目配方与 P15/P16。

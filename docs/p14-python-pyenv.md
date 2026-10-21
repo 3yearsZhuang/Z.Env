@@ -1,8 +1,8 @@
 # P14 / 43 — Python pyenv 受控编译渠道（工作包 08）
 
 日期：2026-10-21（Asia/Shanghai），分支 `main`。
-状态：**受控源码编译计划、构建依赖/插件门禁与伪管理器场景完成；真实 pyenv 编译验收待补。**
-本机未安装 pyenv，本轮未执行真实源码编译，也未安装系统依赖。
+状态：**受控源码编译计划、构建依赖/插件门禁、伪管理器场景与真实可丢弃 pyenv 编译安装/卸载完成；其他版本/平台与真实失败/取消场景待补。**
+真实验收使用临时克隆的 pyenv 与可丢弃 `PYENV_ROOT`，未安装到用户 pyenv，也未修改用户环境。
 
 ## 动因
 
@@ -25,6 +25,9 @@ pyenv 与 mise/uv 不同：它通过 python-build 现场编译 CPython，需要 
 - 执行超时 1 小时、输出预算 1 MiB；取消/失败回收进程树。结果以版本目录与重扫实例为准，
   退出码不作为编译或删除成功证明。
 - 计划接线：Python `WriteSpec` 增加 Pyenv 分支；`python.rs` 预览的命令与执行共用固定 argv。
+  Python 写租约同步扩到 `brew`/`pyenv`，否则真实 Command 步骤会被旧的 mise/uv 白名单拒绝。
+- 原生验收入口 [python_pyenv_operations.rs](../src-tauri/examples/python_pyenv_operations.rs)：
+  在 `ZENV_ACCEPTANCE_ROOT` 内扫描、预览、安装、重扫、卸载，并输出计划与任务记录。
 
 ## 验证记录
 
@@ -32,12 +35,13 @@ pyenv 与 mise/uv 不同：它通过 python-build 现场编译 CPython，需要 
 | --- | --- |
 | Rust 单测 | pyenv 5 项：安装编译并核验、卸载并重扫、缺构建工具/插件/已有版本拒绝、0 退出无目录不算成功、取消回收且不落版本目录 |
 | 伪管理器 | 固定 pyenv 脚本覆盖 version/root/commands/install/uninstall；构建工具为本地空脚本 |
-| 真实 pyenv 编译 | **未执行**；本机无 pyenv，且真实编译需要构建依赖与较长耗时，需独立可丢弃环境验收 |
+| 真实 pyenv 编译 | 临时克隆 pyenv + 可丢弃 `PYENV_ROOT`：python-build 真实编译 CPython 3.12.13 成功；应用计划 4 步安装全部 `completed/installed`，重扫出现健康 Pyenv 实例；4 步卸载 `completed/uninstalled`，版本目录移除。未写用户 pyenv/state/cache，未安装系统依赖 |
+| 真实构建环境 | 使用系统 `cc/make/patch/git/curl/tar` 与 Homebrew `openssl@3`/readline/ncurses；python-build 自动发现依赖 |
 | 静态/构建 | 随本轮全量门禁执行 fmt、clippy `-D warnings`、测试与构建 |
 
 ## 边界与后续
 
-- 真实 python-build、插件/补丁、OpenSSL/readline 依赖、构建失败残留与取消后重扫仍待独立验收；
-  伪管理器测试不能宣告 pyenv 渠道实机闭环。
+- 真实 3.12.13 编译/卸载已闭环；其他 Python 版本、Linux/Windows pyenv、真实构建失败残留与真实取消
+  场景仍待补。伪管理器的失败/取消/零退出场景与真实编译不能互相替代。
 - 不自动安装系统依赖，不修改 shell 或项目版本请求；rehash 与已有 venv 影响需另行核对。
-- 下一步：在独立环境完成 pyenv 真实编译与失败/取消场景；随后项目配方与 P15/P16。
+- 下一步：真实构建失败/取消与更多版本矩阵；随后 Homebrew 真实写入、项目配方与 P15/P16。
