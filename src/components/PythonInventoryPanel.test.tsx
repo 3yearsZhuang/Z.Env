@@ -46,7 +46,11 @@ it("Python 读取不复用 Node 范围，来源和隔离探针分开，绑定与
   render(<PythonInventoryPanel {...props} />);
   expect(useInventory).toHaveBeenCalledWith(true, "python");
   expect(screen.getByText("3 条来源记录 · 2 条通过隔离探针")).toBeTruthy();
-  expect(screen.getByText(/mise 与 uv 托管安装\/卸载以计划中的能力、归属和影响为准/)).toBeTruthy();
+  expect(
+    screen.getByText(
+      /mise\/uv 精确安装与 Homebrew core formula 安装\/卸载以计划中的能力、归属和影响为准/,
+    ),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^执行/ })).toBeNull();
   expect(screen.getByRole("button", { name: "预览 Python 安装计划" })).toBeTruthy();
   const bind = screen.getAllByRole("button", { name: "绑定此实例到项目" });
