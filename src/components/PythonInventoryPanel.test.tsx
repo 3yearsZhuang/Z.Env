@@ -10,11 +10,13 @@ vi.mock("./OperationPlanDialog", () => ({
     toolId: string;
     snapshotRequestId: string;
     installationId: string | null;
+    initialAction?: string;
     onFinished: () => void;
     onClose: () => void;
   }) => (
     <div role="dialog" aria-label="测试计划">
-      {p.toolId} · {p.snapshotRequestId} · {p.installationId ?? "install"}
+      {p.toolId} · {p.snapshotRequestId} · {p.installationId ?? "install"} ·{" "}
+      {p.initialAction ?? "default"}
       <button onClick={p.onFinished}>完成并刷新</button>
       <button onClick={p.onClose}>关闭测试计划</button>
     </div>
@@ -36,13 +38,19 @@ beforeEach(() => {
   vi.mocked(useInventory).mockImplementation(() => state);
 });
 afterEach(cleanup);
-it("Python 读取不复用 Node 范围，来源和隔离探针分开，安装只提供预览", () => {
+it("Python 读取不复用 Node 范围，来源和隔离探针分开，绑定与安装入口显式", async () => {
   render(<PythonInventoryPanel {...props} />);
   expect(useInventory).toHaveBeenCalledWith(true, "python");
   expect(screen.getByText("3 条来源记录 · 2 条通过隔离探针")).toBeTruthy();
   expect(screen.getByText(/mise 与 uv 托管安装\/卸载以计划中的能力、归属和影响为准/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^执行|绑定/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^执行/ })).toBeNull();
   expect(screen.getByRole("button", { name: "预览 Python 安装计划" })).toBeTruthy();
+  const bind = screen.getAllByRole("button", { name: "绑定此实例到项目" });
+  expect(bind.length).toBeGreaterThan(0);
+  fireEvent.click(bind[0]);
+  const dialog = await screen.findByRole("dialog", { name: "测试计划" });
+  expect(dialog.textContent).toContain("bind");
+  fireEvent.click(screen.getByRole("button", { name: "关闭测试计划" }));
   fireEvent.click(screen.getByRole("button", { name: "重试 pyenv Python 来源" }));
   expect(state.refresh).toHaveBeenCalledWith("pyenv");
 });

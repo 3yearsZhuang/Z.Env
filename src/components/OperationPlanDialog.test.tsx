@@ -443,6 +443,7 @@ it("Python 验证显式绑定工具，复用签发 ID 并拒绝其他工具的�
   expect(screen.getAllByRole("option").map((e) => e.textContent)).toEqual([
     "重新验证此实例",
     "卸载此实例",
+    "绑定此实例",
   ]);
   await user.click(screen.getByRole("button", { name: "生成预览" }));
   expect(operationPlan).toHaveBeenLastCalledWith(
@@ -452,6 +453,50 @@ it("Python 验证显式绑定工具，复用签发 ID 并拒绝其他工具的�
   await user.click(await screen.findByRole("button", { name: "执行重新验证" }));
   await screen.findByText(/执行结果与当前工具计划不匹配/);
   expect(screen.queryByText(/原实例已重新验证/)).toBeNull();
+});
+it("Python 绑定预览提交项目作用域与精确实例", async () => {
+  const user = userEvent.setup();
+  vi.mocked(operationPlan).mockImplementation(async () => {
+    const value = pythonPlan();
+    value.action = "bind";
+    value.capability = { canPreview: true, canExecute: true, reason: null };
+    return value;
+  });
+  render(
+    <OperationPlanDialog
+      toolId="python"
+      snapshotRequestId="snapshot"
+      installationId="instance"
+      initialAction="bind"
+      initialBinding={{ strategy: "direct", scope: "project", projectPath: "/work/project" }}
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  expect((screen.getByRole("combobox", { name: "计划操作" }) as HTMLSelectElement).value).toBe(
+    "bind",
+  );
+  expect((screen.getByRole("combobox", { name: "绑定方式" }) as HTMLSelectElement).value).toBe(
+    "direct",
+  );
+  expect((screen.getByRole("combobox", { name: "绑定作用范围" }) as HTMLSelectElement).value).toBe(
+    "project",
+  );
+  expect((screen.getByRole("textbox", { name: "绑定项目路径" }) as HTMLInputElement).value).toBe(
+    "/work/project",
+  );
+  await user.click(screen.getByRole("button", { name: "生成预览" }));
+  expect(operationPlan).toHaveBeenLastCalledWith(
+    {
+      snapshotRequestId: "snapshot",
+      intent: {
+        action: "bind",
+        installationId: "instance",
+        binding: { strategy: "direct", scope: "project", projectPath: "/work/project" },
+      },
+    },
+    "python",
+  );
 });
 it("Python 四渠道预览区分精确版本和 formula，没有写执行入口", async () => {
   const user = userEvent.setup();

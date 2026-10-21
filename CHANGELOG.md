@@ -13,7 +13,7 @@
 - Node：mise/Homebrew 精确安装、受支持卸载、直连/托管/项目 PATH 绑定与解除、项目环境声明与候选解析。
 - Python：mise 精确预编译安装/卸载；uv 托管精确安装/卸载，固定 `--no-bin` 与受控安装目录，识别次版本别名；`uv uninstall` 的 0 退出不作为删除成功证据。
 - 工具目录与导航：七项工具定义、来源接入账本、实例投影与五个主入口；Python/Node 详情可查看来源、实例与计划。
-- Python 项目声明只读核对：解析 mise.toml、.python-version、pyproject requires-python 与 .tool-versions，按 PEP 440 子集匹配候选；冲突和未知语法保持未知，尚未写入配置。
+- Python 项目声明与 mise 绑定：解析 mise.toml、.python-version、pyproject requires-python 与 .tool-versions，按 PEP 440 子集匹配候选；健康 mise 实例可预览并写入项目/全局 [tools] python，保留其他工具与注释、拒绝外部修改；解绑与补偿尚未开放。
 
 **可靠性与平台底座**
 

@@ -194,6 +194,7 @@ impl OperationPlanService {
         };
         let mut steps = vec![];
         let mut impact = vec![];
+        let mut python_binding = None;
         let (action, target, package, mut promise, mut capability) = match request.intent {
             PlanIntent::Install {
                 provider_id,
@@ -289,11 +290,7 @@ impl OperationPlanService {
                     },
                 )
             }
-            PlanIntent::Verify { installation_id }
-            | PlanIntent::Uninstall { installation_id }
-            | PlanIntent::Bind {
-                installation_id, ..
-            } => {
+            PlanIntent::Verify { installation_id } | PlanIntent::Uninstall { installation_id } => {
                 let target = snapshot
                     .installations
                     .iter()
@@ -302,21 +299,17 @@ impl OperationPlanService {
                     })
                     .cloned()
                     .ok_or(PlanError::Stale)?;
-                // Verify 复用共享执行器；Install/Uninstall 只有写渠道准备成功后才开放执行。
                 let action = match requested_action {
-                    Some(a) => a,
+                    Some(action) => action,
                     None => unreachable!(),
                 };
-                let ready = action != Action::Bind && target_ready(&snapshot, &target);
-                let reason = if action == Action::Bind {
-                    Some("Python 绑定、虚拟环境及项目作用域尚未接入；不能转交 Node 执行器".into())
-                } else if !ready {
+                let ready = target_ready(&snapshot, &target);
+                let reason = if !ready {
                     Some("此实例尚无当前健康的隔离探针证据；未知 PATH 文件、过期及异常记录不会自动执行".into())
                 } else {
                     None
                 };
-                let enabled = ready;
-                if enabled {
+                if ready {
                     if action == Action::Uninstall {
                         steps = vec![
                             step(
@@ -381,9 +374,68 @@ impl OperationPlanService {
                     target.provider_package.clone(),
                     promise,
                     Capability {
-                        can_preview: enabled,
-                        can_execute: action == Action::Verify && enabled,
+                        can_preview: ready,
+                        can_execute: action == Action::Verify && ready,
                         reason,
+                    },
+                )
+            }
+            PlanIntent::Bind {
+                installation_id,
+                binding,
+            } => {
+                let target = snapshot
+                    .installations
+                    .iter()
+                    .find(|i| {
+                        i.installation_id == installation_id && i.tool_id == ToolId::from("python")
+                    })
+                    .cloned()
+                    .ok_or(PlanError::Stale)?;
+                let binding = binding.ok_or(PlanError::Unsupported)?;
+                let spec =
+                    python_binding::prepare_bind(&target, &snapshot, &binding, &config_path)?;
+                let scope = if binding.scope == BindingScope::Global {
+                    "全局"
+                } else {
+                    "项目"
+                };
+                steps = vec![
+                    step(
+                        StepKind::Preflight,
+                        "重验 mise 实例与目标配置未被外部修改",
+                        &options.common.home,
+                    ),
+                    step(
+                        StepKind::Command,
+                        "写入 [tools] Python 选择并保留注释与备份",
+                        &options.common.home,
+                    ),
+                    step(
+                        StepKind::Refresh,
+                        "写入后重扫 Python 来源并核对实例",
+                        &options.common.home,
+                    ),
+                    step(
+                        StepKind::Verify,
+                        "核对配置值与实例仍健康；实际解析需另行确认",
+                        &options.common.home,
+                    ),
+                ];
+                impact = spec.impact.clone();
+                python_binding = Some(spec);
+                (
+                    Action::Bind,
+                    Some(target.clone()),
+                    target.provider_package.clone(),
+                    format!(
+                        "把精确 CPython {} 写入{scope} mise 配置；配置写入不等于实际解析、终端或 IDE 生效",
+                        target.version.as_deref().unwrap_or("未知")
+                    ),
+                    Capability {
+                        can_preview: true,
+                        can_execute: true,
+                        reason: None,
                     },
                 )
             }
@@ -501,6 +553,11 @@ impl OperationPlanService {
                 return Err(PlanError::EvidenceUnavailable);
             }
         }
+        if let Some(spec) = &python_binding {
+            if let Ok((_, Some(stamp))) = super::guards::configuration(&spec.config_path) {
+                files.push((spec.config_path.clone(), stamp));
+            }
+        }
         for path in steps.iter().filter_map(|s| s.program.as_ref()) {
             let path = PathBuf::from(path);
             files.push((path.clone(), file_stamp(&path)?));
@@ -524,13 +581,27 @@ impl OperationPlanService {
                 capability,
                 version_promise: promise,
                 configuration,
-                configuration_change: "不修改 Python 版本请求、项目配置、虚拟环境或 shell；安装目录与管理器副作用见计划"
-                    .into(),
+                configuration_change: if python_binding.is_some() {
+                    "仅修改 mise [tools] Python 选择；保留其他工具、注释与结构，写入前保留 .zenv-backup"
+                } else {
+                    "不修改 Python 版本请求、项目配置、虚拟环境或 shell；安装目录与管理器副作用见计划"
+                }
+                .into(),
                 permission: "当前用户；不提权".into(),
-                rollback: if python_write.is_some() {"原生下载、缓存、状态与部分安装可能保留；失败或取消后重扫，不自动重装或删除残留"} else {"重新验证只更新清单与步骤；其他渠道安装执行尚未开放"}.into(),
+                rollback: if python_binding.is_some() {
+                    "写入前保留 .zenv-backup；本切片不自动解绑，失败后需人工核对配置"
+                } else if python_write.is_some() {
+                    "原生下载、缓存、状态与部分安装可能保留；失败或取消后重扫，不自动重装或删除残留"
+                } else {
+                    "重新验证只更新清单与步骤；其他渠道安装执行尚未开放"
+                }
+                .into(),
                 steps,
                 impact,
-                configuration_diff: vec![],
+                configuration_diff: python_binding
+                    .as_ref()
+                    .map(|spec| vec![spec.diff.clone()])
+                    .unwrap_or_default(),
             },
             started: Instant::now(),
             consumed: false,
@@ -545,6 +616,7 @@ impl OperationPlanService {
             binding: None,
             python: Some(options),
             python_write,
+            python_binding,
         })
     }
     pub(super) fn execute_python_with_context(
@@ -566,7 +638,7 @@ impl OperationPlanService {
                 if stored.view.tool_id != InventoryTool::Python
                     || !matches!(
                         stored.view.action,
-                        Action::Verify | Action::Install | Action::Uninstall
+                        Action::Verify | Action::Install | Action::Uninstall | Action::Bind
                     )
                     || stored.write.is_some()
                     || stored.binding.is_some()
@@ -574,7 +646,10 @@ impl OperationPlanService {
                     return Err(PlanError::Disabled);
                 }
                 let options = stored.python.as_ref().ok_or(PlanError::Preconditions)?;
-                if stored.view.action != Action::Verify && stored.python_write.is_none() {
+                if stored.view.action != Action::Verify
+                    && stored.python_write.is_none()
+                    && stored.python_binding.is_none()
+                {
                     return Err(PlanError::Disabled);
                 }
                 match kind {
@@ -593,6 +668,9 @@ impl OperationPlanService {
                         let fresh =
                             merge_inventory("python-plan-preflight".into(), now(), vec![scan])
                                 .map_err(|_| PlanError::Preconditions)?;
+                        if let Some(binding) = &stored.python_binding {
+                            return binding.revalidate(stored.target.as_ref(), &fresh);
+                        }
                         if let Some(write) = &stored.python_write {
                             write.revalidate(stored.target.as_ref(), &fresh, options)
                         } else {
@@ -604,6 +682,13 @@ impl OperationPlanService {
                         }
                     }
                     StepKind::Command => {
+                        if let Some(binding) = &stored.python_binding {
+                            let (_, snapshot) = query
+                                .current_snapshot_for(InventoryTool::Python)
+                                .map_err(|_| PlanError::Inventory)?;
+                            binding.revalidate(stored.target.as_ref(), &snapshot)?;
+                            return binding.apply();
+                        }
                         let write = stored.python_write.as_ref().ok_or(PlanError::Disabled)?;
                         let (_, snapshot) = query
                             .current_snapshot_for(InventoryTool::Python)
@@ -660,6 +745,9 @@ impl OperationPlanService {
                         let (_, snapshot) = query
                             .current_snapshot_for(InventoryTool::Python)
                             .map_err(|_| PlanError::Inventory)?;
+                        if let Some(binding) = &stored.python_binding {
+                            return binding.verify(&snapshot);
+                        }
                         if let Some(write) = &stored.python_write {
                             write.verify(&snapshot, options)
                         } else {

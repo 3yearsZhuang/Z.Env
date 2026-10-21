@@ -1,8 +1,8 @@
 # P14 / 43 — Python 项目环境与绑定（工作包 06）
 
 日期：2026-10-21（Asia/Shanghai），分支 `main`。
-状态：**第一切片（声明解析、候选匹配与只读报告）完成；mise 绑定写入、解绑与补偿待继续。**
-本轮是只读能力：不写项目配置、不执行解释器、不安装依赖。
+状态：**声明解析、候选匹配与 mise 项目/全局绑定写入完成；解绑、收据、补偿与实际解析核验待继续。**
+声明与候选是只读能力；绑定切片只在用户确认的计划内写目标 mise 配置，不执行解释器、不安装依赖。
 
 ## 动因
 
@@ -51,6 +51,20 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
   [python-project-v1.json](../fixtures/project-environment/python-project-v1.json)。
 - 原生只读入口 [python_project.rs](../src-tauri/examples/python_project.rs)。
 
+### mise 绑定写入
+
+新增 [Python 绑定适配](../src-tauri/src/operation_plan/python_binding.rs)：
+
+- 只接受 `mise` 健康实例、`direct` 策略与项目/全局作用域；版本必须是精确稳定 `3.x.y`。
+- 项目作用域复用项目目标解析（目录或配置文件），全局作用域写入当前全局 mise 配置。
+- 使用 `toml_edit` 只改 `[tools] python`（已有 `core:python` 时沿用该键），保留其他工具、
+  注释与结构；同时存在 `python` 与 `core:python` 时拒绝猜测。
+- 预览展示 `tools.python` 前后值与完整配置差异；执行前重读配置并拒绝外部修改；
+  写入后重扫 Python 来源、核对配置值与实例仍健康。
+- 写入沿用配置服务的同目录原子替换与 `.zenv-backup`；不改 shell、不卸载实例。
+- 前端 Python 详情新增“绑定此实例到项目”，计划弹窗对 Python 隐藏不支持的注册/托管/PATH
+  策略，作用域只提供全局/项目；`unbind` 在 Python 下仍隐藏。
+
 ## 验证记录
 
 | 检查 | 结果与边界 |
@@ -58,13 +72,15 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
 | Rust 单测 | Python 项目模块 7 项：PEP 440 子集、匹配/冲突、声明、候选、路径、共享契约 |
 | 前端 | Python 项目 API 4 项：契约、IPC 调用、未来版本/未知状态/跨来源/超预算拒绝 |
 | 真实 macOS 只读核对 | 临时项目 `mise.toml`（`3.13`）+ `pyproject.toml`（`>=3.10,<3.14`）：状态 `supported`，mise 3.13.15 与 uv 3.13.14 `satisfied`，uv 3.12.13/3.14.6 `mismatch`，PATH 实例不可用；`inventoryComplete=false`（PATH/其他来源未完整读取）如实上报 |
+| 真实 mise 绑定 | 临时项目 `mise.toml` 含 `node = "22"` 与 `[env] A = "1"`；真实 mise CPython 3.13.15 预览 → 执行 → 重扫核验：`completed/bound`，写入 `python = "3.13.15"`，node 与环境段原样保留，差异仅 `tools.python` |
 | 静态/构建 | Rust fmt、clippy `-D warnings`、构建；前端 lint、Prettier、构建、版本与文档链接检查 |
 
 真实核对只读：未写项目配置、未执行解释器、未安装依赖；未把候选可匹配写成项目实际生效。
 
 ## 边界与后续
 
-- 尚未写入 `mise.toml`/全局配置，未实现解绑、补偿或绑定收据；项目实际解析仍未知。
+- 绑定已写入项目/全局 `mise.toml`，但解绑、绑定收据、失败自动补偿与“写入后 mise 实际解析”
+  尚未实现；`mise which python`/终端/IDE 生效仍标未知。
+- 绑定仅限 mise 实例；uv/brew/PATH 实例不能直接作为 mise 配置目标，需先由 mise 管理或链接。
 - 未处理 poetry/uv workspace 动态依赖、多版本 `.python-version`、已有 `.venv` 的基础解释器引用。
-- 下一步（WP06-B）：mise 项目/全局绑定、配置差异预览、执行后实际解析核验、解绑与补偿；
-  随后再评估虚拟环境与配方。
+- 下一步：绑定收据与解绑/补偿、`mise which` 实际解析核验；随后已有 `.venv` 解释器判断与配方。

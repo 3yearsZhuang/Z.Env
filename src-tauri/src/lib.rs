@@ -6,6 +6,7 @@ mod doctor;
 pub mod domain;
 mod env;
 mod env_center;
+pub use env_center::global_config_path;
 mod error;
 mod history;
 pub mod inventory;

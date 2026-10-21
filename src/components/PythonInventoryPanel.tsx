@@ -37,7 +37,10 @@ export default function PythonInventoryPanel({
   onReadState,
 }: Props) {
   const state = useInventory(active, "python");
-  const [planning, setPlanning] = useState<{ installationId: string | null } | null>(null);
+  const [planning, setPlanning] = useState<{
+    installationId: string | null;
+    action?: "verify" | "bind";
+  } | null>(null);
   useEffect(() => {
     if (!active) setPlanning(null);
   }, [active]);
@@ -208,6 +211,25 @@ export default function PythonInventoryPanel({
                   Boolean(state.error) ||
                   item.stale ||
                   item.health !== "healthy" ||
+                  item.providerPackage.providerId !== "mise"
+                }
+                title={
+                  item.providerPackage.providerId !== "mise"
+                    ? "Python 绑定当前只支持 mise 管理的实例"
+                    : undefined
+                }
+                onClick={() => setPlanning({ installationId: item.installationId, action: "bind" })}
+              >
+                绑定此实例到项目
+              </button>
+              <button
+                className="btn"
+                disabled={
+                  !active ||
+                  state.loading ||
+                  Boolean(state.error) ||
+                  item.stale ||
+                  item.health !== "healthy" ||
                   item.providerPackage.providerId === "path"
                 }
                 onClick={() => setPlanning({ installationId: item.installationId })}
@@ -242,6 +264,12 @@ export default function PythonInventoryPanel({
             toolId="python"
             snapshotRequestId={state.snapshot.requestId}
             installationId={planning.installationId}
+            initialAction={planning.action === "bind" ? "bind" : undefined}
+            initialBinding={
+              planning.action === "bind"
+                ? { strategy: "direct", scope: "project", projectPath: "" }
+                : undefined
+            }
             onClose={() => setPlanning(null)}
             onFinished={() => {
               if (active) void state.refresh();

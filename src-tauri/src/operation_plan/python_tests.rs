@@ -234,19 +234,15 @@ fn four_install_previews_keep_channel_identity_and_can_never_execute() {
             assert!(args.last().unwrap().contains("3.13.15"));
         }
     }
-    for action in [Action::Bind, Action::Uninstall] {
-        let p = f.preview(f.request(action)).unwrap();
-        assert!(!p.capability.can_execute);
-        if action == Action::Uninstall {
-            // 健康目标可以预览卸载步骤；缺少 core 收据时仍在准备阶段关闭执行。
-            assert_eq!(p.steps.len(), 4);
-            assert!(p.capability.can_preview);
-            assert!(p.capability.reason.is_some());
-        } else {
-            assert!(p.steps.is_empty());
-        }
-        assert!(matches!(f.execute(&p), Err(PlanError::Disabled)));
-    }
+    let p = f.preview(f.request(Action::Uninstall)).unwrap();
+    assert!(!p.capability.can_execute);
+    // 健康目标可以预览卸载步骤；缺少 core 收据时仍在准备阶段关闭执行。
+    assert_eq!(p.steps.len(), 4);
+    assert!(p.capability.can_preview);
+    assert!(p.capability.reason.is_some());
+    assert!(matches!(f.execute(&p), Err(PlanError::Disabled)));
+    // 绑定必须显式给出作用域与项目路径，缺省请求不再落到 Node 或猜测默认值。
+    assert!(f.preview(f.request(Action::Bind)).is_err());
     // 预览只允许读能力证据（--version / --help）；不能执行安装或卸载。
     let calls = fs::read_to_string(f.dir.path().join("manager-calls")).unwrap_or_default();
     assert!(
@@ -571,4 +567,89 @@ fn v2_python_preview_reuses_execution_journal_and_leaves_node_cache_unchanged() 
     assert!(!failed);
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].id, wrapped.plan.plan_id);
+}
+
+#[test]
+fn python_bind_plan_writes_project_config_and_verifies_instance() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    fs::write(&config, "[tools]\nnode = \"22\"\n").unwrap();
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap()
+        .clone();
+    let request = PlanRequest {
+        snapshot_request_id: snapshot.request_id,
+        intent: PlanIntent::Bind {
+            installation_id: target.installation_id.clone(),
+            binding: Some(BindingOptions {
+                strategy: BindingStrategy::Direct,
+                scope: BindingScope::Project,
+                project_path: Some(project.path().to_string_lossy().into()),
+            }),
+        },
+    };
+    let plan = f.preview(request).unwrap();
+    assert_eq!(plan.action, Action::Bind);
+    assert!(plan.capability.can_execute);
+    assert_eq!(plan.steps.len(), 4);
+    assert_eq!(plan.configuration_diff.len(), 1);
+    assert_eq!(plan.configuration_diff[0].field, "tools.python");
+    assert_eq!(plan.configuration_diff[0].before, None);
+    assert_eq!(
+        plan.configuration_diff[0].after.as_deref(),
+        Some(target.version.as_deref().unwrap())
+    );
+    let record = f.execute(&plan).unwrap();
+    assert_eq!(record.status, ExecutionStatus::Completed);
+    let text = fs::read_to_string(&config).unwrap();
+    assert!(text.contains("python = \"3.13.15\""));
+    assert!(text.contains("node = \"22\""));
+    assert!(matches!(f.execute(&plan), Err(PlanError::Consumed)));
+}
+
+#[test]
+fn python_bind_preview_rejects_stale_target_and_unknown_scope() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| item.provider_package.provider_id == ProviderId::Mise)
+        .unwrap()
+        .clone();
+    for binding in [
+        BindingOptions {
+            strategy: BindingStrategy::Managed,
+            scope: BindingScope::Project,
+            project_path: Some(project.path().to_string_lossy().into()),
+        },
+        BindingOptions {
+            strategy: BindingStrategy::Direct,
+            scope: BindingScope::Project,
+            project_path: Some("relative".into()),
+        },
+    ] {
+        let request = PlanRequest {
+            snapshot_request_id: snapshot.request_id.clone(),
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(binding),
+            },
+        };
+        assert!(f.preview(request).is_err());
+    }
 }

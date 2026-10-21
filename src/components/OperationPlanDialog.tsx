@@ -69,6 +69,12 @@ export default function OperationPlanDialog({
   const [executing, setExecuting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [clock, setClock] = useState(Date.now());
+  useEffect(() => {
+    if (python && action === "bind") {
+      if (scope === "registration") setScope("project");
+      if (strategy !== "direct") setStrategy("direct");
+    }
+  }, [python, action, scope, strategy]);
   const sequence = useRef(0);
   const alive = useRef(true);
   const inFlight = useRef(false);
@@ -275,7 +281,7 @@ export default function OperationPlanDialog({
           <DialogTitle>{displayName} 操作计划</DialogTitle>
           <DialogDescription>
             {python
-              ? "重新验证只确认所选实例。原生 mise 的精确安装与卸载按计划核验；其他渠道安装仅预览。"
+              ? "重新验证只确认所选实例。mise 的精确安装、卸载与项目/全局绑定按计划核验；其他渠道安装仅预览。"
               : "先核对目标、配置差异与来源影响，再执行计划。失败或取消后的补偿单独记录。"}
           </DialogDescription>
         </header>
@@ -290,7 +296,11 @@ export default function OperationPlanDialog({
                 onChange={(e) => setAction(e.target.value as PlanAction)}
               >
                 {ACTIONS.filter(
-                  (a) => !python || a.value === "verify" || a.value === "uninstall",
+                  (a) =>
+                    !python ||
+                    a.value === "verify" ||
+                    a.value === "uninstall" ||
+                    a.value === "bind",
                 ).map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
@@ -364,8 +374,8 @@ export default function OperationPlanDialog({
                   }}
                 >
                   <option value="direct">直连原生 mise / nvm 精确实例</option>
-                  <option value="managed">Homebrew 托管链接</option>
-                  <option value="projectPath">仅项目 PATH</option>
+                  {!python && <option value="managed">Homebrew 托管链接</option>}
+                  {!python && <option value="projectPath">仅项目 PATH</option>}
                 </select>
               </label>
               <label>
@@ -376,7 +386,7 @@ export default function OperationPlanDialog({
                   disabled={executing || strategy === "projectPath"}
                   onChange={(e) => setScope(e.target.value as BindingScope)}
                 >
-                  <option value="registration">仅注册到 mise</option>
+                  {!python && <option value="registration">仅注册到 mise</option>}
                   <option value="global">注册并写入全局选择</option>
                   <option value="project">注册并写入项目选择</option>
                 </select>

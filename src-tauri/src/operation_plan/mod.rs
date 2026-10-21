@@ -4,6 +4,7 @@ mod guards;
 mod journal;
 pub mod model;
 mod python;
+mod python_binding;
 mod python_mise;
 mod python_uv;
 mod v2;
@@ -89,6 +90,7 @@ struct StoredPlan {
     binding: Option<bindings::BindingSpec>,
     python: Option<crate::providers::python::PythonScanOptions>,
     python_write: Option<python::WriteSpec>,
+    python_binding: Option<python_binding::BindingSpec>,
 }
 struct State {
     plans: VecDeque<StoredPlan>,
@@ -648,6 +650,7 @@ impl OperationPlanService {
             binding,
             python: None,
             python_write: None,
+            python_binding: None,
         })
     }
     fn store(&self, mut stored: StoredPlan) -> Result<OperationPlan, PlanError> {
