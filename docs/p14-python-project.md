@@ -1,7 +1,7 @@
 # P14 / 43 — Python 项目环境与绑定（工作包 06）
 
 日期：2026-10-21（Asia/Shanghai），分支 `main`。
-状态：**声明解析、候选匹配、mise 项目/全局绑定写入、私有收据、解绑与失败回滚完成；`mise which` 实际解析核验待继续。**
+状态：**声明解析、候选匹配、mise 项目/全局绑定写入、私有收据、解绑、失败回滚与 `mise which` 实际解析核验完成。**
 声明与候选是只读能力；绑定/解绑只在用户确认的计划内写目标 mise 配置，不执行解释器、不安装依赖。
 
 ## 动因
@@ -75,6 +75,9 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
   成功后删除收据；外部修改时返回 `BindingConflict` 并保留收据。
 - 失败回滚：绑定写入后核验失败时恢复预览前内容并删除收据；解绑失败时按收据重新写回绑定值，
   恢复 `bound` 收据；外部冲突不覆盖。执行器已接入通用补偿步骤，模块单测覆盖两个方向。
+- 实际解析核验：绑定写入后以受控 mise 命令（不加载 shell、禁用 hooks、保留配置读取）在项目目录执行
+  `mise which python`，将输出规范路径与目标实例 `canonicalExecutablePath` 比对；不一致或命令失败
+  即 `Verification` 失败并触发回滚。终端/IDE 是否继承仍需另行确认。
 
 ## 验证记录
 
@@ -85,14 +88,16 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
 | 真实 macOS 只读核对 | 临时项目 `mise.toml`（`3.13`）+ `pyproject.toml`（`>=3.10,<3.14`）：状态 `supported`，mise 3.13.15 与 uv 3.13.14 `satisfied`，uv 3.12.13/3.14.6 `mismatch`，PATH 实例不可用；`inventoryComplete=false`（PATH/其他来源未完整读取）如实上报 |
 | 真实 mise 绑定 | 临时项目 `mise.toml` 含 `node = "22"` 与 `[env] A = "1"`；真实 mise CPython 3.13.15 预览 → 执行 → 重扫核验：`completed/bound`，写入 `python = "3.13.15"`，node 与环境段原样保留，差异仅 `tools.python` |
 | 真实 mise 解绑 | 同一项目继续解绑：`completed/unbound`，配置恢复为绑定前内容，收据移除；私有账本与项目均在可丢弃目录 |
+| 真实 `mise which` | 绑定写入后真实 mise 2026.10.8 解析到目标 CPython 3.13.15 规范路径；验收使用临时 `MISE_DATA_DIR`（`installs` 指向真实目录、state/cache 可写），避免沙箱拒绝写真实 state |
 | 静态/构建 | Rust fmt、clippy `-D warnings`、构建；前端 lint、Prettier、构建、版本与文档链接检查 |
 
 真实核对只读：未写项目配置、未执行解释器、未安装依赖；未把候选可匹配写成项目实际生效。
 
 ## 边界与后续
 
-- 绑定/解绑已写入项目/全局 `mise.toml` 并带私有收据与失败回滚；但“写入后 mise 实际解析”
-  尚未执行 `mise which python`，终端/IDE 生效仍标未知。
+- 绑定/解绑已写入项目/全局 `mise.toml` 并带私有收据、失败回滚与项目作用域的 `mise which`
+  实际解析核验；全局作用域与终端/IDE 继承仍需平台实测。
+- 实际解析禁用了 mise hooks，避免执行项目自定义脚本；依赖 hooks 的环境可能与终端结果不同。
 - 绑定仅限 mise 实例；uv/brew/PATH 实例不能直接作为 mise 配置目标，需先由 mise 管理或链接。
 - 未处理 poetry/uv workspace 动态依赖、多版本 `.python-version`、已有 `.venv` 的基础解释器引用。
-- 下一步：`mise which python` 实际解析核验、已有 `.venv` 解释器判断与配方。
+- 下一步：已有 `.venv` 解释器判断、全局作用域/终端继承验收与项目配方。

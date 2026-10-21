@@ -417,6 +417,7 @@ impl OperationPlanService {
                     &binding,
                     &config_path,
                     &python_binding::ledger(&options),
+                    &options.common.home,
                 )?;
                 let scope = if binding.scope == BindingScope::Global {
                     "全局"
@@ -839,7 +840,8 @@ impl OperationPlanService {
                             .current_snapshot_for(InventoryTool::Python)
                             .map_err(|_| PlanError::Inventory)?;
                         if let Some(binding) = &stored.python_binding {
-                            return binding.verify(&snapshot);
+                            binding.verify(&snapshot)?;
+                            return binding.verify_resolution(options);
                         }
                         if let Some(write) = &stored.python_write {
                             write.verify(&snapshot, options)

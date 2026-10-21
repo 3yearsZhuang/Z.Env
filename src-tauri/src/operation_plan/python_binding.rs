@@ -58,6 +58,8 @@ pub(super) struct BindingSpec {
     pub diff: ConfigurationDiff,
     pub impact: Vec<String>,
     facts: Facts,
+    cwd: PathBuf,
+    target_executable: Option<PathBuf>,
     ledger: PathBuf,
     receipt: Receipt,
     target: Option<Installation>,
@@ -218,6 +220,7 @@ pub(super) fn prepare_bind(
     binding: &BindingOptions,
     global_config: &Path,
     ledger_path: &Path,
+    home: &Path,
 ) -> Result<BindingSpec, PlanError> {
     if binding.strategy != BindingStrategy::Direct {
         return Err(denied("Python 绑定只支持 mise 直接配置选择"));
@@ -273,6 +276,19 @@ pub(super) fn prepare_bind(
     } else {
         "项目"
     };
+    let cwd = if binding.scope == BindingScope::Global {
+        home.to_path_buf()
+    } else {
+        config_path
+            .parent()
+            .ok_or(PlanError::EvidenceUnavailable)?
+            .to_path_buf()
+    };
+    let target_executable = target
+        .canonical_executable_path
+        .as_deref()
+        .or(target.executable_path.as_deref())
+        .and_then(|path| PathBuf::from(path).canonicalize().ok());
     let impact = vec![
         format!("写入{scope} mise 配置：{}", config_path.display()),
         "只修改 [tools] Python 选择，保留其他工具、注释与结构；写入前保留 .zenv-backup".into(),
@@ -311,6 +327,8 @@ pub(super) fn prepare_bind(
         ledger: ledger_path.to_path_buf(),
         receipt,
         target: Some(target.clone()),
+        cwd,
+        target_executable,
     })
 }
 
@@ -371,6 +389,8 @@ pub(super) fn prepare_unbind(
         ledger: ledger_path.to_path_buf(),
         receipt,
         target: None,
+        cwd: PathBuf::new(),
+        target_executable: None,
     })
 }
 
@@ -512,6 +532,38 @@ impl BindingSpec {
             _ => Ok(()),
         }
     }
+    /// 配置写入后执行真实 mise 解析；终端/IDE 是否继承仍需另行确认。
+    pub fn verify_resolution(&self, options: &PythonScanOptions) -> Result<(), PlanError> {
+        if self.action != Action::Bind {
+            return Ok(());
+        }
+        let expected = self
+            .target_executable
+            .as_ref()
+            .ok_or(PlanError::Verification)?;
+        let program = guards::executable(&options.common, "mise").ok_or(PlanError::Verification)?;
+        let mut cmd = writes::mise_resolution_command(&program, &options.common);
+        cmd.current_dir(&self.cwd).args(["which", "python"]);
+        let result = crate::process::probe::run_probe(
+            &mut cmd,
+            &crate::process::probe::ProbeLimits {
+                timeout: Duration::from_secs(30),
+                max_output_bytes: 64 * 1024,
+            },
+            &CancellationToken::default(),
+        )
+        .map_err(|_| PlanError::Verification)?;
+        if !result.status.success() {
+            return Err(PlanError::Verification);
+        }
+        let resolved = String::from_utf8(result.stdout).map_err(|_| PlanError::Verification)?;
+        let resolved = PathBuf::from(resolved.trim());
+        if !resolved.is_absolute() || resolved.canonicalize().ok() != Some(expected.clone()) {
+            return Err(PlanError::Verification);
+        }
+        Ok(())
+    }
+
     pub fn rollback(&self) -> Result<(), PlanError> {
         let _guard = LEDGER_LOCK.lock().map_err(|_| PlanError::Command)?;
         let current = config::read_optional(&self.facts.config_path)
@@ -677,6 +729,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         assert_eq!(spec.diff.before.as_deref(), Some("3.12"));
@@ -713,6 +766,7 @@ mod tests {
             &options(BindingScope::Global, None),
             &global,
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         spec.apply().unwrap();
@@ -736,6 +790,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger(),
+            &std::env::temp_dir(),
         )
         .is_err());
         assert!(prepare_bind(
@@ -744,6 +799,7 @@ mod tests {
             &options(BindingScope::Project, Some(Path::new("relative"))),
             &global(),
             &ledger(),
+            &std::env::temp_dir(),
         )
         .is_err());
         let mut uv = target.clone();
@@ -754,6 +810,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger(),
+            &std::env::temp_dir(),
         )
         .is_err());
     }
@@ -771,6 +828,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         fs::write(&path, "[tools]\nnode = \"20\"\n").unwrap();
@@ -788,6 +846,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         spec.apply().unwrap();
@@ -817,6 +876,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         assert_eq!(spec.diff.field, "tools.core:python");
@@ -836,6 +896,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .is_err());
     }
@@ -853,6 +914,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         spec.apply().unwrap();
@@ -879,6 +941,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         spec.apply().unwrap();
@@ -905,6 +968,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .unwrap();
         first.apply().unwrap();
@@ -914,6 +978,7 @@ mod tests {
             &options(BindingScope::Project, Some(directory.path())),
             &global(),
             &ledger,
+            &std::env::temp_dir(),
         )
         .is_err());
         assert!(prepare_unbind("missing", &ledger).is_err());

@@ -43,7 +43,14 @@ impl Fixture {
         let output = serde_json::json!({"version":"3.13.15","implementation":"cpython","releaseLevel":"final","freeThreaded":false,"debug":false,"architecture":"arm64","execPath":executable});
         let text = format!("#!/bin/sh\nif [ -f '{0}/slow' ]; then /usr/bin/touch '{0}/entered'; /bin/sleep 30; fi\nif [ -f '{0}/wrong' ]; then printf '%s' '{{}}'; else printf '%s' '{1}'; fi\n", root.display(), output);
         script(&executable, &text);
-        for name in ["mise", "brew", "pyenv", "uv"] {
+        script(
+            &root.join("bin/mise"),
+            &format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{0}/manager-calls'\nif [ \"$1\" = which ] && [ \"$2\" = python ]; then printf '%s' '{0}/mise/installs/python/3.13.15/bin/python3'; exit 0; fi\n/usr/bin/touch '{0}/MANAGER_MUST_NOT_RUN'\nexit 91\n",
+                root.display()
+            ),
+        );
+        for name in ["brew", "pyenv", "uv"] {
             script(
                 &root.join("bin").join(name),
                 &format!(

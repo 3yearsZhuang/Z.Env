@@ -127,6 +127,33 @@ pub(super) fn uv_command(
         .env("UV_CACHE_DIR", options.home.join(".cache/uv"));
     cmd
 }
+/// 允许读取项目/全局 mise 配置的实际解析命令；不加载 shell、不运行 hooks。
+/// 与 `command` 不同，这里不设置 `MISE_NO_CONFIG`，也不重定向 `MISE_CONFIG_DIR`。
+pub(super) fn mise_resolution_command(program: &Path, options: &NodeScanOptions) -> Command {
+    let mut cmd = base_command(program, options);
+    for (key, value) in [
+        ("MISE_YES", "1"),
+        ("MISE_COLOR", "0"),
+        ("MISE_NO_HOOKS", "1"),
+    ] {
+        cmd.env(key, value);
+    }
+    for (key, path) in [
+        ("MISE_DATA_DIR", options.mise_data_dir.clone()),
+        ("MISE_INSTALLS_DIR", options.mise_data_dir.join("installs")),
+        ("MISE_CACHE_DIR", options.mise_data_dir.join("cache")),
+        ("MISE_STATE_DIR", options.mise_data_dir.join("state")),
+        (
+            "MISE_DOWNLOADS_DIR",
+            options.mise_data_dir.join("downloads"),
+        ),
+        ("MISE_SHIMS_DIR", options.mise_data_dir.join("shims")),
+    ] {
+        cmd.env(key, path);
+    }
+    cmd
+}
+
 /// pyenv 受控编译：固定根目录与工具链 PATH，不加载用户 shell 或项目配置。
 pub(super) fn pyenv_command(program: &Path, options: &NodeScanOptions, root: &Path) -> Command {
     let mut cmd = base_command(program, options);
