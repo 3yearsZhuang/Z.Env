@@ -117,15 +117,31 @@ mod unix {
         let options = options(temp.path());
         let path = options.nvm_dir.join("versions/node/v22/bin/node");
         let escaped_home = temp.path().to_string_lossy().replace('\'', "'\\''");
+        let given_home = temp.path().to_string_lossy().replace('\'', "'\\''");
         let physical_home = temp
             .path()
             .canonicalize()
             .unwrap()
             .to_string_lossy()
             .replace('\'', "'\\''");
-        script(&path, &format!("[ \"$PWD\" = '{physical_home}' ] || exit 31\n[ \"$HOME\" = '{escaped_home}' ] || exit 32\n[ \"$PATH\" = '/usr/bin:/bin:/usr/sbin:/sbin' ] || exit 33\n[ -z \"${{NODE_OPTIONS+x}}${{NODE_PATH+x}}${{LD_PRELOAD+x}}${{DYLD_INSERT_LIBRARIES+x}}\" ] || exit 34\nprintf '%s' '{{\"version\":\"22.23.3\",\"architecture\":\"arm64\"}}'"));
+        let body = format!(
+            "fail() {{ printf '%s' \"$1\" > \"$HOME/probe-fail\"; exit 31; }}\n\
+             [ \"$PWD\" = '{physical_home}' ] || [ \"$PWD\" = '{given_home}' ] || fail \"pwd=$PWD\"\n\
+             [ \"$HOME\" = '{escaped_home}' ] || fail \"home=$HOME\"\n\
+             [ \"$PATH\" = '/usr/bin:/bin:/usr/sbin:/sbin' ] || fail \"path=$PATH\"\n\
+             [ -z \"${{NODE_OPTIONS+x}}${{NODE_PATH+x}}${{LD_PRELOAD+x}}${{DYLD_INSERT_LIBRARIES+x}}\" ] || fail \"injected\"\n\
+             printf '%s' '{{\"version\":\"22.23.3\",\"architecture\":\"arm64\"}}'"
+        );
+        script(&path, &body);
         let scan = scan_node_provider(ProviderId::Nvm, &options, &CancellationToken::default());
-        assert_eq!(scan.report.status, ProviderStatus::Ok);
+        if scan.report.status != ProviderStatus::Ok {
+            let detail =
+                std::fs::read_to_string(temp.path().join("probe-fail")).unwrap_or_default();
+            panic!(
+                "controlled probe failed: {detail}; error={:?}",
+                scan.report.error
+            );
+        }
         assert_eq!(scan.observations[0].health, Health::Healthy);
     }
 
