@@ -12,7 +12,7 @@
 > P9–P14 的实现已按批次提交并合入 `main`，但各条目的测试数字仍是当时基线，不作为当前结果。
 
 - ✅ **接手与对话汇总**：398 条恢复包已校验；实时翻完归档列表 3 页，10 个其他对话均已归档，本轮仅核实归档结果。当前对话为唯一未归档入口，见 [接手记录](./docs/archive/workspace-handoff-2026-10-20.md)。
-- 🚧 **完成线扩展与跨平台底座**：用户确认七类工具三平台写闭环；Python 覆盖解释器与已有虚拟环境，pyenv 加受控编译。Windows 有界探针、稳定文件身份和显式环境策略已接入，统一计划 v2 的 Node/Python 传输入口也已接入；本机 Rust 245 项及静态/构建检查通过，Windows 原生探针已在 CI 全部跑通（132 通过、0 失败、2 ignored，均为 fixture/符号链接权限等明确跳过项）。工作包 02 的 launcher、provider 受控环境与 Windows 完整实机验收仍未完成；见 [实施路线](./docs/cross-platform-implementation.md)和 [底座切片](./docs/cross-platform-foundation.md)。下列已完成标记保留其原有限定范围，不代表三平台扩展完成。
+- 🚧 **完成线扩展与跨平台底座**：用户确认七类工具三平台写闭环；Python 覆盖解释器与已有虚拟环境，pyenv 加受控编译。Windows 有界探针、稳定文件身份和显式环境策略已接入，统一计划 v2 的 Node/Python 传输入口也已接入；本机 Rust 245 项及静态/构建检查通过，Windows 原生探针已在 CI 全部跑通（132 通过、0 失败、2 ignored，均为 fixture/符号链接权限等明确跳过项）。原生 launcher 后端与真实 Node 启动验收已完成，工作包 02 的 launcher shim 归属/安装删除、provider 受控环境与 Windows 完整实机验收仍未完成；见 [实施路线](./docs/cross-platform-implementation.md)和 [底座切片](./docs/cross-platform-foundation.md)。下列已完成标记保留其原有限定范围，不代表三平台扩展完成。
 
 - 工作区版本字段为 **v0.7.1**；P9–P14 已按 5 个批次提交并合入 `main`（2026-10-20 收口），本轮未执行发布。
 - 收口时修复 5 个失败 Rust 测试（计划错误保真、探针测试不再依赖 setuid `/bin/ps`），并新增文档索引与 `npm run check:docs` 链接检查。
@@ -59,7 +59,7 @@
 | ⬜ | P15 / 44 诊断与运维 | doctor v2、PATH 治理、服务与缓存归属及能力；手动流程稳定后做定时巡检 |
 | ⬜ | P16 / 45 快照迁移与收口 | 跨来源迁移意图、旧格式兼容、旧入口退出、三平台及发布产物验收 |
 
-**下一步：P14 工作包 06 的 mise 绑定写入/解绑/补偿（声明与候选只读切片已完成），随后 Python Homebrew/pyenv 写渠道**；工作包 02 的 launcher、provider 受控环境与 Windows 实机继续推进，再完成 Node 三平台、其余五工具、配方和 P15/P16。P12 的 Homebrew 真实写入/托管及打包桌面 IPC 门槛保留；完整工作包顺序见三平台方案。收口批次位于 `codex/inventory-contracts` 并已合入 `main`。
+**下一步：原生 launcher shim 与归属、P14 Python Homebrew/pyenv 写渠道**；工作包 02 的 launcher、provider 受控环境与 Windows 实机继续推进，再完成 Node 三平台、其余五工具、配方和 P15/P16。P12 的 Homebrew 真实写入/托管及打包桌面 IPC 门槛保留；完整工作包顺序见三平台方案。收口批次位于 `codex/inventory-contracts` 并已合入 `main`。
 
 ## 保留的候选与平台约束
 

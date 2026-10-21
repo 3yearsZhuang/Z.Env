@@ -60,7 +60,7 @@ Windows 探针 fixture 由测试二进制派生；在输出洪泛、取消和超
   Windows `canonicalize` 没有本模块提供的 OS 级超时；输出和进程预算不构成沙箱。
 - 需要 Windows 符号链接权限的额外测试明确 ignored，不计作默认通过。
 - 此切片不开放 Windows 的 Node/Python 安装、目录扫描或绑定能力；目录账本仍保持实际范围。
-  原生 launcher、Windows provider 的受控环境、适配器、统一计划 v2 与实际桌面流程继续按活计划实施。
+  原生 launcher 已接入并有真实 Node 启动验收，见 [launcher 记录](./cross-platform-launcher.md)；launcher shim 归属/安装删除、Windows provider 受控环境、适配器与实际桌面流程继续按活计划实施。
 
 本地证据目录：
 `/Users/3yearszhuang/.codex/visualizations/2026/10/20/01a15823-350f-7f61-9551-bb80094c52ba/`。

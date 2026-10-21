@@ -10,6 +10,7 @@ pub use env_center::global_config_path;
 mod error;
 mod history;
 pub mod inventory;
+pub mod launcher;
 mod managed;
 mod mise;
 mod net;
