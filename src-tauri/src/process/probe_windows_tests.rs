@@ -167,11 +167,27 @@ fn cancellation_reaps_descendants_before_returning() {
 }
 
 #[test]
-fn timeout_reaps_descendants_holding_pipes_after_parent_exits() {
+fn parent_exit_terminates_descendants_and_reports_parent_status() {
+    // 父进程退出时后代仍持有继承的管道写端；Windows 以 Job 终止后代并返回父状态，
+    // 不为后台残留等待到超时（Unix 对应场景仍等待 EOF 并超时）。
     let (result, child) = watched_probe(
         "parent-exit",
         ProbeLimits {
             timeout: Duration::from_secs(3),
+            ..limits()
+        },
+        false,
+    );
+    assert_stopped(child);
+    assert!(result.unwrap().status.success());
+}
+
+#[test]
+fn timeout_reaps_slow_direct_process() {
+    let (result, child) = watched_probe(
+        "slow",
+        ProbeLimits {
+            timeout: Duration::from_secs(1),
             ..limits()
         },
         false,
@@ -183,7 +199,7 @@ fn timeout_reaps_descendants_holding_pipes_after_parent_exits() {
 #[test]
 fn successful_parent_also_reaps_descendants_that_closed_output() {
     // 后代把标准输出接到 NUL 后退出父进程；Windows 上后代仍可能继承探针管道写端，
-    // 因此 EOF 不能作为唯一完成条件，需要 Job 计数确认没有存活后代。
+    // 因此 EOF 不能作为唯一完成条件，直接进程退出后由 Job 守卫终止后代。
     let (result, child) = watched_probe("parent-detached-output", limits(), false);
     assert_stopped(child);
     assert!(result.unwrap().status.success());
@@ -241,6 +257,11 @@ fn fixture() {
             publish_pid(Path::new(&marker.unwrap()));
             wait_marker(Path::new(&std::env::var_os("ZENV_OBSERVER_READY").unwrap()));
             std::thread::sleep(Duration::from_secs(60));
+        }
+        "slow" => {
+            publish_pid(Path::new(&marker.unwrap()));
+            wait_marker(Path::new(&std::env::var_os("ZENV_OBSERVER_READY").unwrap()));
+            std::thread::sleep(Duration::from_secs(5));
         }
         "flood" => {
             publish_pid(Path::new(&marker.unwrap()));

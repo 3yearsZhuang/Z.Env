@@ -12,9 +12,8 @@ use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
 };
 use windows_sys::Win32::System::JobObjects::{
-    AssignProcessToJobObject, CreateJobObjectW, JobObjectBasicAccountingInformation,
-    JobObjectExtendedLimitInformation, QueryInformationJobObject, SetInformationJobObject,
-    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+    AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+    SetInformationJobObject, TerminateJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 use windows_sys::Win32::System::Pipes::PeekNamedPipe;
@@ -63,27 +62,13 @@ impl RunningChild {
         resume_initial_thread(running.child.id())?;
         Ok(running)
     }
-    /// 调用方已确认直接进程退出；此时 Job 中仍有其他活动进程，才可能有后代继续写管道。
-    /// 计数查询失败时保守返回 true，继续按原有超时语义等待。
-    pub(super) fn has_live_descendants(&mut self) -> io::Result<bool> {
+    /// 直接进程已退出；后代只可能是后台残留。终止 Job 让继承的管道写端关闭，
+    /// 避免为不会产出结果的句柄等待到超时。Unix 保持等待真实 EOF。
+    pub(super) fn terminate_descendants(&self) -> io::Result<()> {
         let Some(job) = self.job.as_ref() else {
-            return Ok(true);
+            return Ok(());
         };
-        let mut accounting = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
-        let result = unsafe {
-            QueryInformationJobObject(
-                job.as_raw_handle(),
-                JobObjectBasicAccountingInformation,
-                (&mut accounting as *mut JOBOBJECT_BASIC_ACCOUNTING_INFORMATION).cast(),
-                size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32,
-                null_mut(),
-            )
-        };
-        if result == 0 {
-            return Ok(true);
-        }
-        // 计数可能尚未移除已退出的直接进程；扣除 1 后仍大于 0 才是存活后代。
-        Ok(accounting.ActiveProcesses.saturating_sub(1) > 0)
+        checked(unsafe { TerminateJobObject(job.as_raw_handle(), 1) })
     }
 }
 

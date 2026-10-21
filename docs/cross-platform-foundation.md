@@ -47,8 +47,8 @@
 
 Windows 探针 fixture 由测试二进制派生；在输出洪泛、取消和超时之前先取得观察句柄，
 再通过确认文件让 fixture 继续运行，避免用已回收的 PID 猜测终态。断言失败时先兜底清理。
-双流预算改用固定 `cmd` 输出确定精确上限，避免 libtest 前缀在 Windows 上的字节差异；另有零输出预算、argv/cwd/Unicode、
-父退出但后代持有管道、正常成功后代回收和 Command 复用场景。
+双流预算用固定载荷与组合溢出验证，避免 libtest 前缀在 Windows 上的字节差异；另有 argv/cwd/Unicode、
+父退出终止后代并返回父状态、直接进程超时回收、正常成功后代回收和 Command 复用场景。
 文件守卫覆盖同内容/长度/mtime 替换、hardlink、设备路径拒绝及正常/verbatim/UNC/缺失配置。
 
 验收区分本机 Unix 测试、Windows 目标编译、Windows 原生测试和完整桌面 IPC；跨编译不证明

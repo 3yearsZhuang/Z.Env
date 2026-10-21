@@ -146,11 +146,10 @@ fn run_platform_probe(
             status = running.child.try_wait()?;
         }
         // 直接进程退出后，管道 EOF 是“全部后代关闭输出”的充分条件，但不是必要条件：
-        // Windows 后代可能继承探针管道的写端，却已不再运行（如设置了 NUL 标准输出）。
-        // 以 Job 计数判断是否只剩直接进程及已退出残留，避免为不存在的输出等待到超时。
-        let drained = stdout_closed && stderr_closed;
+        // Windows 后代可能继承探针管道的写端，却已不再产出（例如标准输出接到 NUL）。
+        // 此时终止本次 Job 中的后代并继续排空，避免为后台残留等待到超时；Unix 仍等待真实 EOF。
         if let Some(exit) = status {
-            if drained || !running.has_live_descendants()? {
+            if stdout_closed && stderr_closed {
                 check_budget(started, limits, cancellation)?;
                 return Ok(ProbeOutput {
                     status: exit,
@@ -158,6 +157,8 @@ fn run_platform_probe(
                     stderr: err,
                 });
             }
+            #[cfg(windows)]
+            running.terminate_descendants()?;
         }
         if !progressed {
             // 短周期轮询避免为每个探针生成可能永久阻塞的管道读取线程。
@@ -198,10 +199,6 @@ impl RunningChild {
         Ok(Self {
             child: command.spawn()?,
         })
-    }
-    // Unix 只有管道 EOF 或超时能证明后代不再写；保持等待语义不变。
-    fn has_live_descendants(&mut self) -> io::Result<bool> {
-        Ok(true)
     }
 }
 
