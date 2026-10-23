@@ -44,7 +44,7 @@
 - **Node.js 只读清单（macOS 试点）**：独立读取 mise、Homebrew、nvm 和 PATH；按目录保留实例、版本、归属与文件证据，来源失败明确未知并可单独重试。支持取消、过期数据与同文件关联；查看和刷新不触发修复。其它平台新清单明确未支持，既有管理入口继续保留。
 - **Python 只读清单（macOS 试点）**：分别读取 mise、Homebrew、pyenv、uv 和 PATH 的 CPython 3；uv 次版本别名只作观测，不冒充精确实例；未知 PATH 文件不自动执行。绑定与项目虚拟环境仍标未接入。
 - **Python 项目声明与绑定**：解析 `mise.toml`、`.python-version`、`pyproject.toml` 的 `requires-python` 与 `.tool-versions`，按 PEP 440 子集匹配本机 Python 候选；健康 mise 实例可预览并写入项目/全局 `[tools] python`，显示配置差异、拒绝外部修改；已绑定项可解除并恢复原值，失败回滚带私有收据，写入后用 `mise which` 核对实际解析路径。
-- **Node / Python 操作计划（macOS 试点）**：Node 的 mise/Homebrew 安装、受支持卸载、绑定与项目环境已接入；Python 的 mise/uv 精确安装、Homebrew core formula 安装/卸载（依赖/归属门禁）与项目绑定已接入，pyenv 受控源码编译已接入并在可丢弃环境完成真实 CPython 编译/卸载。执行前按快照、目标、配置和文件指纹重验，计划过期或外部变化须重新预览；重新验证记录步骤状态，应用重启后未完成任务标为中断，不自动重放。
+- **Node / Python 操作计划（macOS 试点）**：Node 的 mise/Homebrew 安装、受支持卸载、绑定与项目环境已接入；Python 的 mise/uv 精确安装、Homebrew core formula 安装/卸载（依赖/归属门禁）与项目绑定已接入，并在可丢弃前缀完成真实 formula 安装/卸载；pyenv 受控源码编译也已在可丢弃环境完成真实 CPython 编译/卸载。执行前按快照、目标、配置和文件指纹重验，计划过期或外部变化须重新预览；重新验证记录步骤状态，应用重启后未完成任务标为中断，不自动重放。
 - 旧运行时管理与体检位于“其他运行时与管理操作”折叠区；修复需明确点击。
 - 顶部按钮切换「运行时 / 环境变量 / 环境预设」三个区块；区块与已访问的环境/项目/软件页面保留状态；任务由后端独立管理，切页或 WebView 重新加载后可在任务面板查看；退出应用不恢复任务
 - **环境健康**：mise 可用性、shell 集成、PATH 重复与失效目录、托管接入健康度巡检，
