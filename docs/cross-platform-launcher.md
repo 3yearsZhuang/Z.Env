@@ -19,6 +19,8 @@
 - 环境完全显式：清空继承环境后设置 `HOME`（Windows 另设 `USERPROFILE`）、`PATH` 与调用方变量；
   可执行文件所在目录自动置于 PATH 首位。拒绝非法键值、超预算变量和
   `LD_PRELOAD`/`LD_LIBRARY_PATH`/`DYLD_*` 等加载器注入项。
+- 保留键与重复键被拒绝：调用方变量不能覆盖 `HOME`/`PATH`/`USERPROFILE`，也不能重复声明同一键
+  （Windows 按大小写不敏感归一），避免显式环境被隐式改写。
 - 复用 [受控探针](../src-tauri/src/process/probe.rs)：Unix 进程组、Windows Job、超时、取消、
   双流总预算和终态后代回收与现有探针一致；退出码与信号分别返回，输出按 UTF-8 有损解码。
 - 结果包含安装 ID、原始/规范可执行路径、退出码、信号、成功标记、stdout/stderr 与耗时，
@@ -30,7 +32,7 @@
 
 | 检查 | 结果与边界 |
 | --- | --- |
-| Rust 单测 | launcher 4 项：真实 argv/cwd/env/退出码、未知实例/相对 cwd/非法 argv/环境、超时与输出超限回收、非可执行与篡改目标 |
+| Rust 单测 | launcher 5 项：真实 argv/cwd/env/退出码、未知实例/相对 cwd/非法 argv/环境、保留键与重复键拒绝、超时与输出超限回收、非可执行与篡改目标 |
 | 真实 macOS 启动 | 清单中的 mise Node 22.23.3：`node --version` 退出码 0，stdout `v22.23.3`，规范路径回映到 `.../node/22.23.3/bin/node`，耗时约 35 ms |
 | 静态/构建 | fmt、clippy `-D warnings`、构建与完整测试在本轮门禁中执行 |
 | Windows | 代码走共享探针与 Job 守卫，Windows CI 编译/clippy/测试；launcher 单测使用 Unix 脚本，未提供 Windows 原生启动用例 |

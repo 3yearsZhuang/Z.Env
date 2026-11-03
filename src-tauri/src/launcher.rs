@@ -7,6 +7,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeSet,
     path::{Path, PathBuf},
     process::Command,
     time::{Duration, Instant},
@@ -111,6 +112,7 @@ fn validate_environment(environment: &LaunchEnvironment) -> Result<PathBuf, Laun
     if environment.vars.len() > MAX_ENV {
         return Err(invalid_environment());
     }
+    let mut seen = BTreeSet::new();
     for (key, value) in &environment.vars {
         if key.is_empty()
             || key.len() > MAX_ENV_KEY
@@ -120,6 +122,16 @@ fn validate_environment(environment: &LaunchEnvironment) -> Result<PathBuf, Laun
             || !key.bytes().enumerate().all(|(index, byte)| {
                 byte == b'_' || byte.is_ascii_alphabetic() || (index > 0 && byte.is_ascii_digit())
             })
+        {
+            return Err(invalid_environment());
+        }
+        let normalized = if cfg!(windows) {
+            key.to_ascii_uppercase()
+        } else {
+            key.clone()
+        };
+        if matches!(normalized.as_str(), "HOME" | "PATH" | "USERPROFILE")
+            || !seen.insert(normalized)
         {
             return Err(invalid_environment());
         }
@@ -421,6 +433,36 @@ mod tests {
             launch(&snapshot, &request, &CancellationToken::default()),
             Err(LaunchError::InvalidEnvironment)
         ));
+    }
+
+    #[test]
+    fn reserved_and_duplicate_environment_keys_are_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = script(directory.path(), "#!/bin/sh\nexit 0\n");
+        let snapshot = snapshot_for(&path);
+        let cases = vec![
+            vec![(
+                "HOME".to_string(),
+                directory.path().to_string_lossy().into_owned(),
+            )],
+            vec![("PATH".into(), "/usr/bin:/bin".into())],
+            vec![("USERPROFILE".into(), "/tmp".into())],
+            vec![
+                ("TRAIT".to_string(), "a".to_string()),
+                ("TRAIT".to_string(), "b".to_string()),
+            ],
+        ];
+        for vars in cases {
+            let mut request = launch_request(directory.path());
+            request.environment.vars = vars;
+            assert!(
+                matches!(
+                    launch(&snapshot, &request, &CancellationToken::default()),
+                    Err(LaunchError::InvalidEnvironment)
+                ),
+                "reserved/duplicate keys must be refused"
+            );
+        }
     }
 
     #[test]
