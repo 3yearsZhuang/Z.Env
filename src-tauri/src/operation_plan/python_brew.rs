@@ -56,7 +56,7 @@ fn output(program: &Path, options: &PythonScanOptions, args: &[&str]) -> Result<
     let result = run_probe(
         &mut cmd,
         &ProbeLimits {
-            timeout: Duration::from_secs(15),
+            timeout: Duration::from_secs(60),
             max_output_bytes: 512 * 1024,
         },
         &CancellationToken::default(),
@@ -80,22 +80,25 @@ fn facts(program: &Path, options: &PythonScanOptions, formula: &str) -> Result<F
         &["info", "--json=v2", "--formula", formula],
     )?)
     .map_err(|_| denied("Homebrew formula 信息格式不支持"))?;
-    let name = info
+    let formula_info = info
         .get("formulae")
         .and_then(|value| value.as_array())
         .and_then(|items| items.first())
-        .and_then(|item| item.get("name"))
+        .ok_or(denied("Homebrew 未返回所需 core formula"))?;
+    let name = formula_info
+        .get("name")
         .and_then(|value| value.as_str())
         .filter(|name| name.len() <= 128)
         .ok_or(denied("Homebrew 未返回所需 core formula"))?;
-    let list = output(program, options, &["list", "--versions"])?;
-    let mut kegs = vec![];
-    for line in list.lines() {
-        let mut words = line.split_whitespace();
-        if words.next() == Some(formula) {
-            kegs.extend(words.map(|word| word.chars().take(64).collect::<String>()));
-        }
-    }
+    let mut kegs = formula_info
+        .get("installed")
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|keg| keg.get("version").and_then(|value| value.as_str()))
+        .filter(|version| !version.is_empty())
+        .map(|version| version.chars().take(64).collect::<String>())
+        .collect::<Vec<_>>();
     kegs.sort();
     kegs.dedup();
     if kegs.len() > 32 {
@@ -360,7 +363,13 @@ ROOT='@ROOT@'
 case "$1" in
 --prefix) printf '%s\n' "$ROOT/prefix"; exit 0;;
 --cellar) printf '%s\n' "$ROOT/prefix/Cellar"; exit 0;;
-info) printf '%s' '{"formulae":[{"name":"python@3.13"}]}'; exit 0;;
+info)
+  installed=''
+  if [ -s "$ROOT/list" ]; then
+    installed=$(/usr/bin/awk 'NR==1 { for (i = 2; i <= NF; i++) printf "%s{\"version\":\"%s\"}", (i > 2 ? "," : ""), $i }' "$ROOT/list")
+  fi
+  printf '{"formulae":[{"name":"python@3.13","installed":[%s]}]}' "$installed"
+  exit 0;;
 list) [ -f "$ROOT/list" ] && /bin/cat "$ROOT/list"; exit 0;;
 uses) [ -f "$ROOT/uses" ] && /bin/cat "$ROOT/uses"; exit 0;;
 install)
@@ -595,6 +604,43 @@ exit 99
             assert!(matches!(worker.join().unwrap(), Err(PlanError::Cancelled)));
         });
         assert!(!directory.path().join("prefix/Cellar/python@3.13").exists());
+    }
+
+    #[test]
+    fn multiple_installed_kegs_are_read_from_formula_info_and_refused() {
+        let (directory, options) = options();
+        std::fs::write(directory.path().join("list"), "python@3.13 3.13.5 3.13.4\n").unwrap();
+        std::fs::create_dir_all(
+            directory
+                .path()
+                .join("prefix/Cellar/python@3.13/3.13.5/bin"),
+        )
+        .unwrap();
+        std::fs::create_dir_all(
+            directory
+                .path()
+                .join("prefix/Cellar/python@3.13/3.13.4/bin"),
+        )
+        .unwrap();
+        let target = installation(directory.path());
+        assert!(prepare(
+            Action::Install,
+            &package(),
+            None,
+            None,
+            &snapshot(vec![], true),
+            &options,
+        )
+        .is_err());
+        assert!(prepare(
+            Action::Uninstall,
+            &package(),
+            Some(&target),
+            None,
+            &snapshot(vec![target.clone()], true),
+            &options,
+        )
+        .is_err());
     }
 
     #[test]
