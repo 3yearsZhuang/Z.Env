@@ -16,7 +16,7 @@ Homebrew 的版本承诺与 mise/uv 不同：formula 随渠道更新，不能承
 - 新增 [Homebrew Python 写适配](../src-tauri/src/operation_plan/python_brew.rs)。
 - formula 白名单：仅 `python` 与 `python@3.N`（N=8..99）；拒绝 `python3`、精确补丁版、第三方 tap。
   安装请求不得携带精确版本；预览承诺明确“版本由执行时 formula 决定”。
-- 能力证据：`brew --prefix`、`--cellar`、`info --json=v2 --formula`、`uses --installed`；核验 formula 身份、keg 与反向依赖。
+- 能力证据：`brew --prefix`、`--cellar`、`info --json=v2 --formula`；安装路径不读取反向依赖，只有卸载预览/重验才调用 `uses --installed`。
   keg 直接读取 `info` 的 `installed` 数组（权威），比额外的 `list --versions` 少一次子进程，也避免
   `Caskroom` 缺失时 `brew list` 误报失败。
 - 安装门禁：该 formula 已有任何 keg 时拒绝，不覆盖、不静默升级；argv 固定为
@@ -35,7 +35,7 @@ Homebrew 的版本承诺与 mise/uv 不同：formula 随渠道更新，不能承
 
 | 检查 | 结果与边界 |
 | --- | --- |
-| Rust 单测 | Homebrew 7 项：formula 白名单、安装写 keg 并核验、已有 keg/精确版本/不完整来源拒绝、多 keg 读取与拒绝、卸载单 keg/无依赖/归属、0 退出无产物与外部变化、取消回收且不落 keg |
+| Rust 单测 | Homebrew 7 项：formula 白名单、安装写 keg 并核验且不读反向依赖、已有 keg/精确版本/不完整来源拒绝、多 keg 读取与拒绝、卸载单 keg/无依赖/归属、0 退出无产物与外部变化、取消回收且不落 keg |
 | 伪管理器 | 固定 `brew` 脚本覆盖 prefix/cellar/info/uses/install/uninstall；不访问真实 Homebrew |
 | 真实 Homebrew 写入 | 可丢弃 `/private/var/tmp/hb` Homebrew 前缀（Tier 3）从空状态安装 `python@3.13` 3.13.18 及 7 个依赖；应用计划 4 步安装 `completed/installed`，重扫健康 Brew 实例；4 步卸载 `completed/uninstalled`，formula 目录移除且共享依赖保留。未修改系统 `/opt/homebrew` |
 | 真实迁移条件 | 前缀 11 字符满足 bottle 重定位上限；`bin/brew` 只读以通过继承沙箱检测；keg 改读 `info.installed`，不再调用受 `Caskroom` 缺失影响的 `brew list`；首次冷启动可能下载 portable ruby/API，证据预算 60 秒 |

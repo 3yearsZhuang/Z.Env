@@ -46,7 +46,7 @@
 - 🚧 **P14 工作包 06 — Python 项目环境与绑定**：已完成 `mise.toml`/`.python-version`/`pyproject.toml` `requires-python`/`.tool-versions` 声明解析、PEP 440 子集约束、候选匹配与只读报告；并完成 mise 项目/全局绑定写入、私有收据、解绑与失败回滚（差异预览、外部修改拒绝、写入后重扫核验、Python 详情绑定/解绑入口）。真实临时项目核对、真实 mise 3.13.15 绑定/解绑均通过；`mise which` 实际解析核验待继续，见 [实施记录](./docs/p14-python-project.md)。
 
 
-- ✅ **P14 工作包 07 — Python Homebrew 写渠道**：core `python`/`python@3.N` 白名单、formula 身份与 keg/反向依赖门禁、安装/卸载 argv 与结果核验已接入；伪 brew 7 项场景通过；keg 读取改为 `info.installed`，少一次子进程，避免 `Caskroom` 缺失时 `brew list` 失败。可丢弃 `/private/var/tmp/hb` 前缀完成真实 `python@3.13` 3.13.18 安装/卸载（应用计划 4+4 步全部 completed，formula 目录移除），未修改系统 `/opt/homebrew`；系统/其他 formula 与真实失败取消场景待补，见 [实施记录](./docs/p14-python-brew.md)。
+- ✅ **P14 工作包 07 — Python Homebrew 写渠道**：core `python`/`python@3.N` 白名单、formula 身份与 keg/反向依赖门禁、安装/卸载 argv 与结果核验已接入；伪 brew 7 项场景通过；keg 读取改为 `info.installed`，少一次子进程并避免 `Caskroom` 缺失时 `brew list` 失败；反向依赖只在卸载时读取。可丢弃 `/private/var/tmp/hb` 前缀完成真实 `python@3.13` 3.13.18 安装/卸载（应用计划 4+4 步全部 completed，formula 目录移除），未修改系统 `/opt/homebrew`；系统/其他 formula 与真实失败取消场景待补，见 [实施记录](./docs/p14-python-brew.md)。
 
 - ✅ **P14 工作包 08 — Python pyenv 受控编译**：`pyenv root`/`commands`、六项构建工具与精确版本门禁、固定 install/uninstall argv、受控 PATH 与 1 小时超时已接入；伪 pyenv 5 项场景通过。真实可丢弃环境完成 CPython 3.12.13 源码编译安装/卸载（应用计划 4+4 步全部 completed，版本目录移除），未写用户环境；其他版本/平台与真实失败/取消场景待补，见 [实施记录](./docs/p14-python-pyenv.md)。
 

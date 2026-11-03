@@ -68,7 +68,12 @@ fn output(program: &Path, options: &PythonScanOptions, args: &[&str]) -> Result<
     String::from_utf8(result.stdout).map_err(|_| PlanError::EvidenceUnavailable)
 }
 
-fn facts(program: &Path, options: &PythonScanOptions, formula: &str) -> Result<Facts, PlanError> {
+fn facts(
+    program: &Path,
+    options: &PythonScanOptions,
+    formula: &str,
+    with_dependents: bool,
+) -> Result<Facts, PlanError> {
     let prefix = PathBuf::from(output(program, options, &["--prefix"])?.trim());
     let cellar = PathBuf::from(output(program, options, &["--cellar"])?.trim());
     if !prefix.is_absolute() || !cellar.is_absolute() {
@@ -104,14 +109,17 @@ fn facts(program: &Path, options: &PythonScanOptions, formula: &str) -> Result<F
     if kegs.len() > 32 {
         return Err(denied("Homebrew keg 数量超出预算"));
     }
-    let uses = output(program, options, &["uses", "--installed", formula])?;
-    let dependents: Vec<String> = uses
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .take(64)
-        .map(|line| line.chars().take(128).collect())
-        .collect();
+    let dependents = if with_dependents {
+        let uses = output(program, options, &["uses", "--installed", formula])?;
+        uses.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .take(64)
+            .map(|line| line.chars().take(128).collect())
+            .collect()
+    } else {
+        vec![]
+    };
     Ok(Facts {
         prefix,
         cellar,
@@ -170,7 +178,7 @@ pub(super) fn prepare(
     }
     let program =
         guards::executable(&options.common, "brew").ok_or(denied("没有可定位的 brew 程序"))?;
-    let facts = facts(&program, options, &formula)?;
+    let facts = facts(&program, options, &formula, action == Action::Uninstall)?;
     if facts.formula_name != formula && facts.formula_name != package.package_id {
         return Err(denied("Homebrew formula 身份与请求不一致"));
     }
@@ -286,7 +294,7 @@ impl WriteSpec {
         snapshot: &InventorySnapshot,
         options: &PythonScanOptions,
     ) -> Result<(), PlanError> {
-        let native = facts(&self.program, options, &self.formula)?;
+        let native = facts(&self.program, options, &self.formula, false)?;
         if self.action == Action::Install {
             if !ready(snapshot) || native.kegs.len() != 1 {
                 return Err(PlanError::Verification);
@@ -371,7 +379,7 @@ info)
   printf '{"formulae":[{"name":"python@3.13","installed":[%s]}]}' "$installed"
   exit 0;;
 list) [ -f "$ROOT/list" ] && /bin/cat "$ROOT/list"; exit 0;;
-uses) [ -f "$ROOT/uses" ] && /bin/cat "$ROOT/uses"; exit 0;;
+uses) printf '%s\n' "$*" >> "$ROOT/uses-calls"; [ -f "$ROOT/uses" ] && /bin/cat "$ROOT/uses"; exit 0;;
 install)
   [ -f "$ROOT/zero" ] && exit 0
   if [ -f "$ROOT/slow" ]; then /usr/bin/touch "$ROOT/started"; /bin/sleep 30; fi
@@ -474,7 +482,7 @@ exit 99
 
     #[test]
     fn install_formula_writes_keg_and_verifies_snapshot() {
-        let (_directory, options) = options();
+        let (directory, options) = options();
         let spec = prepare(
             Action::Install,
             &package(),
@@ -492,6 +500,10 @@ exit 99
         let root = &options.common.home.parent().unwrap().to_path_buf();
         spec.verify(&snapshot(vec![installation(root)], true), &options)
             .unwrap();
+        assert!(
+            !directory.path().join("uses-calls").exists(),
+            "install must not read reverse dependents"
+        );
     }
 
     #[test]
@@ -558,6 +570,10 @@ exit 99
         assert_eq!(spec.argv, ["uninstall", "--formula", "python@3.13"]);
         spec.run(&options, &CancellationToken::default()).unwrap();
         spec.verify(&snapshot(vec![], true), &options).unwrap();
+        assert!(
+            directory.path().join("uses-calls").exists(),
+            "uninstall must read reverse dependents"
+        );
 
         std::fs::write(directory.path().join("list"), "python@3.13 3.13.5\n").unwrap();
         std::fs::create_dir_all(
