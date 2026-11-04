@@ -12,6 +12,10 @@ use std::{
 };
 
 const MAX_RECEIPTS: usize = 32;
+/// 仅测试构建：模拟 Command 之后、Verify 之前配置被外部改写。
+#[cfg(test)]
+static CONFLICT_ON_VERIFY: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 static LEDGER_LOCK: Mutex<()> = Mutex::new(());
 static RECEIPT_SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -491,6 +495,10 @@ impl BindingSpec {
         remove_receipt(&self.ledger, &self.receipt.id)
     }
     pub fn verify(&self, snapshot: &InventorySnapshot) -> Result<(), PlanError> {
+        #[cfg(test)]
+        if self.action == Action::Unbind && CONFLICT_ON_VERIFY.swap(false, Ordering::SeqCst) {
+            let _ = std::fs::write(&self.facts.config_path, "[tools]\npython = \"3.11\"\n");
+        }
         let current =
             config::read_optional(&self.facts.config_path).map_err(|_| PlanError::Verification)?;
         let (key, value) =
@@ -637,6 +645,11 @@ pub(super) fn list(ledger_path: &Path) -> Result<Vec<PythonBinding>, PlanError> 
             state: record.state.clone(),
         })
         .collect())
+}
+
+#[cfg(test)]
+pub(super) fn force_unbind_verify_conflict() {
+    CONFLICT_ON_VERIFY.store(true, Ordering::SeqCst);
 }
 
 #[cfg(test)]

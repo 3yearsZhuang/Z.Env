@@ -74,7 +74,10 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
 - 解绑预览重读配置，要求当前值与收据一致才允许；执行只恢复收据记录的原值/移除键盘，
   成功后删除收据；外部修改时返回 `BindingConflict` 并保留收据。
 - 失败回滚：绑定写入后核验失败时恢复预览前内容并删除收据；解绑失败时按收据重新写回绑定值，
-  恢复 `bound` 收据；外部冲突不覆盖。执行器已接入通用补偿步骤；新增执行器级测试：绑定写入后 `mise which` 解析失败 → Verify `failed`、Compensate `completed`，配置恢复且收据清空。解绑方向仍由模块单测覆盖。
+  恢复 `bound` 收据；外部冲突不覆盖。执行器已接入通用补偿步骤；新增执行器级测试：
+  - 绑定写入后 `mise which` 解析失败 → Verify `failed`、Compensate `completed`，配置恢复且收据清空；
+  - 解绑 Command 后、Verify 前配置被外部改写 → Verify `failed`、Compensate `failed`，
+    结果为 `CompensationConflict`，保持外部值且不伪造收据。
 - 实际解析核验：绑定写入后以受控 mise 命令（不加载 shell、禁用 hooks、保留配置读取）在项目目录执行
   `mise which python`，将输出规范路径与目标实例 `canonicalExecutablePath` 比对；不一致或命令失败
   即 `Verification` 失败并触发回滚。终端/IDE 是否继承仍需另行确认。
@@ -90,6 +93,7 @@ Python 项目通常同时用 `mise.toml`、`.python-version`、`pyproject.toml` 
 | 真实 mise 解绑 | 同一项目继续解绑：`completed/unbound`，配置恢复为绑定前内容，收据移除；私有账本与项目均在可丢弃目录 |
 | 真实 `mise which` | 绑定写入后真实 mise 2026.10.8 解析到目标 CPython 3.13.15 规范路径；验收使用临时 `MISE_DATA_DIR`（`installs` 指向真实目录、state/cache 可写），避免沙箱拒绝写真实 state |
 | 执行器补偿（绑定） | 写入后强制 `mise which` 返回错误路径：Verify 失败、Compensate 完成，项目配置恢复为写入前内容，私有收据清空 |
+| 执行器补偿（解绑冲突） | 解绑写入后、Verify 前改写配置：Verify 失败、Compensate 失败，结果为 `CompensationConflict`，外部值保留，收据不恢复 |
 | 静态/构建 | Rust fmt、clippy `-D warnings`、构建；前端 lint、Prettier、构建、版本与文档链接检查 |
 
 真实核对只读：未写项目配置、未执行解释器、未安装依赖；未把候选可匹配写成项目实际生效。

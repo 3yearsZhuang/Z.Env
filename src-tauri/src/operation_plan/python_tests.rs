@@ -776,3 +776,66 @@ fn python_bind_verification_failure_compensates_configuration_and_receipt() {
     let doc: serde_json::Value = serde_json::from_str(&text).unwrap();
     assert!(doc["records"].as_array().unwrap().is_empty());
 }
+#[test]
+fn python_unbind_compensation_conflict_is_reported_and_keeps_external_change() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    fs::write(&config, "[tools]\npython = \"3.12\"\n").unwrap();
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap()
+        .clone();
+    let bind = f
+        .preview(PlanRequest {
+            snapshot_request_id: snapshot.request_id.clone(),
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(BindingOptions {
+                    strategy: BindingStrategy::Direct,
+                    scope: BindingScope::Project,
+                    project_path: Some(project.path().to_string_lossy().into()),
+                }),
+            },
+        })
+        .unwrap();
+    assert_eq!(f.execute(&bind).unwrap().outcome, Some(Outcome::Bound));
+    let ledger = python_binding::ledger(&f.options);
+    let receipt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&ledger).unwrap()).unwrap();
+    let binding_id = receipt["records"][0]["id"].as_str().unwrap().to_owned();
+    let (_, current) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let unbind = f
+        .preview(PlanRequest {
+            snapshot_request_id: current.request_id,
+            intent: PlanIntent::Unbind {
+                binding_id: binding_id.clone(),
+            },
+        })
+        .unwrap();
+    assert!(unbind.capability.can_execute);
+    // Command 成功后、Verify 前让配置被外部改写：补偿应报告冲突，保持外部值且不伪造收据。
+    python_binding::force_unbind_verify_conflict();
+    let result = f.execute(&unbind);
+    assert!(result.is_err());
+    let (records, _) = f.service.records();
+    let record = records
+        .iter()
+        .find(|record| record.id == unbind.plan_id)
+        .unwrap();
+    assert_eq!(record.compensation, Some(CompensationOutcome::Conflict));
+    assert_eq!(record.outcome, Some(Outcome::CompensationConflict));
+    assert_eq!(
+        fs::read_to_string(&config).unwrap(),
+        "[tools]\npython = \"3.11\"\n"
+    );
+    assert!(!fs::read_to_string(&ledger).unwrap().contains(&binding_id));
+}
