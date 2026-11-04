@@ -12,6 +12,7 @@ import {
   type ProviderPackage,
   type ToolInfo,
 } from "../api";
+import { clearEnvInfoCache } from "../lib/envInfo";
 import SoftwareView from "./SoftwareView";
 
 vi.mock("../api", () => ({
@@ -52,6 +53,7 @@ const packages: ProviderPackage[] = [
 ];
 
 beforeEach(() => {
+  clearEnvInfoCache();
   vi.resetAllMocks();
   vi.mocked(packageCatalog).mockResolvedValue(packages);
   vi.mocked(listTools).mockResolvedValue([]);

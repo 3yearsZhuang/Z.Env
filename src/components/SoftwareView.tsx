@@ -21,7 +21,6 @@ import {
 import {
   detectSystemInstalled,
   errorMessage,
-  getEnvInfo,
   installSystemPackage,
   listTools,
   packageCatalog,
@@ -30,6 +29,7 @@ import {
   type ToolInfo,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import { readEnvInfo } from "../lib/envInfo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./SoftwareView.css";
 
@@ -328,7 +328,7 @@ export default function SoftwareView({
     let alive = true;
     setEnvState({ status: "loading" });
     setManagerStates({});
-    getEnvInfo()
+    readEnvInfo({ force: systemAttempt > 0 })
       .then(async (env) => {
         if (!alive) return;
         const managers = env.pkg.filter((pkg) => pkg.available).map((pkg) => pkg.name);
