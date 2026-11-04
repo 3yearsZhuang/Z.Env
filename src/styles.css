@@ -111,9 +111,6 @@ body.glass .input {
   position: relative;
   transition: width 0.18s ease;
 }
-.collapse-btn {
-  display: none;
-}
 .brand.clickable {
   cursor: pointer;
   user-select: none;
@@ -362,9 +359,6 @@ body.glass .input {
   background: rgba(224, 180, 90, 0.12);
   color: var(--warning);
   border: 1px solid rgba(224, 180, 90, 0.28);
-}
-.banner-icon {
-  margin-right: 6px;
 }
 .banner a {
   color: inherit;
@@ -867,12 +861,6 @@ body.glass .input {
   display: flex;
   gap: 10px;
 }
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
 
 .editor {
   width: 100%;
@@ -1025,23 +1013,6 @@ body.glass .input {
   border-color: var(--red);
 }
 
-/* ---------- 预设导入 ---------- */
-/* .preset-head 样式见「环境预设」段（此前与 858 行起逐字重复，已删） */
-.preset-target {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.preset-radio {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-}
-
 /* 行内跳转按钮：看起来像链接，实际切 tab 或页内滚动 */
 .link-btn {
   border: none;
@@ -1181,9 +1152,6 @@ body.glass .input {
   flex-direction: column;
   gap: 14px;
 }
-.easter-log-list {
-  margin-top: 8px;
-}
 .easter-logs {
   display: flex;
   flex-direction: column;
@@ -1283,86 +1251,10 @@ body.glass .input {
   font-size: 12px;
   color: var(--text-dim);
 }
-
-/* ---------- 环境信息条（首页） ---------- */
-.env-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 12px;
-}
-.env-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 11px;
-  font-size: 12.5px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text-dim);
-}
-.env-chip b {
-  color: var(--text);
-  font-weight: 600;
-}
-/* 顶部环境横幅：系统 + git + 各包管理器合并为一行 */
-.top-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 14px;
-  cursor: default;
-}
-.top-banner .banner-icon {
-  margin-right: 2px;
-}
-.top-item {
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-.top-item b,
-.top-item:last-child b {
-  color: var(--accent);
-}
-.top-item:not(:last-child)::after {
-  content: "·";
-  margin-left: 14px;
-  color: var(--border);
-}
-
-/* ---------- 支持列表页 ---------- */
-.pkg-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-.pkg-chip {
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  background: var(--bg);
-  cursor: pointer;
-  user-select: none;
-}
-.pkg-chip:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft, transparent);
-}
 .pkg-chip.on {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-soft, transparent);
-}
-.pkg-chip.working {
-  color: #e0b45a;
-  border-color: #e0b45a;
-  background: rgba(224, 180, 90, 0.12);
-  cursor: default;
 }
 .pkg-chip.ok {
   color: #2e9e5b;
@@ -1374,41 +1266,6 @@ body.glass .input {
   border-color: #e5606a;
   background: rgba(229, 96, 106, 0.12);
 }
-.pkg-row .inst-badge {
-  margin-right: 2px;
-}
-.pkg-chip .chip-copy {
-  margin-left: 2px;
-  font-size: 11px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.pkg-chip:hover .chip-copy,
-.pkg-row:hover .chip-copy {
-  opacity: 1;
-}
-.chip-copy:hover {
-  color: var(--accent);
-}
-/* 系统包管理器原生安装任务条 */
-.sys-job {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  font-size: 12.5px;
-}
-.sys-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  flex-shrink: 0;
-}
 .sys-dot.run {
   background: #e0b45a;
   animation: sys-pulse 1s ease-in-out infinite;
@@ -1419,19 +1276,6 @@ body.glass .input {
 .sys-dot.err {
   background: #e5606a;
 }
-.sys-job b {
-  white-space: nowrap;
-}
-.sys-line {
-  flex: 1;
-  min-width: 0;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-family: var(--mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 @keyframes sys-pulse {
   0%,
   100% {
@@ -1440,11 +1284,6 @@ body.glass .input {
   50% {
     opacity: 0.35;
   }
-}
-.soft-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
 }
 .support-toolbar {
   display: flex;
@@ -1473,79 +1312,9 @@ body.glass .input {
   color: var(--accent);
   background: var(--accent-soft, transparent);
 }
-.soft-card button.soft-install {
-  font: inherit;
-  width: 100%;
-  text-align: left;
-}
-button.soft-install {
-  font: inherit;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-}
 .empty.small {
   padding: 24px;
   color: var(--text-dim);
-}
-.soft-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  color: var(--text);
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    transform 0.1s;
-}
-.soft-card:hover {
-  border-color: var(--accent);
-}
-.soft-card:active {
-  transform: scale(0.98);
-}
-.soft-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.soft-name {
-  font-weight: 600;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.inst-badge {
-  font-size: 10.5px;
-  font-weight: 500;
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  background: var(--bg);
-}
-.inst-badge.yes {
-  color: #2e9e5b;
-  border-color: #2e9e5b;
-  background: rgba(46, 158, 91, 0.12);
-}
-.soft-desc {
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.soft-link {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--accent);
 }
 
 /* 渠道安装弹窗：包管理器安装命令列表 */
@@ -1553,27 +1322,6 @@ button.soft-install {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.channel-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 12px;
-  font: inherit;
-  text-align: left;
-  color: var(--text);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background 0.15s;
-}
-.channel-row:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft, transparent);
 }
 .channel-row.on {
   border-color: var(--accent);
@@ -1594,27 +1342,6 @@ button.soft-install {
   color: var(--accent);
   border-color: var(--accent);
 }
-.channel-cmd {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  font-family: var(--mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
-  color: var(--text-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  user-select: all;
-}
-.channel-copy {
-  flex-shrink: 0;
-  font-size: 11.5px;
-  color: var(--accent);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.channel-row:hover .channel-copy {
-  opacity: 1;
-}
 
 /* ---------- 滚动条 ---------- */
 ::-webkit-scrollbar {
@@ -1630,14 +1357,6 @@ button.soft-install {
 }
 ::-webkit-scrollbar-track {
   background: transparent;
-}
-
-/* ---------- 系统概览仪表盘 ---------- */
-.gauges {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-bottom: 22px;
 }
 .gauge {
   display: flex;
@@ -1662,20 +1381,6 @@ button.soft-install {
   transform-origin: center;
   transition: stroke-dasharray 0.6s ease;
 }
-.gauge-num {
-  fill: var(--text);
-  font-size: 20px;
-  font-weight: 700;
-}
-.gauge-cap {
-  fill: var(--text-dim);
-  font-size: 11px;
-}
-.gauge-sub {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
 
 .panel {
   background: var(--bg-card);
@@ -1690,28 +1395,6 @@ button.soft-install {
   font-weight: 600;
   margin-bottom: 14px;
 }
-
-.disk-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.disk-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.disk-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-.disk-name {
-  font-weight: 500;
-}
-.disk-nums {
-  color: var(--text-dim);
-}
 .bar-track {
   height: 8px;
   background: var(--bg-hover);
@@ -1723,28 +1406,6 @@ button.soft-install {
   background: var(--primary);
   border-radius: 6px;
   transition: width 0.5s ease;
-}
-
-.gpu-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.gpu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-.gpu-name {
-  font-weight: 500;
-}
-
-/* ---------- CPU 历史曲线 ---------- */
-.chart-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 .chart {
   width: 100%;
@@ -1761,52 +1422,6 @@ button.soft-install {
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
-}
-.chart-caption {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-/* ---------- 网络速率 ---------- */
-.net-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.net-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.net-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.net-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.net-name {
-  font-weight: 600;
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-.net-total {
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.net-rates {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 .net-rate.down {
   color: var(--accent);
@@ -1834,24 +1449,6 @@ button.soft-install {
   overflow: hidden;
   box-shadow: var(--surface-shadow);
 }
-.usage-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.usage-top-info {
-  min-width: 0;
-  flex: 1;
-}
-.usage-title {
-  font-size: 15px;
-  font-weight: 700;
-}
-.usage-meta {
-  font-size: 12px;
-  color: var(--text-dim);
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
 .usage-model {
   font-size: 11px;
   color: var(--text-dim);
@@ -1874,129 +1471,17 @@ button.soft-install {
   width: 100%;
   height: 100%;
 }
-
-/* 网络卡片顶部的速率文本块 */
-.rate-block {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-.rate-block-num {
-  font-size: 18px;
-  font-weight: 700;
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
 .rate-block-num.down {
   color: var(--accent);
 }
 .rate-block-num.up {
   color: var(--green);
 }
-.rate-block-cap {
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
-/* 电池卡片体 */
-.battery-fill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 6px;
-}
-.battery-fill-num {
-  font-size: 40px;
-  font-weight: 800;
-  color: var(--green);
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
-.battery-fill-status {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-
-/* GPU 卡片体 */
-.gpu-fill {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100%;
-}
-.space-fill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-dim);
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
-.gpu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-.gpu-name {
-  font-weight: 600;
-}
-.gpu-vram {
-  margin-left: auto;
-}
-
-.net-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-left: auto;
-}
-.net-rate {
-  font-size: 13px;
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
 .net-rate.down {
   color: var(--accent);
 }
 .net-rate.up {
   color: var(--green);
-}
-
-.battery-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.battery-status {
-  font-size: 14px;
-}
-
-/* ---------- 硬件信息 ---------- */
-.hw-group {
-  display: flex;
-  flex-direction: column;
-}
-.hw-row {
-  display: flex;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.hw-row:last-child {
-  border-bottom: none;
-}
-.hw-label {
-  width: 46px;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  font-size: 13px;
-}
-.hw-value {
-  font-size: 13px;
-  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-  word-break: break-all;
 }
 
 /* ---------- 工具图标徽标 ---------- */
@@ -2084,39 +1569,6 @@ button.soft-install {
   flex-direction: column;
   gap: 16px;
 }
-.compact-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.compact-group-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-}
-.compact-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.tc-chip {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition:
-    transform 0.1s,
-    border-color 0.15s;
-}
-.tc-chip:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-}
 .tc-chip.installed {
   border-color: var(--green);
 }
@@ -2131,16 +1583,6 @@ button.soft-install {
   width: 28px;
   height: 28px;
   font-size: 12px;
-}
-.tc-chip::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-dim);
 }
 .tc-chip.installed::after {
   background: var(--green);
@@ -2159,11 +1601,6 @@ button.soft-install {
   width: 22px;
   height: 22px;
   object-fit: contain;
-}
-
-/* ---------- 其他支持的工具 ---------- */
-.other-tools {
-  margin-top: 26px;
 }
 .tool-card.other {
   flex-direction: column;
@@ -2232,13 +1669,6 @@ button.soft-install {
   .usage-card {
     padding: 12px;
   }
-  .usage-title {
-    font-size: 13px;
-  }
-  .net-head,
-  .rate-block {
-    display: none;
-  }
 }
 @media (max-width: 460px) {
   .usage-grid {
@@ -2302,24 +1732,8 @@ button.soft-install {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
-.setting-radio {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: grid;
-  place-items: center;
-}
 .setting-row.active .setting-radio {
   border-color: var(--accent);
-}
-.setting-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: transparent;
-  transition: background 0.15s;
 }
 .setting-dot.on {
   background: var(--accent);
@@ -2392,22 +1806,6 @@ button.soft-install {
 }
 .about-desc strong {
   color: var(--text);
-}
-.about-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.about-row:last-child {
-  border-bottom: none;
-}
-.about-k {
-  width: 46px;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  font-size: 13px;
 }
 .about-v {
   font-size: 13px;
@@ -2487,14 +1885,6 @@ summary:focus-visible {
 }
 button:disabled {
   opacity: 0.5;
-}
-.nav-section-label {
-  height: 24px;
-  padding: 0 12px;
-  color: var(--text-dim);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1px;
 }
 .sidebar.collapsed .nav {
   width: 100%;
@@ -2983,15 +2373,6 @@ button:disabled {
   gap: 6px;
   margin-bottom: 22px;
 }
-.soft-card {
-  padding: 15px 16px;
-  box-shadow: var(--surface-shadow);
-}
-.inst-badge.yes {
-  color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 25%, var(--border));
-  background: var(--green-soft);
-}
 .input:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -3039,9 +2420,6 @@ button:disabled {
   }
   .support-search-field {
     width: 100%;
-  }
-  .soft-grid {
-    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 560px) {
@@ -3164,10 +2542,6 @@ button:disabled {
   padding: 18px 20px 16px;
   box-shadow: var(--surface-shadow-sm);
 }
-.usage-title {
-  font-size: 16px;
-  letter-spacing: -0.2px;
-}
 
 /* 徽标与胶囊：更圆、更淡 */
 .pill {
@@ -3248,15 +2622,6 @@ select.input {
   border-radius: 14px;
   padding: 12px 16px;
 }
-
-/* 概览：仪表盘改成一张横向英雄卡 */
-.gauges {
-  gap: 14px;
-  padding: 18px;
-  border-radius: 26px;
-  background: var(--bg-card);
-  box-shadow: var(--surface-shadow);
-}
 .gauge {
   flex: 1;
   min-width: 140px;
@@ -3275,10 +2640,6 @@ select.input {
 }
 .gauge-value {
   stroke-width: 12;
-}
-.gauge-num {
-  font-size: 22px;
-  font-weight: 800;
 }
 
 /* 概览区标题：更小、更克制 */
@@ -3316,15 +2677,8 @@ select.input {
 .view-head .btn-ghost:hover {
   background: rgb(255 255 255 / 18%);
 }
-
-/* ============ MiuiX 细节层：融合分组列表 ============ */
-
-/* 来源/分组容器：浅底块，不再描边 */
 .node-inventory-source,
-.channel-list,
-.disk-list,
-.net-list,
-.gpu-list {
+.channel-list {
   border-radius: 18px;
 }
 .node-inventory-source {
@@ -3341,30 +2695,13 @@ select.input {
   text-transform: uppercase;
   color: var(--text-dim);
 }
-
-/* 数据行：行距更松、分隔线更淡、悬停有底色 */
-.disk-row,
-.net-row,
-.hw-row,
-.channel-row,
-.compact-row,
 .adopt-row {
   padding: 11px 10px;
   border-radius: 12px;
   transition: background 0.15s ease;
 }
-.disk-row:hover,
-.net-row:hover,
-.hw-row:hover,
-.channel-row:hover,
-.compact-row:hover,
 .adopt-row:hover {
   background: var(--surface-2);
-}
-.disk-row + .disk-row,
-.net-row + .net-row,
-.hw-row + .hw-row {
-  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 
 /* 头部与表头：降噪 */
@@ -3456,8 +2793,7 @@ hr {
   text-transform: uppercase;
 }
 .setting-desc,
-.view-sub,
-.field-hint {
+.view-sub {
   line-height: 1.75;
 }
 
@@ -3541,8 +2877,6 @@ dd {
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.gauge-num,
-.rate-block-num,
 .resource-meta {
   font-variant-numeric: tabular-nums;
 }
@@ -3640,7 +2974,6 @@ dd {
 }
 .tool-grid,
 .usage-grid,
-.gauges,
 .preset-grid,
 .overview-details,
 .overview-section-heading {
@@ -3655,9 +2988,6 @@ dd {
   gap: var(--gap-grid);
 }
 .preset-grid {
-  gap: var(--gap-grid);
-}
-.gauges {
   gap: var(--gap-grid);
 }
 
@@ -3683,14 +3013,11 @@ dd {
 .preset-grid > * {
   display: flex;
 }
-
-/* 区块标题与卡片左边缘对齐 */
 .overview-section-heading,
 .view-head,
 .panel,
 .usage-grid,
-.tool-grid,
-.gauges {
+.tool-grid {
   margin-left: 0;
   margin-right: 0;
 }
@@ -3712,18 +3039,12 @@ dd {
 .project-environment > :last-child {
   margin-bottom: 0;
 }
-
-/* 区块标题与卡片文案使用同一基线 */
 .panel-title,
-.usage-title,
 .node-inventory-heading h2,
 .project-env-heading h3 {
   line-height: 1.35;
 }
-
-/* 按钮组在卡片内右对齐或等距 */
 .dialog-foot,
-.form-actions,
 .project-env-actions {
   gap: 10px;
 }
