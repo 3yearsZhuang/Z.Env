@@ -562,6 +562,33 @@ export function presetParseTools(toml: string): Promise<PresetTool[]> {
   return invoke("preset_parse_tools", { toml });
 }
 
+/** 项目配方单项处置（只读预览，不执行） */
+export type RecipeDisposition = "reuse" | "install" | "conflict" | "unsupported" | "unknown";
+
+export interface RecipeStep {
+  tool: string;
+  request: string | null;
+  disposition: RecipeDisposition;
+  channel: string | null;
+  installationId: string | null;
+  version: string | null;
+  reason: string;
+  planReady: boolean;
+}
+
+export interface RecipeReport {
+  schemaVersion: number;
+  snapshotRequestId: string;
+  steps: RecipeStep[];
+  executable: boolean;
+  issues: string[];
+}
+
+/** 只读配方预览：汇总预设工具、项目声明与清单；不改写项目、不安装工具 */
+export function recipePreview(tools: PresetTool[]): Promise<RecipeReport> {
+  return invoke("recipe_preview", { tools, project: null });
+}
+
 /** 通用错误信息提取 */
 export function errorMessage(e: unknown): string {
   if (typeof e === "string") return e;

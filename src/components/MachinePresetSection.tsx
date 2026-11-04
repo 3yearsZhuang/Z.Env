@@ -5,8 +5,10 @@ import {
   errorMessage,
   listTools,
   presetParseTools,
+  recipePreview,
   type PresetFile,
   type PresetTool,
+  type RecipeReport,
 } from "../api";
 import type { Navigate } from "../lib/nav";
 import { presetToToml, toolsOf } from "../lib/preset";
@@ -37,6 +39,7 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
   const [pending, setPending] = useState<PresetChoice | null>(null);
   const [pendingTools, setPendingTools] = useState<PresetTool[]>([]);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
+  const [recipe, setRecipe] = useState<RecipeReport | null>(null);
 
   /** 打开预设预览弹窗（解析出工具清单）；快照重建占用通道时拒绝进入 */
   async function openInstall(choice: PresetChoice) {
@@ -61,6 +64,12 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
         );
       } catch {
         setInstalledNames(new Set());
+      }
+      // 只读配方检查：失败只降级为“未检查”，不阻塞原有安装流程。
+      try {
+        setRecipe(await recipePreview(tools));
+      } catch {
+        setRecipe(null);
       }
       setInstallLog([]);
       setPendingTools(tools);
@@ -142,6 +151,18 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
                   这些运行时会装进 mise 存储；使用前请在项目中指定版本或设为全局默认。不会改动项目的
                   mise.toml。已装状态按本机现状标注，已装的会重新校验版本。
                 </div>
+                {recipe && (
+                  <div className="dialog-tip" role="status">
+                    配方检查：{recipe.steps.filter((s) => s.disposition === "reuse").length}{" "}
+                    项可复用、
+                    {recipe.steps.filter((s) => s.disposition === "install").length} 项可安装、
+                    {
+                      recipe.steps.filter((s) => !["reuse", "install"].includes(s.disposition))
+                        .length
+                    }{" "}
+                    项需人工确认；此检查不改写项目或安装工具。
+                  </div>
+                )}
                 <div className="adopt-list">
                   {pendingTools.map((t) => (
                     <div className="adopt-row" key={t.name}>

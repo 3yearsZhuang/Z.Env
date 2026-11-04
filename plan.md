@@ -50,6 +50,8 @@
 
 - ✅ **P14 工作包 08 — Python pyenv 受控编译**：`pyenv root`/`commands`、六项构建工具与精确版本门禁、固定 install/uninstall argv、受控 PATH 与 1 小时超时已接入；伪 pyenv 5 项场景通过。真实可丢弃环境完成 CPython 3.12.13 源码编译安装/卸载（应用计划 4+4 步全部 completed，版本目录移除），未写用户环境；其他版本/平台与真实失败/取消场景待补，见 [实施记录](./docs/p14-python-pyenv.md)。
 
+- 🚧 **P14 工作包 10 — 项目配方**：只读配方预览已接入，逐项给出复用/可安装/冲突/不支持/未知与原因，`unsupported`/`unknown` 不猜测；前端在整机预设弹窗显示检查计数。执行编排、失败重试与 Node 计划接入待继续，见 [实施记录](./docs/p14-project-recipes.md)。
+
 ## 已排定的重构路线
 
 阶段状态在本表维护；后续范围与工作包统一见 [三平台实施方案](./docs/cross-platform-implementation.md)。首个 **macOS + Node.js** 样板保留为已完成基线，mise 为可选 provider。

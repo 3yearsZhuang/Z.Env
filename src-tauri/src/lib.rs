@@ -21,6 +21,7 @@ mod process;
 mod project;
 pub mod project_environment;
 pub mod providers;
+mod recipe;
 mod services;
 mod snapshot;
 mod sources;
@@ -668,6 +669,53 @@ async fn python_project_environment(
     .map_err(|_| "Python 项目核对线程中断，请重试".to_owned())?
 }
 
+/// 项目配方只读预览：汇总预设工具、项目声明与清单，不改写项目或安装任何工具。
+#[tauri::command(async)]
+async fn recipe_preview(
+    service: tauri::State<'_, operation_plan::OperationPlanService>,
+    inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
+    tools: Vec<preset::PresetTool>,
+    project: Option<project_environment::PythonProjectRequest>,
+) -> Result<recipe::RecipeReport, String> {
+    if tools.len() > 64 {
+        return Err("配方工具数量超出预算".into());
+    }
+    let options = providers::python::PythonScanOptions::from_environment()
+        .map_err(|_| "无法读取项目上下文")?;
+    let (_, snapshot) = inventory
+        .current_snapshot()
+        .map_err(|_| "清单不可用，请先完成读取")?;
+    let python = match project {
+        Some(request) => {
+            let expected = request.snapshot_request_id.clone();
+            let lease = inventory
+                .begin_tool(
+                    request.request_id.clone(),
+                    None,
+                    inventory::query::InventoryTool::Python,
+                )
+                .map_err(|e| e.to_string())?;
+            Some(
+                lease
+                    .read_snapshot(&expected, |snapshot, _| {
+                        project_environment::inspect_python(snapshot, &request)
+                    })
+                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?,
+            )
+        }
+        None => None,
+    };
+    Ok(recipe::preview(
+        &tools,
+        &snapshot,
+        python.as_ref(),
+        &options,
+        service.inner(),
+        inventory.inner(),
+    ))
+}
+
 /// Python 绑定收据列表；只读私有账本，不探测安装或改写配置。
 #[tauri::command(async)]
 fn python_bindings() -> Result<Vec<operation_plan::PythonBinding>, String> {
@@ -871,6 +919,7 @@ pub fn run() {
             tool_catalog,
             project_environment,
             python_project_environment,
+            recipe_preview,
             python_bindings,
             inventory_cancel,
             install_preset,
