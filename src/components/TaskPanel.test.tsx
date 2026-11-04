@@ -7,7 +7,7 @@ import TaskPanel from "./TaskPanel";
 vi.mock("../api", () => ({
   operationCancel: vi.fn(),
   operationList: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
 const running: Operation = {

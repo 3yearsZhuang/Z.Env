@@ -8,7 +8,7 @@ vi.mock("../api", () => ({
   replaceTools: vi.fn(),
   presetImport: vi.fn(),
   presetParseTools: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({

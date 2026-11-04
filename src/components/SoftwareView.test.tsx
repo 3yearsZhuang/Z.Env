@@ -22,7 +22,7 @@ vi.mock("../api", () => ({
   listTools: vi.fn(),
   onSysInstallProgress: vi.fn(),
   packageCatalog: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 vi.mock("../data/catalog", () => ({
   CAT_KEYS_ALL: ["语言", "编辑器"],

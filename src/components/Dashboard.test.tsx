@@ -9,7 +9,7 @@ vi.mock("../api", () => ({
   systemStats: vi.fn(),
   checkMise: vi.fn(),
   getEnvInfo: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
 const stats: SystemStats = {
