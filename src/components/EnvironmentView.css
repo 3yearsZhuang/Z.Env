@@ -43,3 +43,67 @@
     padding: 12px;
   }
 }
+
+/* 运行时切换器：本机工具页的第一入口，直接决定下方显示哪套实例清单 */
+.runtime-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-grid, 12px);
+  margin-bottom: 0;
+}
+.runtime-switch-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+.runtime-switch-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  transform: translateY(-1px);
+}
+.runtime-switch-btn.active {
+  border-color: var(--primary-strong);
+  box-shadow:
+    0 0 0 1px var(--primary-strong) inset,
+    var(--surface-shadow-sm);
+}
+.runtime-switch-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.runtime-switch-btn.active .runtime-switch-name {
+  color: var(--primary-strong);
+}
+.runtime-switch-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .runtime-switch {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 能力台账：折叠区与旧版渠道同族，但标题强调“只读说明” */
+.runtime-capability {
+  min-width: 0;
+}
