@@ -15,8 +15,8 @@
   gap: 13px;
   min-width: 0;
   padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   background: var(--card);
   box-shadow: var(--surface-shadow);
 }
@@ -66,8 +66,8 @@
 .ops-panel {
   margin-bottom: 22px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   background: var(--card);
   box-shadow: var(--surface-shadow);
 }
@@ -152,7 +152,7 @@
   height: 36px;
   color: var(--muted-foreground);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--background);
 }
 
@@ -413,7 +413,7 @@
   display: block;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 11px;
   background: var(--background);
   font-family: var(--mono);
   font-size: 12px;

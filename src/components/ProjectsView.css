@@ -51,7 +51,7 @@
   background: var(--accent-soft);
   color: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 12%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 .project-count,
 .project-badge {
@@ -79,7 +79,7 @@
   align-items: center;
   gap: 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 11px;
   padding: 0 12px;
   color: var(--text-dim);
   background: var(--bg-soft);
@@ -235,7 +235,7 @@
   align-items: flex-start;
   gap: 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 11px;
   padding: 12px 14px;
   font-size: 12px;
   line-height: 1.8;

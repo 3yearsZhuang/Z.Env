@@ -1,8 +1,8 @@
 .node-inventory {
   min-width: 0;
   margin-bottom: 22px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   background: var(--card);
   box-shadow: var(--surface-shadow);
   container-type: inline-size;
@@ -263,7 +263,7 @@
   align-items: center;
   gap: 12px;
   padding: 13px 14px;
-  border-radius: 8px;
+  border-radius: 11px;
   list-style: none;
   cursor: pointer;
   scroll-margin-top: 16px;
@@ -473,7 +473,7 @@
 .node-inventory-empty {
   padding: 24px 14px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: 11px;
   color: var(--muted-foreground);
   font-size: 12px;
   line-height: 1.8;

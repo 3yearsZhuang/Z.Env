@@ -2,7 +2,7 @@
   width: min(420px, calc(100vw - 32px));
   padding: 0;
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: 0 8px 32px #182c471a;
 }
 
