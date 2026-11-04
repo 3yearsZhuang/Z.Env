@@ -3,8 +3,8 @@
   margin: 20px 0;
   padding: 18px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 13px;
+  border-radius: var(--r-lg);
+  font-size: var(--fs-base);
   line-height: 1.7;
 }
 .project-env-heading {
@@ -42,8 +42,8 @@
   overflow-wrap: anywhere;
 }
 .project-environment code {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   white-space: normal;
 }
 .project-environment ul {
@@ -64,7 +64,7 @@
   padding: 12px;
   margin: 8px 0;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-xs);
 }
 .project-env-candidates > li > div {
   display: flex;
@@ -74,7 +74,7 @@
 }
 .project-env-candidates span {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .project-env-candidates code {
   display: block;
@@ -88,7 +88,7 @@
 .project-env-context {
   border: 1px solid var(--border);
   padding: 12px;
-  border-radius: 7px;
+  border-radius: var(--r-xs);
 }
 .project-env-mismatch {
   border-color: var(--warning);

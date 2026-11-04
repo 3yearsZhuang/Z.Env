@@ -1,12 +1,16 @@
-/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（MiuiX / HyperOS 风格：米白底、悬浮圆角卡片、低饱和蓝）。
- * 明/暗两套令牌在此集中定义；styles.css 的旧变量（--bg/--accent 等）全部映射到这里，
+/* 设计系统入口：Tailwind v4 + 设计令牌（MiuiX / HyperOS 风格：米白底、悬浮圆角卡片、低饱和蓝）。
+ *
+ * 这里是**唯一令牌层**：颜色、圆角、字号、间距、字体栈只在 index.css 定义一次。
+ * styles.css 与组件 CSS 只消费令牌、不再自己定义——历史上 styles.css 二次定义
+ * `--accent`/`--radius` 会晚于本文件生效，导致 Tailwind 语义类（bg-accent / rounded-md）
+ * 解析成另一套值。新增视觉数值请先扩展本文件的刻度，不要在组件里写裸值。
  * 明暗切换由 App.tsx 解析（auto 跟随系统）后切换 <html> 上的 .dark 类。 */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* MiuiX / HyperOS 基调：米白底、纯白悬浮卡片、低饱和蓝主色。 */
+  /* ---------- 颜色 ---------- */
   --background: #f2f3f5;
   --foreground: #101114;
   --card: #ffffff;
@@ -16,6 +20,7 @@
   --primary: #3482ff;
   --primary-strong: #2f6fe0;
   --primary-foreground: #ffffff;
+  --primary-soft: color-mix(in srgb, var(--primary) 9%, transparent);
   --secondary: #f7f8fa;
   --secondary-foreground: #101114;
   --muted: #f7f8fa;
@@ -23,7 +28,9 @@
   --accent: #e8f1ff;
   --accent-foreground: #1f6ae0;
   --destructive: #e34b4b;
+  --destructive-soft: color-mix(in srgb, var(--destructive) 12%, transparent);
   --success: #14b87a;
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
   --warning: #e08b1e;
   --border: #e7e8ec;
   --input: #f2f3f5;
@@ -36,7 +43,44 @@
   --surface-shadow: 0 1px 2px rgb(16 17 20 / 4%), 0 8px 24px rgb(16 17 20 / 6%);
   --surface-shadow-sm: 0 1px 2px rgb(16 17 20 / 5%), 0 2px 8px rgb(16 17 20 / 4%);
   --ring: #9cc2ff;
-  --radius: 0.875rem;
+
+  /* 页头头图渐变 */
+  --hero-from: #4a8cff;
+  --hero-to: #2258d6;
+  --hero-glow: 0 18px 40px rgb(52 130 255 / 26%);
+
+  /* ---------- 圆角刻度 ----------
+   * 组件只允许使用这六档 + 胶囊，不再写 4/9/11/13/15/20/24px 这类一次性数值。 */
+  --r-xs: 6px; /* 微型标记、代码片段、徽标 */
+  --r-sm: 10px; /* 内层小行、证据列表、紧凑输入 */
+  --r-md: 14px; /* 控件：按钮、输入、标签、列表行 */
+  --r-lg: 18px; /* 卡片与内容块 */
+  --r-xl: 22px; /* 面板、工具卡、侧栏 */
+  --r-2xl: 26px; /* 对话框、页头头图 */
+  --r-pill: 999px;
+
+  /* ---------- 字号刻度 ---------- */
+  --fs-xs: 11px; /* 说明、徽标、元信息 */
+  --fs-sm: 12px; /* 次要正文、列表副标题 */
+  --fs-base: 13px; /* 正文 */
+  --fs-md: 14px; /* 强调正文、控件 */
+  --fs-lg: 15px; /* 小标题 */
+  --fs-xl: 17px; /* 卡片标题 */
+  --fs-2xl: 20px; /* 区块标题 */
+  --fs-3xl: 26px; /* 页面标题 */
+  --fs-4xl: 32px; /* 关键数值 */
+
+  /* ---------- 间距刻度 ----------
+   * 区块纵向 16px、栅格 12px、卡片内边距 24px、页面内边距 28px；
+   * 窄窗在此统一收缩，避免各页各写一套媒体查询。 */
+  --gap-block: 16px;
+  --gap-grid: 12px;
+  --pad-card: 24px;
+  --pad-page: 28px;
+
+  /* ---------- 字体栈 ---------- */
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
   color-scheme: light;
 }
 
@@ -70,7 +114,19 @@
   --surface-3: #26282e;
   --surface-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 45%);
   --surface-shadow-sm: 0 1px 2px rgb(0 0 0 / 35%), 0 4px 14px rgb(0 0 0 / 30%);
+  --hero-from: #3568c9;
+  --hero-to: #16224a;
+  --hero-glow: 0 18px 44px rgb(0 0 0 / 55%);
   color-scheme: dark;
+}
+
+/* 窄窗：卡片间距与内边距同步收缩，保持等距 */
+@media (max-width: 720px) {
+  :root {
+    --pad-page: 16px;
+    --pad-card: 18px;
+    --gap-block: 12px;
+  }
 }
 
 @theme inline {
@@ -96,9 +152,14 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
   --color-ring: var(--ring);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 3px);
-  --radius-sm: calc(var(--radius) - 6px);
+  /* 圆角工具类与手写 CSS 共用同一刻度 */
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+  --radius-pill: var(--r-pill);
 }
 
 @layer base {
@@ -119,7 +180,7 @@
       "PingFang SC",
       "Microsoft YaHei",
       sans-serif;
-    font-size: 14px;
+    font-size: var(--fs-md);
     -webkit-font-smoothing: antialiased;
   }
 }

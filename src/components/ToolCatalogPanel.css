@@ -2,12 +2,12 @@
   min-width: 0;
   padding: 20px;
   border: 1px solid transparent;
-  border-radius: 22px;
-  background: var(--bg-card);
+  border-radius: var(--r-xl);
+  background: var(--card);
   box-shadow: var(--surface-shadow-sm);
   margin-bottom: 0;
   background: var(--card);
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.7;
 }
 .tool-catalog-heading {
@@ -57,7 +57,7 @@
   min-width: 0;
   border: 0;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   background: var(--surface-2);
 }
 .tool-catalog-card h3 {
@@ -65,10 +65,10 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
-  font-size: 15px;
+  font-size: var(--fs-lg);
 }
 .tool-catalog-card h3 span {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-foreground);
   font-weight: 400;
 }
@@ -79,8 +79,8 @@
   overflow-wrap: anywhere;
 }
 .tool-catalog code {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   white-space: normal;
 }
 .tool-catalog-actions {
