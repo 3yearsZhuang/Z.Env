@@ -14,6 +14,7 @@ import {
   ToolSource,
 } from "../api";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import { Notice } from "./ui/notice";
 
 interface Props {
   tool: ToolInfo;
@@ -253,14 +254,14 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
         </div>
 
         {error && (
-          <div className="banner error" onClick={() => setError(null)}>
-            ⚠ {error}
-          </div>
+          <Notice tone="error" onDismiss={() => setError(null)}>
+            {error}
+          </Notice>
         )}
         {toast && (
-          <div className="toast error" onClick={() => setToast(null)}>
-            ⚠ {toast}
-          </div>
+          <Notice tone="error" onDismiss={() => setToast(null)}>
+            {toast}
+          </Notice>
         )}
 
         <div className="dialog-body">

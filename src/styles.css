@@ -225,25 +225,64 @@ body.glass .input {
   font-size: var(--fs-base);
   line-height: 1.7;
 }
+
+/* 统一提示条（components/ui/notice.tsx）：图标 + 文本 + 可键盘操作的关闭按钮 */
+.banner.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.banner.notice > svg {
+  flex: none;
+  margin-top: 3px;
+}
+.notice-text {
+  flex: 1;
+  min-width: 0;
+}
+.notice-dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.notice-dismiss:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.notice-dismiss:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
 .banner.error {
   background: var(--destructive-soft);
   color: var(--destructive);
-  border: 1px solid rgba(229, 96, 106, 0.25);
+  border: 1px solid color-mix(in srgb, var(--destructive) 25%, transparent);
 }
 .banner.success {
   background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(63, 185, 127, 0.25);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
 }
 .banner.info {
   background: var(--primary-soft);
   color: var(--primary);
-  border: 1px solid rgba(79, 140, 255, 0.25);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
 }
 .banner.warn {
-  background: rgba(224, 180, 90, 0.12);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
   color: var(--warning);
-  border: 1px solid rgba(224, 180, 90, 0.28);
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent);
 }
 .banner a {
   color: inherit;
@@ -271,7 +310,7 @@ body.glass .input {
   gap: 10px;
 }
 .tool-card.open {
-  border-color: rgba(79, 140, 255, 0.4);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
 }
 
 .tool-badge {
@@ -323,10 +362,10 @@ body.glass .input {
 .pill.channel {
   background: var(--accent-soft, transparent);
   color: var(--primary);
-  border: 1px solid rgba(79, 140, 255, 0.35);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
 }
 .pill.managed {
-  background: rgba(224, 180, 90, 0.15);
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
   color: #e0b45a;
 }
 .pill.uninstalled {
@@ -483,7 +522,7 @@ body.glass .input {
 .toast.error {
   background: var(--destructive-soft);
   color: var(--destructive);
-  border: 1px solid rgba(229, 96, 106, 0.3);
+  border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
 }
 /* 接管/解除接管 确认框 */
 .confirm-mask {
@@ -925,6 +964,7 @@ body.glass .input {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   overflow: hidden;
+  outline: none;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   animation: easter-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   transform-origin: center;
@@ -1047,7 +1087,11 @@ body.glass .input {
 }
 .donate-img.placeholder {
   background:
-    linear-gradient(135deg, rgba(79, 140, 255, 0.12), rgba(111, 91, 255, 0.12)),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      rgba(111, 91, 255, 0.12)
+    ),
     repeating-linear-gradient(45deg, transparent 0 8px, rgba(139, 147, 163, 0.12) 8px 9px);
   border: 1px dashed var(--border);
   display: grid;
@@ -1074,7 +1118,7 @@ body.glass .input {
 .pkg-chip.err {
   color: #e5606a;
   border-color: #e5606a;
-  background: rgba(229, 96, 106, 0.12);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
 }
 .sys-dot.run {
   background: #e0b45a;
@@ -1273,7 +1317,7 @@ body.glass .input {
 }
 .selfcheck.warn {
   border-color: color-mix(in srgb, #e0b45a 55%, transparent);
-  background: rgba(224, 180, 90, 0.1);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
 }
 .selfcheck-head {
   display: flex;

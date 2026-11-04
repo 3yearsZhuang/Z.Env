@@ -15,6 +15,7 @@ import {
 } from "../api/operationPlan";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./OperationPlanDialog.css";
+import { Notice } from "./ui/notice";
 
 interface Props {
   toolId?: "node" | "python";
@@ -483,11 +484,7 @@ export default function OperationPlanDialog({
           >
             {loading ? "生成计划中…" : "生成预览"}
           </button>
-          {error && (
-            <p role="alert" className="operation-plan-error">
-              {error}
-            </p>
-          )}
+          {error && <Notice tone="error">{error}</Notice>}
           {message && <p role="status">{message}</p>}
           {plan && (
             <section aria-label="后端操作计划">
