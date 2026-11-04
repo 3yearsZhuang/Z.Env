@@ -54,11 +54,13 @@ use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectStat
 // 函数签名与前端调用方式保持不变。
 //
 // 可共享的全局状态：持有复用的 System 实例以计算 CPU 利用率，
-// NetworkState 以计算网络速率，以及缓存的硬件静态信息。
+// NetworkState 以计算网络速率，缓存的硬件静态信息，
+// 以及电量/磁盘这类慢变量的 TTL 缓存（避免每次轮询都起 pmset 子进程）。
 pub struct AppData {
     pub system: Mutex<sysinfo::System>,
     pub network: Mutex<system::NetworkState>,
     pub hardware: Mutex<Option<system::Hardware>>,
+    pub slow: Mutex<system::SlowMetrics>,
 }
 
 impl Default for AppData {
@@ -67,17 +69,20 @@ impl Default for AppData {
             system: Mutex::new(sysinfo::System::new()),
             network: Mutex::new(system::NetworkState::default()),
             hardware: Mutex::new(None),
+            slow: Mutex::new(system::SlowMetrics::default()),
         }
     }
 }
 
 /// 收集一次系统资源快照。硬件静态信息只采集一次并缓存；
 /// 每次轮询仅计算动态指标（快），避免 system_profiler 反复执行。
+/// 锁顺序固定为 system → network → hardware → slow，避免与执行器互相等待。
 #[tauri::command(async)]
 fn system_stats(state: tauri::State<'_, AppData>) -> Result<system::SystemStats, String> {
     let mut sys = state.system.lock().map_err(|e| e.to_string())?;
     let mut net = state.network.lock().map_err(|e| e.to_string())?;
     let mut hw = state.hardware.lock().map_err(|e| e.to_string())?;
+    let mut slow = state.slow.lock().map_err(|e| e.to_string())?;
     if hw.is_none() {
         *hw = Some(system::collect_hardware(&mut sys));
     }
@@ -85,6 +90,7 @@ fn system_stats(state: tauri::State<'_, AppData>) -> Result<system::SystemStats,
         &mut sys,
         &mut net,
         hw.as_ref().unwrap(),
+        &mut slow,
     ))
 }
 

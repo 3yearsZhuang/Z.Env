@@ -1,7 +1,7 @@
 //! 系统资源占用统计：CPU / 内存 / 磁盘 / 电量 / GPU / 网络。
 
 use serde::Serialize;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use sysinfo::{Disks, Networks, System};
 
 #[derive(Debug, Clone, Serialize)]
@@ -113,9 +113,69 @@ pub fn collect_hardware(sys: &mut System) -> Hardware {
     }
 }
 
+/// 慢变量采样缓存：电量走 `pmset` 子进程（macOS 实测约 7ms/次），磁盘枚举也要遍历挂载点，
+/// 二者都不需要 2s 的采样分辨率。按 TTL 复用可把 2s 轮询从「每次都起子进程」降到
+/// 「每分钟两次子进程」，同时保持界面数值的可用新鲜度。
+pub struct SlowMetrics {
+    battery: Option<(Instant, Option<BatteryInfo>)>,
+    disks: Option<(Instant, Vec<DiskInfo>)>,
+    battery_ttl: Duration,
+    disk_ttl: Duration,
+}
+
+impl Default for SlowMetrics {
+    fn default() -> Self {
+        Self {
+            battery: None,
+            disks: None,
+            battery_ttl: Duration::from_secs(30),
+            disk_ttl: Duration::from_secs(5),
+        }
+    }
+}
+
+impl SlowMetrics {
+    /// 指定 TTL（测试用：`Duration::ZERO` 表示每次都重新采样）。
+    pub fn with_ttl(battery_ttl: Duration, disk_ttl: Duration) -> Self {
+        Self {
+            battery_ttl,
+            disk_ttl,
+            ..Self::default()
+        }
+    }
+
+    fn battery(&mut self, load: impl FnOnce() -> Option<BatteryInfo>) -> Option<BatteryInfo> {
+        let ttl = self.battery_ttl;
+        cached(&mut self.battery, ttl, load)
+    }
+
+    fn disks(&mut self, load: impl FnOnce() -> Vec<DiskInfo>) -> Vec<DiskInfo> {
+        let ttl = self.disk_ttl;
+        cached(&mut self.disks, ttl, load)
+    }
+}
+
+/// 缓存槽取值：未过期直接复用，过期或为空时调用 `load` 重新采样。
+fn cached<T: Clone>(slot: &mut Option<(Instant, T)>, ttl: Duration, load: impl FnOnce() -> T) -> T {
+    if let Some((at, value)) = slot.as_ref() {
+        if at.elapsed() < ttl {
+            return value.clone();
+        }
+    }
+    let value = load();
+    *slot = Some((Instant::now(), value.clone()));
+    value
+}
+
 /// 收集一次动态统计快照（快速）。`sys` 需在应用生命周期内复用，
-/// `net` 用于跨调用计算网络速率；硬件字段取自缓存的 `hw`。
-pub fn collect_dynamic(sys: &mut System, net: &mut NetworkState, hw: &Hardware) -> SystemStats {
+/// `net` 用于跨调用计算网络速率；硬件字段取自缓存的 `hw`；
+/// 电量与磁盘按 `slow` 的 TTL 复用，避免每次轮询都读子进程。
+pub fn collect_dynamic(
+    sys: &mut System,
+    net: &mut NetworkState,
+    hw: &Hardware,
+    slow: &mut SlowMetrics,
+) -> SystemStats {
     // --- CPU ---
     sys.refresh_cpu_usage();
     let cpu_usage = sys.global_cpu_usage();
@@ -131,14 +191,14 @@ pub fn collect_dynamic(sys: &mut System, net: &mut NetworkState, hw: &Hardware) 
         0.0
     };
 
-    // --- 磁盘（不读型号，快） ---
-    let disks = collect_disks();
+    // --- 磁盘（不读型号，快；按 TTL 复用） ---
+    let disks = slow.disks(collect_disks);
 
     // --- 网络 ---
     let interfaces = collect_networks(net);
 
-    // --- 电量 ---
-    let battery = read_battery();
+    // --- 电量（macOS 起 pmset 子进程，按 TTL 复用） ---
+    let battery = slow.battery(read_battery);
 
     SystemStats {
         cpu_usage,
@@ -803,4 +863,86 @@ fn read_windows_gpus() -> Vec<GpuInfo> {
         .filter(|l| !l.is_empty())
         .map(|name| GpuInfo { name, vram: None })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    fn battery(percent: u8) -> BatteryInfo {
+        BatteryInfo {
+            percent,
+            charging: false,
+        }
+    }
+
+    #[test]
+    fn slow_metrics_reuses_value_within_ttl() {
+        let mut slow = SlowMetrics::with_ttl(Duration::from_secs(3600), Duration::from_secs(3600));
+        let calls = Cell::new(0);
+        for _ in 0..5 {
+            let value = slow.battery(|| {
+                calls.set(calls.get() + 1);
+                Some(battery(87))
+            });
+            assert_eq!(value.map(|b| b.percent), Some(87));
+        }
+        assert_eq!(calls.get(), 1, "TTL 内不应重复采样电量");
+    }
+
+    #[test]
+    fn slow_metrics_reloads_after_ttl() {
+        let mut slow = SlowMetrics::with_ttl(Duration::ZERO, Duration::ZERO);
+        let calls = Cell::new(0);
+        for _ in 0..3 {
+            let _ = slow.battery(|| {
+                calls.set(calls.get() + 1);
+                Some(battery(50))
+            });
+        }
+        assert_eq!(calls.get(), 3, "TTL 为 0 时每次都应重新采样");
+    }
+
+    #[test]
+    fn slow_metrics_caches_absent_battery() {
+        // 无电池设备（台式机）也要缓存“没有”，否则每轮都会白起一次 pmset。
+        let mut slow = SlowMetrics::with_ttl(Duration::from_secs(3600), Duration::from_secs(3600));
+        let calls = Cell::new(0);
+        for _ in 0..3 {
+            assert!(slow
+                .battery(|| {
+                    calls.set(calls.get() + 1);
+                    None
+                })
+                .is_none());
+        }
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn slow_metrics_caches_disks_independently() {
+        let mut slow = SlowMetrics::with_ttl(Duration::from_secs(3600), Duration::from_secs(3600));
+        let disk_calls = Cell::new(0);
+        let battery_calls = Cell::new(0);
+        for _ in 0..4 {
+            let disks = slow.disks(|| {
+                disk_calls.set(disk_calls.get() + 1);
+                vec![DiskInfo {
+                    name: "disk1".to_string(),
+                    model: None,
+                    total_gb: 100.0,
+                    available_gb: 40.0,
+                    percent: 60.0,
+                }]
+            });
+            assert_eq!(disks.len(), 1);
+            let _ = slow.battery(|| {
+                battery_calls.set(battery_calls.get() + 1);
+                Some(battery(20))
+            });
+        }
+        assert_eq!(disk_calls.get(), 1);
+        assert_eq!(battery_calls.get(), 1);
+    }
 }
