@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listTools, listRegistry, ToolInfo } from "../api";
 import { KNOWN_RUNTIMES } from "../data/catalog";
 import { getLogs, LogEntry } from "../logger";
@@ -126,17 +126,65 @@ export default function EasterEgg({ onClose }: { onClose: () => void }) {
   const coveredCount = registry.filter((n) => coveredSet.has(n)).length;
   const missing = registry.filter((n) => !coveredSet.has(n));
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // 唯一非 Radix 的遮罩弹窗：补齐焦点管理、Tab 循环与 Esc 关闭（此前只有鼠标可关）。
+  useEffect(() => {
+    const panel = dialogRef.current;
+    panel?.focus();
+    const focusables = () =>
+      Array.from(
+        panel?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => !el.hasAttribute("disabled"));
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) {
+        event.preventDefault();
+        panel?.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   // 防止 ESC/overlay 点击误关由外部控制，这里不自动关闭
 
   return (
     <div className="overlay easter-overlay" onClick={onClose}>
-      <div className="easter" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="easter"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="easter-title"
+        ref={dialogRef}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="easter-head">
           <div>
-            <h2>🥚 彩蛋</h2>
+            <h2 id="easter-title">🥚 彩蛋</h2>
             <p className="view-sub">解锁隐藏面板</p>
           </div>
-          <button className="btn-close" onClick={onClose}>
+          <button className="btn-close" onClick={onClose} aria-label="关闭彩蛋面板">
             ✕
           </button>
         </div>

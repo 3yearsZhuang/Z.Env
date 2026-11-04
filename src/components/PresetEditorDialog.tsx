@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PresetTool } from "../api";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import { Notice } from "./ui/notice";
 
 /** 编辑器初始值；isNew 决定标题文案与重名校验口径 */
 export interface PresetDraft {
@@ -154,9 +155,9 @@ export default function PresetEditorDialog({
             </p>
           )}
           {error && (
-            <div className="banner error" style={{ marginTop: 10 }} onClick={() => setError(null)}>
-              ⚠ {error}
-            </div>
+            <Notice tone="error" style={{ marginTop: 10 }} onDismiss={() => setError(null)}>
+              {error}
+            </Notice>
           )}
         </div>
 

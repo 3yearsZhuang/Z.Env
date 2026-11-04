@@ -224,6 +224,8 @@ function SoftIcon({ name }: { name: string }) {
         <img
           src={TOOL_ICON_PATHS[name] || `/tools/${name}.svg`}
           alt=""
+          loading="lazy"
+          decoding="async"
           draggable={false}
           onError={() => setFailed(true)}
         />

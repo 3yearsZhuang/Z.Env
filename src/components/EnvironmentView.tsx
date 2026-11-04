@@ -28,6 +28,7 @@ import type { Navigate } from "../lib/nav";
 import { useMachineInstall } from "../lib/useMachineInstall";
 import { KNOWN_RUNTIMES, TOOL_ICON_PATHS } from "../data/catalog";
 import "./EnvironmentView.css";
+import { Notice } from "./ui/notice";
 
 /** 工具徽标：先走显式映射，再按 /tools/{name}.svg 通用查找，都没有则回退名称缩写 */
 function ToolBadge({ name }: { name: string }) {
@@ -43,6 +44,8 @@ function ToolBadge({ name }: { name: string }) {
           src={src}
           alt={name}
           className="tool-badge-img"
+          loading="lazy"
+          decoding="async"
           draggable={false}
           onError={() => setFailed(true)}
         />
@@ -529,21 +532,14 @@ export default function EnvironmentView({
           )}
 
           {error && (
-            <div className="banner error" role="alert">
-              <span>⚠ {error}</span>
-              <button
-                className="btn-ghost"
-                onClick={() => setError(null)}
-                aria-label="关闭管理操作提示"
-              >
-                关闭
-              </button>
-            </div>
+            <Notice tone="error" onDismiss={() => setError(null)}>
+              {error}
+            </Notice>
           )}
           {notice && (
-            <div className="banner success" onClick={() => setNotice(null)}>
-              ✓ {notice}
-            </div>
+            <Notice tone="success" onDismiss={() => setNotice(null)}>
+              {notice}
+            </Notice>
           )}
 
           {loading && cards.length === 0 ? (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { envCenterRemove, envCenterSet, errorMessage, type EnvCenterSnapshot } from "../api";
+import { Notice } from "./ui/notice";
 
 /** 系统 env 列表无搜索词时的最大渲染行数（超出提示细化搜索） */
 const SYSTEM_ENV_RENDER_LIMIT = 80;
@@ -75,14 +76,14 @@ export default function EnvPanel({ snap, reload }: Props) {
   return (
     <>
       {error && (
-        <div className="banner warn" onClick={() => setError("")}>
+        <Notice tone="warn" onDismiss={() => setError("")}>
           {error}
-        </div>
+        </Notice>
       )}
       {notice && (
-        <div className="banner info" onClick={() => setNotice("")}>
+        <Notice tone="info" onDismiss={() => setNotice("")}>
           {notice}
-        </div>
+        </Notice>
       )}
 
       <section className="panel">

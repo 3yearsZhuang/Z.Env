@@ -74,9 +74,6 @@
 .operation-plan-scroll li p {
   margin: 2px 0;
 }
-.operation-plan-error {
-  color: var(--destructive);
-}
 .operation-plan-warning {
   color: var(--warning);
 }

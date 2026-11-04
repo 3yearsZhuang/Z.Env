@@ -18,6 +18,7 @@ import type { MachineInstallApi } from "../lib/useMachineInstall";
 import { useUserPresets } from "../lib/useUserPresets";
 import PresetLibrary, { type PresetChoice } from "./PresetLibrary";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import { Notice } from "./ui/notice";
 
 interface Props {
   /** 切到别的 tab（弹窗里给出「装到某个项目」的出口） */
@@ -104,14 +105,14 @@ export default function MachinePresetSection({ onNavigate, installApi, channelBu
   return (
     <>
       {error && (
-        <div className="banner error" onClick={() => setError(null)}>
-          ⚠ {error}
-        </div>
+        <Notice tone="error" onDismiss={() => setError(null)}>
+          {error}
+        </Notice>
       )}
       {notice && (
-        <div className="banner success" onClick={() => setNotice(null)}>
-          ✓ {notice}
-        </div>
+        <Notice tone="success" onDismiss={() => setNotice(null)}>
+          {notice}
+        </Notice>
       )}
 
       <PresetLibrary
