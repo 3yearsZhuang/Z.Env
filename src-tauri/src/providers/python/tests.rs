@@ -36,6 +36,47 @@ impl Fixture {
     }
 }
 #[test]
+fn bounded_parallel_scan_keeps_provider_order_and_coverage() {
+    let f = Fixture::new();
+    script(
+        &f.options
+            .common
+            .mise_data_dir
+            .join("installs/python/3.13.8/bin/python3"),
+        "3.13.8",
+    );
+    let baseline = scan_python_sources(&f.options, &Default::default());
+    for limit in [1, 2, 4, 99] {
+        let mut options = f.options.clone();
+        options.common.limits.max_parallel_providers = limit;
+        let scans = scan_python_sources(&options, &Default::default());
+        assert_eq!(
+            scans
+                .iter()
+                .map(|scan| scan.report.provider_id)
+                .collect::<Vec<_>>(),
+            PROVIDERS.to_vec(),
+            "limit={limit}"
+        );
+        assert_eq!(
+            scans
+                .iter()
+                .map(|scan| (scan.report.status, scan.observations.len()))
+                .collect::<Vec<_>>(),
+            baseline
+                .iter()
+                .map(|scan| (scan.report.status, scan.observations.len()))
+                .collect::<Vec<_>>(),
+            "limit={limit}"
+        );
+        assert!(
+            scans.iter().all(|scan| !scan.report.coverage.truncated),
+            "limit={limit}"
+        );
+    }
+}
+
+#[test]
 fn five_sources_keep_distinct_installations_and_path_is_never_executed() {
     let f = Fixture::new();
     script(

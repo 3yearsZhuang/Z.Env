@@ -481,19 +481,58 @@ pub fn scan_python_sources(
     options: &PythonScanOptions,
     token: &CancellationToken,
 ) -> Vec<ProviderScan> {
+    // 来源互不依赖，但有界并发：默认最多 4 个来源同时扫描，避免共享 CPU/IO 被 5 路争抢。
+    let limit = options
+        .common
+        .limits
+        .max_parallel_providers
+        .clamp(1, PROVIDERS.len());
+    let (sender, receiver) = std::sync::mpsc::channel();
     std::thread::scope(|scope| {
-        PROVIDERS
+        let mut pending = PROVIDERS.iter().copied().enumerate();
+        let mut running = 0usize;
+        let mut results: Vec<Option<ProviderScan>> = (0..PROVIDERS.len()).map(|_| None).collect();
+        loop {
+            while running < limit {
+                let Some((index, provider)) = pending.next() else {
+                    break;
+                };
+                let sender = sender.clone();
+                scope.spawn(move || {
+                    let scan = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        scan_python_provider(provider, options, token)
+                    }))
+                    .unwrap_or_else(|_| {
+                        let mut run = ScanRun::new(provider, &options.common, token);
+                        run.tool = ToolId::from("python");
+                        run.problem(
+                            ProviderStatus::Error,
+                            "sourcePanicked",
+                            "Python 来源扫描异常中断",
+                        );
+                        run.finish()
+                    });
+                    let _ = sender.send((index, scan));
+                });
+                running += 1;
+            }
+            if running == 0 {
+                break;
+            }
+            match receiver.recv() {
+                Ok((index, scan)) => {
+                    results[index] = Some(scan);
+                    running -= 1;
+                }
+                Err(_) => break,
+            }
+        }
+        drop(sender);
+        results
             .into_iter()
-            .map(|provider| {
-                (
-                    provider,
-                    scope.spawn(move || scan_python_provider(provider, options, token)),
-                )
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|(provider, worker)| {
-                worker.join().unwrap_or_else(|_| {
+            .zip(PROVIDERS)
+            .map(|(scan, provider)| {
+                scan.unwrap_or_else(|| {
                     let mut run = ScanRun::new(provider, &options.common, token);
                     run.tool = ToolId::from("python");
                     run.problem(

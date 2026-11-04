@@ -27,6 +27,8 @@ pub struct ScanLimits {
     pub max_directory_entries: usize,
     pub max_candidates: usize,
     pub max_probes: usize,
+    /// 同时运行的来源扫描线程上限；来源之间互不阻塞，但共享 CPU/IO 预算。
+    pub max_parallel_providers: usize,
     pub max_output_bytes: usize,
     pub max_metadata_bytes: usize,
 }
@@ -39,6 +41,7 @@ impl Default for ScanLimits {
             max_directory_entries: 2048,
             max_candidates: 128,
             max_probes: 32,
+            max_parallel_providers: 4,
             max_output_bytes: 32 * 1024,
             max_metadata_bytes: 128 * 1024,
         }
