@@ -46,7 +46,7 @@ impl Fixture {
         script(
             &root.join("bin/mise"),
             &format!(
-                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{0}/manager-calls'\nif [ \"$1\" = which ] && [ \"$2\" = python ]; then printf '%s' '{0}/mise/installs/python/3.13.15/bin/python3'; exit 0; fi\n/usr/bin/touch '{0}/MANAGER_MUST_NOT_RUN'\nexit 91\n",
+                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{0}/manager-calls'\nif [ \"$1\" = which ] && [ \"$2\" = python ]; then if [ -f '{0}/wrong-which' ]; then printf '%s' '{0}/elsewhere/python3'; else printf '%s' '{0}/mise/installs/python/3.13.15/bin/python3'; fi; exit 0; fi\n/usr/bin/touch '{0}/MANAGER_MUST_NOT_RUN'\nexit 91\n",
                 root.display()
             ),
         );
@@ -720,4 +720,59 @@ fn python_unbind_plan_restores_previous_configuration_and_receipt() {
     assert!(fs::read_to_string(&ledger)
         .unwrap()
         .contains("\"records\": []"));
+}
+#[test]
+fn python_bind_verification_failure_compensates_configuration_and_receipt() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    fs::write(&config, "[tools]\nnode = \"22\"\n").unwrap();
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap()
+        .clone();
+    let bind = f
+        .preview(PlanRequest {
+            snapshot_request_id: snapshot.request_id.clone(),
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(BindingOptions {
+                    strategy: BindingStrategy::Direct,
+                    scope: BindingScope::Project,
+                    project_path: Some(project.path().to_string_lossy().into()),
+                }),
+            },
+        })
+        .unwrap();
+    assert!(bind.capability.can_execute);
+    // 写入成功后让 mise which 解析到错误路径，强制 Verify 失败并触发补偿。
+    fs::write(f.dir.path().join("wrong-which"), "").unwrap();
+    assert!(f.execute(&bind).is_err());
+    let (records, _) = f.service.records();
+    let record = records.last().unwrap();
+    assert_eq!(record.compensation, Some(CompensationOutcome::Completed));
+    assert!(record
+        .steps
+        .iter()
+        .any(|step| step.kind == StepKind::Verify && step.status == StepStatus::Failed));
+    assert!(record
+        .steps
+        .iter()
+        .any(|step| step.kind == StepKind::Compensate && step.status == StepStatus::Completed));
+    assert_eq!(
+        fs::read_to_string(&config).unwrap(),
+        "[tools]\nnode = \"22\"\n"
+    );
+    let ledger = python_binding::ledger(&f.options);
+    let text = fs::read_to_string(&ledger).unwrap_or_else(|_| "{\"records\":[]}".into());
+    let doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert!(doc["records"].as_array().unwrap().is_empty());
 }
