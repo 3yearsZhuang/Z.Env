@@ -1,8 +1,8 @@
 .task-panel.task-center {
   width: min(420px, calc(100vw - 32px));
   padding: 0;
-  background: var(--bg-card);
-  border-radius: var(--radius);
+  background: var(--card);
+  border-radius: var(--r-lg);
   box-shadow: 0 8px 32px #182c471a;
 }
 
@@ -15,7 +15,7 @@
   align-items: center;
   gap: 10px;
   padding: 13px 16px;
-  color: var(--text-dim);
+  color: var(--muted-foreground);
   list-style: none;
 }
 
@@ -29,16 +29,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text);
-  font-size: 12px;
+  color: var(--foreground);
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
 .task-center-count {
   padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--bg-soft);
-  font-size: 10px;
+  border-radius: var(--r-xs);
+  background: var(--secondary);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -79,15 +79,15 @@
 .task-center-entry-head strong {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
 .task-center-status {
   flex-shrink: 0;
   gap: 4px;
-  font-size: 11px;
-  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  color: var(--muted-foreground);
 }
 
 .task-center-status.running {
@@ -111,7 +111,7 @@
 .task-center-warning,
 .task-center-error {
   margin-top: 12px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -128,14 +128,14 @@
 
 .task-center-log summary {
   padding: 5px 100px 5px 0;
-  font-size: 11px;
-  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  color: var(--muted-foreground);
 }
 
 .task-center .terminal {
   margin: 10px 0 0;
   max-height: 180px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .task-center-cancel {

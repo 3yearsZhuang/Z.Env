@@ -16,7 +16,7 @@
   min-width: 0;
   padding: 20px;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--card);
   box-shadow: var(--surface-shadow);
 }
@@ -33,7 +33,7 @@
   width: 38px;
   height: 38px;
   color: var(--primary);
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
@@ -41,14 +41,14 @@
 .ops-stat-caption {
   display: block;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.6;
 }
 
 .ops-stat strong {
   display: block;
   margin: 5px 0;
-  font-size: 25px;
+  font-size: var(--fs-3xl);
   font-weight: 650;
   line-height: 1.2;
   letter-spacing: -0.8px;
@@ -58,7 +58,7 @@
 
 .ops-stat strong small {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -67,7 +67,7 @@
   margin-bottom: 22px;
   overflow: hidden;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--card);
   box-shadow: var(--surface-shadow);
 }
@@ -95,7 +95,7 @@
 
 .ops-section-title h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 650;
   line-height: 1.6;
 }
@@ -103,7 +103,7 @@
 .ops-section-title p {
   margin: 3px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.6;
 }
 
@@ -111,7 +111,7 @@
   flex-shrink: 0;
   min-height: 34px;
   padding: 7px 11px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
@@ -152,7 +152,7 @@
   height: 36px;
   color: var(--muted-foreground);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--background);
 }
 
@@ -179,7 +179,7 @@
 .ops-item-heading h3 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 600;
   line-height: 1.6;
 }
@@ -189,8 +189,8 @@
   align-items: center;
   gap: 5px;
   padding: 2px 7px;
-  border-radius: 5px;
-  font-size: 10px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
   line-height: 1.6;
   white-space: nowrap;
 }
@@ -220,13 +220,13 @@
 .ops-item-meta {
   margin: 5px 0 0;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 
 .ops-path {
   overflow-wrap: anywhere;
-  font-family: var(--mono);
+  font-family: var(--font-mono);
 }
 
 .ops-actions,
@@ -243,7 +243,7 @@
 }
 
 .ops-size {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -252,7 +252,7 @@
 .ops-readonly {
   min-width: 66px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   text-align: right;
 }
 
@@ -261,7 +261,7 @@
   align-items: center;
   gap: 7px;
   color: var(--primary);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 
@@ -280,7 +280,7 @@
 }
 
 .ops-empty strong {
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 500;
 }
 
@@ -288,7 +288,7 @@
   max-width: 380px;
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 
@@ -298,7 +298,7 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.7;
 }
 
@@ -306,7 +306,7 @@
   margin: 14px 22px;
   padding: 12px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
 }
 
 .ops-feedback > svg,
@@ -385,12 +385,12 @@
   justify-content: space-between;
   gap: 16px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .ops-clean-summary strong {
   color: var(--foreground);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -398,14 +398,14 @@
 .ops-clean-path {
   margin: 8px 0 20px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 
 .ops-command-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 
@@ -413,10 +413,10 @@
   display: block;
   padding: 12px 14px;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: var(--surface-2);
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -424,7 +424,7 @@
 .ops-dialog-hint {
   margin: 12px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 
@@ -466,7 +466,7 @@
   }
 
   .ops-stat strong {
-    font-size: 22px;
+    font-size: var(--fs-2xl);
   }
 }
 
@@ -498,7 +498,7 @@
   }
 
   .ops-stat-caption {
-    font-size: 11px;
+    font-size: var(--fs-xs);
   }
 
   .ops-panel-head {

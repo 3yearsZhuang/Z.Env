@@ -2,11 +2,11 @@
   min-width: 0;
   padding: 20px;
   border: 1px solid transparent;
-  border-radius: 22px;
-  background: var(--bg-card);
+  border-radius: var(--r-xl);
+  background: var(--card);
   box-shadow: var(--surface-shadow-sm);
   line-height: 1.7;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 .python-inventory-heading {
   display: flex;
@@ -40,12 +40,12 @@
   min-width: 0;
   padding: 14px;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   background: var(--surface-2);
 }
 .python-source-grid h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-md);
 }
 .python-inventory button {
   white-space: normal;
@@ -57,8 +57,8 @@
   overflow-wrap: anywhere;
 }
 .python-inventory code {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   white-space: normal;
 }
 .python-instance-list {
@@ -69,7 +69,7 @@
   margin: 8px 0;
   padding: 12px 14px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: var(--surface-2);
 }
 .python-instance-list summary {

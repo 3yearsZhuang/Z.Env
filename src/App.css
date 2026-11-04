@@ -4,8 +4,8 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--text-dim);
-  font-size: 13px;
+  color: var(--muted-foreground);
+  font-size: var(--fs-base);
 }
 
 .workspace-spinner {
@@ -24,7 +24,7 @@
   left: 12px;
   z-index: 60;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--r-xs);
   background: var(--primary);
   color: var(--primary-foreground);
   transform: translateY(-180%);
@@ -75,9 +75,9 @@
     width: 40px;
     height: 40px;
     border: 1px solid transparent;
-    border-radius: 13px;
-    background: var(--bg-card);
-    color: var(--text);
+    border-radius: var(--r-md);
+    background: var(--card);
+    color: var(--foreground);
     box-shadow: var(--surface-shadow);
     cursor: pointer;
   }
