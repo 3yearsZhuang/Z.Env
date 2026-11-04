@@ -201,6 +201,7 @@ export default function ServicesCachesView() {
     <div className="view ops-view">
       <div className="view-head">
         <div>
+          <div className="view-eyebrow">SERVICES & CACHES</div>
           <h1>服务与缓存</h1>
           <p className="view-sub">管理开发服务，查看缓存占用，让本地环境保持轻盈。</p>
         </div>

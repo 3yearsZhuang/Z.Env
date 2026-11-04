@@ -1,9 +1,11 @@
 .tool-catalog {
   min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
+  margin-bottom: 0;
   background: var(--card);
   font-size: 13px;
   line-height: 1.7;
@@ -53,9 +55,10 @@
 }
 .tool-catalog-card {
   min-width: 0;
-  border: 1px solid var(--border);
-  padding: 14px;
-  border-radius: 9px;
+  border: 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-2);
 }
 .tool-catalog-card h3 {
   display: flex;

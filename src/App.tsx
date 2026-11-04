@@ -16,7 +16,6 @@ import {
   LoaderCircle,
   Monitor,
   Moon,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   Server,
@@ -98,10 +97,15 @@ export default function App() {
     const saved = localStorage.getItem("zenv-theme") as Theme | null;
     return saved === "light" || saved === "dark" ? saved : "auto";
   });
-  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(
+    () => localStorage.getItem("zenv-sidebar-collapsed") === "1",
+  );
   const [compactExpanded, setCompactExpanded] = useState(false);
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 900px)").matches);
-  const collapsed = compact ? !compactExpanded : desktopCollapsed;
+  // 桌面用「收起成图标轨」，紧凑用「抽屉」：两种模式不共享同一个折叠值，
+  // 避免窄窗下既保留 68px 图标轨、又缺少抽屉遮罩。
+  const collapsed = !compact && desktopCollapsed;
+  const drawerHidden = compact && !compactExpanded;
   const [easter, setEaster] = useState(false);
 
   // 初始化日志采集（仅一次）
@@ -148,10 +152,16 @@ export default function App() {
     return () => mq.removeEventListener("change", onResize);
   }, []);
 
+  const navRef = useRef<HTMLElement>(null);
+  const compactToggleRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!compactExpanded) return;
+    navRef.current?.querySelector<HTMLButtonElement>(".nav-item")?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCompactExpanded(false);
+      if (event.key === "Escape") {
+        setCompactExpanded(false);
+        compactToggleRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
@@ -159,7 +169,11 @@ export default function App() {
 
   const toggleSidebar = () => {
     if (compact) setCompactExpanded((value) => !value);
-    else setDesktopCollapsed((value) => !value);
+    else
+      setDesktopCollapsed((value) => {
+        localStorage.setItem("zenv-sidebar-collapsed", value ? "0" : "1");
+        return !value;
+      });
   };
 
   const ThemeIcon = THEME_ICON[theme];
@@ -169,11 +183,14 @@ export default function App() {
       setCompatibilityRequest((request) => request + 1);
       setTab("tools");
     } else setTab(next);
-    if (compact) setCompactExpanded(false);
+    if (compact) {
+      setCompactExpanded(false);
+      compactToggleRef.current?.focus();
+    }
   };
 
   return (
-    <div className="app">
+    <div className={`app ${compact ? "compact" : ""}`}>
       <a className="workspace-skip-link" href="#workspace-content">
         跳到主要内容
       </a>
@@ -185,14 +202,34 @@ export default function App() {
           tabIndex={-1}
         />
       )}
-      <aside id="workspace-navigation" className={`sidebar ${collapsed ? "collapsed" : ""}`}>
+      {drawerHidden && (
+        <button
+          ref={compactToggleRef}
+          className="compact-nav-toggle"
+          onClick={() => setCompactExpanded(true)}
+          aria-label="打开导航"
+          aria-expanded={false}
+          aria-controls="workspace-navigation"
+          title="打开导航"
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+      )}
+      <aside
+        id="workspace-navigation"
+        ref={navRef}
+        className={`sidebar ${collapsed ? "collapsed" : ""} ${
+          compact ? (drawerHidden ? "drawer-hidden" : "drawer-open") : ""
+        }`}
+        aria-hidden={drawerHidden || undefined}
+        inert={drawerHidden || undefined}
+      >
         <button
           className="brand clickable"
           onClick={toggleSidebar}
           title={collapsed ? "展开侧边栏" : "收起侧边栏"}
           aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
-          aria-expanded={!collapsed}
-          aria-controls="workspace-navigation"
+          aria-expanded={compact ? !drawerHidden : !collapsed}
         >
           <span className="brand-mark">
             <img src="/zenv-icon.svg" alt="Z.Env" draggable={false} />
@@ -203,12 +240,11 @@ export default function App() {
           </span>
         </button>
 
-        <div className="nav-section-label">工作空间</div>
         <nav className="nav" aria-label="主导航">
           {NAV.filter((item) => item.key !== "settings").map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              className={`nav-item ${tab === key ? "active" : ""}`}
+              className={`nav-item sidebar-row ${tab === key ? "active" : ""}`}
               onClick={() => navigate(key)}
               aria-label={label}
               aria-current={tab === key ? "page" : undefined}
@@ -224,7 +260,7 @@ export default function App() {
 
         <div className="sidebar-footer">
           <button
-            className={`nav-item ${tab === "settings" ? "active" : ""}`}
+            className={`nav-item sidebar-row ${tab === "settings" ? "active" : ""}`}
             onClick={() => navigate("settings")}
             aria-label="设置"
             aria-current={tab === "settings" ? "page" : undefined}
@@ -236,7 +272,18 @@ export default function App() {
             <span className="nav-label">设置</span>
           </button>
           <button
-            className="theme-toggle"
+            className="sidebar-collapse sidebar-row"
+            onClick={toggleSidebar}
+            aria-label={collapsed ? "展开导航" : "收起导航"}
+            aria-expanded={!collapsed}
+            aria-controls="workspace-navigation"
+            title={collapsed ? "展开导航" : "收起导航"}
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            <span className="nav-label">收起导航</span>
+          </button>
+          <button
+            className="theme-toggle sidebar-row"
             onClick={() => changeTheme(THEME_NEXT[theme])}
             title={"切换主题：" + THEME_LABEL[theme]}
             aria-label={`当前主题：${THEME_LABEL[theme]}，切换为${THEME_LABEL[THEME_NEXT[theme]]}`}
@@ -254,27 +301,6 @@ export default function App() {
       </aside>
 
       <main className="workspace">
-        <header className="workspace-header">
-          <div className="workspace-breadcrumb">
-            <button
-              className="sidebar-toggle"
-              onClick={toggleSidebar}
-              aria-label={collapsed ? "展开导航" : "收起导航"}
-              aria-expanded={!collapsed}
-              aria-controls="workspace-navigation"
-              title={collapsed ? "展开导航" : "收起导航"}
-            >
-              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            </button>
-            <span className="breadcrumb-root">工作空间</span>
-            <ChevronRight size={13} aria-hidden="true" />
-            <span className="breadcrumb-current">{currentPage.label}</span>
-          </div>
-          <span className="workspace-local">
-            <Monitor size={14} />
-            本地工作台
-          </span>
-        </header>
         <div
           id="workspace-content"
           ref={contentRef}

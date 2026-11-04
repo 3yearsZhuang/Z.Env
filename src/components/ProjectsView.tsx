@@ -269,6 +269,7 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
     <div className="view project-view">
       <div className="view-head project-view-head">
         <div>
+          <div className="view-eyebrow">PROJECTS</div>
           <h1>项目配置</h1>
           <p className="view-sub">选择项目，管理运行时版本，让每个工作区拥有独立的开发环境。</p>
         </div>

@@ -34,6 +34,9 @@ import {
 /** 保留的历史采样点数量 */
 const MAX_HISTORY = 60;
 
+/** 首页资源采样间隔；不再暴露给用户调整。 */
+const REFRESH_MS = 2000;
+
 /** 环形使用率指示器（SVG） */
 function Ring({ percent, color, size = 110 }: { percent: number; color: string; size?: number }) {
   const r = 42;
@@ -217,7 +220,6 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshMs, setRefreshMs] = useState(2000);
   const inFlight = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -258,10 +260,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
 
   useEffect(() => {
     void refresh();
-    if (refreshMs <= 0) return;
-    const timer = window.setInterval(refresh, refreshMs);
+    const timer = window.setInterval(refresh, REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [refresh, refreshMs]);
+  }, [refresh]);
 
   const diskTotal = stats?.disks.reduce((a, d) => a + d.totalGb, 0) ?? 0;
   const diskUsed = stats?.disks.reduce((a, d) => a + (d.totalGb - d.availableGb), 0) ?? 0;
@@ -285,33 +286,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
           <p className="view-sub">掌握资源状态，让开发环境井然有序。</p>
         </div>
         <div className="head-tools dashboard-controls">
-          <span
-            className={`live-status ${error ? "unavailable" : refreshMs === 0 ? "paused" : ""}`}
-          >
+          <span className={`live-status ${error ? "unavailable" : ""}`}>
             <span className="workspace-dot" />
-            {error ? "连接异常" : refreshMs > 0 ? "自动更新" : "已暂停"}
+            {error ? "连接异常" : "自动更新"}
           </span>
-          <select
-            className="input select-inline"
-            value={String(refreshMs)}
-            onChange={(e) => setRefreshMs(Number(e.target.value))}
-            aria-label="刷新间隔"
-          >
-            <option value="100">每 0.1 秒</option>
-            <option value="500">每 0.5 秒</option>
-            <option value="2000">每 2 秒</option>
-            <option value="5000">每 5 秒</option>
-            <option value="0">暂停更新</option>
-          </select>
-          <button
-            className="btn-ghost icon-only"
-            onClick={refresh}
-            disabled={refreshing}
-            title="现在刷新"
-            aria-label="现在刷新"
-          >
-            <RefreshCw size={16} className={refreshing ? "refresh-spinning" : undefined} />
-          </button>
         </div>
       </div>
 

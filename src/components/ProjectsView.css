@@ -10,8 +10,12 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--text-dim);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
   font: 12px var(--mono);
+  backdrop-filter: blur(8px);
 }
 .project-view .project-panel {
   margin-bottom: 0;
@@ -55,10 +59,10 @@
 }
 .project-count,
 .project-badge {
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
+  border: 1px solid transparent;
+  background: var(--surface-2);
   color: var(--text-dim);
-  border-radius: 5px;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 500;
   padding: 3px 7px;
@@ -353,9 +357,10 @@
   background: color-mix(in srgb, var(--bg-soft) 45%, var(--bg-card));
 }
 .project-presets {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid transparent;
+  border-radius: 22px;
   background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
 }
 .project-presets > summary {
   display: flex;
