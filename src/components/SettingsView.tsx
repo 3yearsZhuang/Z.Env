@@ -8,6 +8,7 @@ import {
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
 import { errorMessage, historyList, HistoryEntry } from "../api";
+import { StateBlock } from "./ui/state-block";
 
 const APP_NAME = "Z.Env";
 const APP_TAGLINE = "整机环境管理中心";
@@ -247,9 +248,9 @@ export default function SettingsView({ onEaster }: Props) {
           </button>
         </div>
         {history && history.length === 0 && (
-          <div className="empty small">
+          <StateBlock size="sm">
             还没有管理动作记录。安装、接入、修复等操作都会留痕于此。
-          </div>
+          </StateBlock>
         )}
         <div className="setting-list">
           {(history ?? []).slice(0, 50).map((h, i) => (

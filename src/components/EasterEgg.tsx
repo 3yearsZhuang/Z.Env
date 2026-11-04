@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listTools, listRegistry, ToolInfo } from "../api";
 import { KNOWN_RUNTIMES } from "../data/catalog";
 import { getLogs, LogEntry } from "../logger";
+import { StateBlock } from "./ui/state-block";
 
 /** 真实收款码图片路径（放入 public/donate/ 下即可自动嵌入；缺失则回退占位假码） */
 const DONATE_IMGS = {
@@ -218,7 +219,7 @@ export default function EasterEgg({ onClose }: { onClose: () => void }) {
             <h2 className="panel-title">日志系统</h2>
             <div className="easter-logs">
               {logs.length === 0 ? (
-                <div className="empty small">暂无日志</div>
+                <StateBlock size="sm">暂无日志</StateBlock>
               ) : (
                 logs
                   .slice()

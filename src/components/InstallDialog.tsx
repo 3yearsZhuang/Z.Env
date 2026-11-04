@@ -15,6 +15,7 @@ import {
 } from "../api";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { Notice } from "./ui/notice";
+import { StateBlock } from "./ui/state-block";
 
 interface Props {
   tool: ToolInfo;
@@ -290,7 +291,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                 </div>
               )}
               {loadingRemote ? (
-                <div className="empty small">正在获取远程版本列表…</div>
+                <StateBlock size="sm">正在获取远程版本列表…</StateBlock>
               ) : filteredRemote.length > 0 ? (
                 <>
                   <label className="field-label">选择远程版本</label>
@@ -310,7 +311,7 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                   </select>
                 </>
               ) : (
-                <div className="empty small">无法自动获取远程版本，可手动输入版本号</div>
+                <StateBlock size="sm">无法自动获取远程版本，可手动输入版本号</StateBlock>
               )}
 
               {external && external.length > 0 && (

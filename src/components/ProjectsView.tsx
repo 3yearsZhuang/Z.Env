@@ -34,6 +34,7 @@ import { useUserPresets } from "../lib/useUserPresets";
 import PresetLibrary, { type PresetChoice } from "./PresetLibrary";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./ProjectsView.css";
+import { StateBlock } from "./ui/state-block";
 
 // CodeMirror 与 TOML 语言包只在首次载入项目后拉取。
 const TomlEditor = lazy(() => import("./TomlEditor"));
@@ -306,7 +307,7 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
           <button className="btn" onClick={() => void rescan()} disabled={scanning}>
             <RefreshCw
               size={14}
-              className={scanning ? "project-spinning" : undefined}
+              className={scanning ? "state-spinning" : undefined}
               aria-hidden="true"
             />
             {scanning ? "扫描中…" : "重新扫描"}
@@ -337,36 +338,44 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
           </div>
         )}
         {scanning && discovered === null ? (
-          <div className="project-empty" role="status">
-            <LoaderCircle size={25} className="project-spinning" aria-hidden="true" />
-            <strong>正在发现项目</strong>
-            <p>查找常用目录中的 Git、Node.js 和 mise 项目。</p>
-          </div>
+          <StateBlock
+            icon={LoaderCircle}
+            spinning
+            title="正在发现项目"
+            detail="查找常用目录中的 Git、Node.js 和 mise 项目。"
+            tall
+          />
         ) : discovered?.length === 0 ? (
-          <div className="project-empty">
-            <FolderOpen size={28} aria-hidden="true" />
-            <strong>还没有发现项目</strong>
-            <p>可以在下方手动输入路径，或选择项目所在的文件夹。</p>
-            <button className="btn" onClick={handlePickDir} disabled={busy}>
-              选择项目目录
-              <ArrowRight size={14} aria-hidden="true" />
-            </button>
-          </div>
+          <StateBlock
+            icon={FolderOpen}
+            title="还没有发现项目"
+            detail="可以在下方手动输入路径，或选择项目所在的文件夹。"
+            tall
+            action={
+              <button className="btn" onClick={handlePickDir} disabled={busy}>
+                选择项目目录
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            }
+          />
         ) : discovered !== null && filtered.length === 0 ? (
-          <div className="project-empty">
-            <Search size={25} aria-hidden="true" />
-            <strong>没有匹配的项目</strong>
-            <p>试试其他名称或路径关键词。</p>
-            <button
-              className="btn"
-              onClick={() => {
-                setSearch("");
-                setPage(0);
-              }}
-            >
-              清除搜索
-            </button>
-          </div>
+          <StateBlock
+            icon={Search}
+            title="没有匹配的项目"
+            detail="试试其他名称或路径关键词。"
+            tall
+            action={
+              <button
+                className="btn"
+                onClick={() => {
+                  setSearch("");
+                  setPage(0);
+                }}
+              >
+                清除搜索
+              </button>
+            }
+          />
         ) : (
           <ul className="project-list" aria-label="发现的项目列表" aria-busy={scanning}>
             {visibleProjects.map((project) => {
@@ -505,7 +514,7 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
             </button>
             <button type="submit" className="btn primary" disabled={busy || !path.trim()}>
               {operation === "loading" ? (
-                <LoaderCircle size={15} className="project-spinning" aria-hidden="true" />
+                <LoaderCircle size={15} className="state-spinning" aria-hidden="true" />
               ) : (
                 <ArrowDownToLine size={15} aria-hidden="true" />
               )}
@@ -548,13 +557,7 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
               aria-label="mise.toml 配置编辑器"
               inert={busy}
             >
-              <Suspense
-                fallback={
-                  <div className="project-empty" role="status">
-                    编辑器加载中…
-                  </div>
-                }
-              >
+              <Suspense fallback={<StateBlock size="sm">编辑器加载中…</StateBlock>}>
                 <TomlEditor
                   value={content}
                   onChange={(value) => {
@@ -612,15 +615,18 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
             )}
           </>
         ) : (
-          <div className="project-empty project-editor-empty">
-            <FileCode2 size={28} aria-hidden="true" />
-            <strong>从一个项目开始</strong>
-            <p>
-              载入上方发现的项目，或选择文件夹，
-              <br />
-              在这里查看和编辑它的运行时版本配置。
-            </p>
-          </div>
+          <StateBlock
+            className="project-editor-empty"
+            icon={FileCode2}
+            title="从一个项目开始"
+            detail={
+              <>
+                载入上方发现的项目，或选择文件夹，
+                <br />
+                在这里查看和编辑它的运行时版本配置。
+              </>
+            }
+          />
         )}
       </section>
 
@@ -689,12 +695,9 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
               </div>
             )}
             {bindLoading ? (
-              <div className="project-empty" role="status">
-                <LoaderCircle size={23} className="project-spinning" aria-hidden="true" />
-                正在检测可绑定的运行时…
-              </div>
+              <StateBlock icon={LoaderCircle} spinning title="正在检测可绑定的运行时…" />
             ) : !bindError && bindSources.length === 0 ? (
-              <div className="project-empty">未发现可通过稳定路径绑定的运行时。</div>
+              <StateBlock detail="未发现可通过稳定路径绑定的运行时。" />
             ) : (
               !bindError && (
                 <div className="adopt-list">

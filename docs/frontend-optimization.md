@@ -26,13 +26,14 @@ MiuiX 重设计以「追加覆盖」方式落地后，前端出现四处结构�
 | 原语与依赖 | `9b6077a` | 删除零消费者的 `ui/button`、`ui/input`、`ui/badge` 与 `@radix-ui/react-slot`、`class-variance-authority`、`@codemirror/language-data`、`@tauri-apps/plugin-opener` |
 | 提示与无障碍 | `7b7a449` | 六处提示条改用统一 `Notice`（`role="alert"`/`role="status"`、真按钮关闭）；彩蛋弹窗补 `role="dialog"`、`aria-modal`、初始焦点、Tab 循环与 Esc；图标补 `loading="lazy"` |
 | 测试与采集复用 | `513f785` | `readEnvInfo` 进程级缓存（并发合并、失败不缓存、`force` 绕过）；补 EnvPanel 5 项、PresetLibrary 3 项、SettingsView 4 项、Dashboard 3 项、TomlEditor 2 项、EasterEgg 3 项、Notice 3 项、缓存 3 项 |
+| 状态块统一 | 本条提交 | `.empty`/`.empty.small`/`.project-empty`/`.ops-empty`/`.support-empty` 五套几何 + 两套旋转动画收敛为 `StateBlock`（lg/sm/md + bordered/tall）与 `.state-spinning`，19 处调用点迁移，删除 11 条各自写死的规则 |
 
 安全约束：删规则与合并规则都先用脚本比对「仍被引用的类是否失去唯一定义」（0 个）与
 「每个选择器的有效声明表是否变化」（0 处），保证等价后再提交。
 
 ## 验证记录
 
-- `npm test`：38 个测试文件、255 项测试通过；`npm run lint`、`npm run format:check`、
+- `npm test`：39 个测试文件、258 项测试通过；`npm run lint`、`npm run format:check`、
   `npm run build`（TypeScript + Vite）通过。
 - `cargo fmt --check`、`cargo clippy --all-targets -- -D warnings`、`cargo test`：290 项通过
   （含本轮新增 4 项 `SlowMetrics` 用例）。

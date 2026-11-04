@@ -295,12 +295,63 @@ body.glass .input {
   font-size: var(--fs-sm);
 }
 
-.empty {
+/* ---------- 状态块（空态 / 读取中 / 无结果） ----------
+ * 统一形态见 components/ui/state-block.tsx：lg = 图标 + 标题 + 说明（+ 动作），
+ * sm/md = 纯文本提示。此前 .empty/.project-empty/.ops-empty/.support-empty 是四套几何，
+ * 间距、圆角与字号各不相同，这里收敛为同一组令牌。 */
+.state-block {
   color: var(--muted-foreground);
   text-align: center;
-  padding: 48px 20px;
+  line-height: 1.75;
+}
+.state-block-lg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 34px 24px;
+  font-size: var(--fs-sm);
+}
+.state-block-lg > svg {
+  margin-bottom: 2px;
+  color: color-mix(in srgb, var(--muted-foreground) 70%, var(--background));
+}
+.state-block-lg strong {
+  font-size: var(--fs-base);
+  font-weight: 550;
+  color: var(--foreground);
+}
+.state-block-lg p {
+  max-width: 380px;
+  margin: 0;
+}
+.state-block-lg.bordered {
   border: 1px dashed var(--border);
   border-radius: var(--r-lg);
+}
+.state-block-lg.tall {
+  min-height: 160px;
+}
+.state-block-sm,
+.state-block-md {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+}
+.state-block-sm {
+  padding: 24px;
+  font-size: var(--fs-base);
+}
+.state-block-md {
+  padding: 48px 20px;
+}
+.state-spinning {
+  animation: state-spin 1.1s linear infinite;
+}
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---------- 工具卡片 ---------- */
@@ -1142,11 +1193,6 @@ body.glass .input {
 .support-search {
   flex: 1;
   max-width: 320px;
-}
-.empty.small {
-  font-size: var(--fs-base);
-  padding: 24px;
-  color: var(--muted-foreground);
 }
 
 /* 渠道安装弹窗：包管理器安装命令列表 */
@@ -2402,12 +2448,19 @@ select.input {
 }
 
 /* 空状态：更大的留白与圆角 */
-.empty {
+.state-block-md,
+.state-block-sm {
   border-radius: var(--r-xl);
-  padding: 56px 24px;
   border-style: solid;
   border-color: var(--border);
   background: var(--surface-2);
+}
+.state-block-md {
+  padding: 56px 24px;
+}
+.state-block-sm {
+  padding: 24px;
+  font-size: var(--fs-base);
 }
 
 /* 横幅：HyperOS 圆角提示条 */

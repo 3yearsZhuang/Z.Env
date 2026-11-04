@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { envCenterRemove, envCenterSet, errorMessage, type EnvCenterSnapshot } from "../api";
 import { Notice } from "./ui/notice";
+import { StateBlock } from "./ui/state-block";
 
 /** 系统 env 列表无搜索词时的最大渲染行数（超出提示细化搜索） */
 const SYSTEM_ENV_RENDER_LIMIT = 80;
@@ -125,9 +126,9 @@ export default function EnvPanel({ snap, reload }: Props) {
         </div>
 
         {snap && snap.entries.length === 0 && (
-          <div className="empty small">
+          <StateBlock size="sm">
             全局 [env] 还没有变量。添加后，接入 mise 的所有终端与项目都会继承这些变量。
-          </div>
+          </StateBlock>
         )}
 
         <div className="setting-list">
@@ -236,11 +237,11 @@ export default function EnvPanel({ snap, reload }: Props) {
                 </div>
               ))}
               {sysFiltered.length > SYSTEM_ENV_RENDER_LIMIT && (
-                <div className="empty small">
+                <StateBlock size="sm">
                   仅显示前 {SYSTEM_ENV_RENDER_LIMIT} 项，请细化搜索关键词。
-                </div>
+                </StateBlock>
               )}
-              {sysFiltered.length === 0 && <div className="empty small">没有匹配的系统变量。</div>}
+              {sysFiltered.length === 0 && <StateBlock size="sm">没有匹配的系统变量。</StateBlock>}
             </div>
           </>
         )}
