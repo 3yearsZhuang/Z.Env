@@ -24,6 +24,7 @@ import {
 } from "../api";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./ServicesCachesView.css";
+import { StateBlock } from "./ui/state-block";
 
 const SERVICE_ACTIONS = { start: "启动", restart: "重启", stop: "停止" } as const;
 type ServiceAction = keyof typeof SERVICE_ACTIONS;
@@ -277,7 +278,7 @@ export default function ServicesCachesView() {
           >
             <RefreshCw
               size={14}
-              className={services.loading ? "ops-spin" : ""}
+              className={services.loading ? "state-spinning" : ""}
               aria-hidden="true"
             />
             {services.loading ? "读取中" : "刷新"}
@@ -315,18 +316,19 @@ export default function ServicesCachesView() {
 
         <div aria-busy={services.loading}>
           {services.loading && !services.data && (
-            <div className="ops-empty" role="status">
-              <LoaderCircle className="ops-spin" size={23} aria-hidden="true" />
-              <strong>正在读取本地服务</strong>
-              <p>首次探测服务管理器可能需要一些时间。</p>
-            </div>
+            <StateBlock
+              icon={LoaderCircle}
+              spinning
+              title="正在读取本地服务"
+              detail="首次探测服务管理器可能需要一些时间。"
+            />
           )}
           {services.data && serviceItems.length === 0 && (
-            <div className="ops-empty">
-              <Server size={26} aria-hidden="true" />
-              <strong>暂无可管理的服务</strong>
-              <p>安装并配置 Homebrew 或 systemd 用户级服务后，可在这里管理。</p>
-            </div>
+            <StateBlock
+              icon={Server}
+              title="暂无可管理的服务"
+              detail="安装并配置 Homebrew 或 systemd 用户级服务后，可在这里管理。"
+            />
           )}
           {serviceItems.length > 0 && (
             <ul className="ops-list" aria-label="本地服务列表">
@@ -356,7 +358,7 @@ export default function ServicesCachesView() {
                     <div className="ops-actions">
                       {rowBusy ? (
                         <span className="ops-operation" role="status">
-                          <LoaderCircle size={15} className="ops-spin" aria-hidden="true" />
+                          <LoaderCircle size={15} className="state-spinning" aria-hidden="true" />
                           正在{SERVICE_ACTIONS[busy.action]}…
                         </span>
                       ) : (
@@ -422,7 +424,11 @@ export default function ServicesCachesView() {
             disabled={caches.loading || cleanBusy}
             aria-label="刷新缓存"
           >
-            <RefreshCw size={14} className={caches.loading ? "ops-spin" : ""} aria-hidden="true" />
+            <RefreshCw
+              size={14}
+              className={caches.loading ? "state-spinning" : ""}
+              aria-hidden="true"
+            />
             {caches.loading ? "统计中" : "刷新"}
           </button>
         </div>
@@ -446,18 +452,19 @@ export default function ServicesCachesView() {
 
         <div aria-busy={caches.loading}>
           {caches.loading && !caches.data && (
-            <div className="ops-empty" role="status">
-              <LoaderCircle className="ops-spin" size={23} aria-hidden="true" />
-              <strong>正在统计开发缓存</strong>
-              <p>缓存较多时可能需要一些时间。</p>
-            </div>
+            <StateBlock
+              icon={LoaderCircle}
+              spinning
+              title="正在统计开发缓存"
+              detail="缓存较多时可能需要一些时间。"
+            />
           )}
           {caches.data && caches.data.length === 0 && (
-            <div className="ops-empty">
-              <Database size={26} aria-hidden="true" />
-              <strong>暂无开发缓存</strong>
-              <p>尚未探测到 Homebrew、mise、npm、pip 等工具的缓存。</p>
-            </div>
+            <StateBlock
+              icon={Database}
+              title="暂无开发缓存"
+              detail="尚未探测到 Homebrew、mise、npm、pip 等工具的缓存。"
+            />
           )}
           {caches.data && caches.data.length > 0 && (
             <ul className="ops-list" aria-label="开发缓存列表">
@@ -574,7 +581,7 @@ export default function ServicesCachesView() {
               )}
               {cleanBusy && (
                 <p className="ops-operation" role="status">
-                  <LoaderCircle size={16} className="ops-spin" aria-hidden="true" />
+                  <LoaderCircle size={16} className="state-spinning" aria-hidden="true" />
                   正在清理 {cleanTarget.name} 缓存…
                 </p>
               )}
@@ -591,7 +598,7 @@ export default function ServicesCachesView() {
             </button>
             <button className="btn primary ops-button" disabled={cleanBusy} onClick={handleClean}>
               {cleanBusy ? (
-                <LoaderCircle size={14} className="ops-spin" aria-hidden="true" />
+                <LoaderCircle size={14} className="state-spinning" aria-hidden="true" />
               ) : (
                 <Trash2 size={14} aria-hidden="true" />
               )}

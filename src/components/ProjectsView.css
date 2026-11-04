@@ -209,30 +209,6 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
-.project-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  min-height: 160px;
-  padding: 32px 24px;
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: var(--fs-sm);
-  line-height: 1.7;
-}
-.project-empty > svg {
-  color: color-mix(in srgb, var(--muted-foreground) 65%, var(--background));
-}
-.project-empty strong {
-  font-size: var(--fs-base);
-  font-weight: 550;
-  color: var(--foreground);
-}
-.project-empty p {
-  max-width: 380px;
-}
 .project-feedback,
 .project-scan-error {
   display: flex;
@@ -430,14 +406,6 @@
 .project-bind-description + .project-scan-error {
   margin: 0;
 }
-.project-spinning {
-  animation: project-spin 1.1s linear infinite;
-}
-@keyframes project-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 @media (max-width: 800px) {
   .project-path-controls {
     flex-wrap: wrap;
@@ -483,7 +451,4 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .project-spinning {
-    animation: none;
-  }
 }

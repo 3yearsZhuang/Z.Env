@@ -32,6 +32,7 @@ import InstallDialog from "./InstallDialog";
 import { readEnvInfo } from "../lib/envInfo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./SoftwareView.css";
+import { StateBlock } from "./ui/state-block";
 
 type LoadState = { status: "loading" | "ready" | "error"; error?: string };
 type CopyFeedback = { ok: boolean; message: string; command: string };
@@ -730,14 +731,17 @@ export default function SoftwareView({
         })}
       </div>
       {filtered.length === 0 && (
-        <div className="support-empty">
-          <Search size={27} aria-hidden="true" />
-          <h2>没有找到匹配的工具</h2>
-          <p>试试其他名称、用途，或清除当前筛选条件。</p>
-          <button type="button" className="btn-ghost" onClick={clearFilters}>
-            清除筛选
-          </button>
-        </div>
+        <StateBlock
+          bordered
+          icon={Search}
+          title="没有找到匹配的工具"
+          detail="试试其他名称、用途，或清除当前筛选条件。"
+          action={
+            <button type="button" className="btn-ghost" onClick={clearFilters}>
+              清除筛选
+            </button>
+          }
+        />
       )}
       {installFor && (
         <InstallDialog

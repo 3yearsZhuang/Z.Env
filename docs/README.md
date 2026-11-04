@@ -25,7 +25,7 @@
 | --- | --- |
 | [P9 / 38 审计修复](./audit-fixes.md) | 项目绑定、TOML 配置、任务互斥、包 ID、Linux、快照、托管与日志脱敏 |
 | [P10 / 39 前端优化](./frontend-polish.md) | 项目搜索分页、状态反馈、键盘操作、任务取消、按需加载 |
-| [前端体系收敛与开销优化](./frontend-optimization.md) | 死规则与覆盖规则清理、令牌与刻度统一、采样/编辑器开销、提示与无障碍、组件测试补齐 |
+| [前端体系收敛与开销优化](./frontend-optimization.md) | 死规则与覆盖规则清理、令牌与刻度统一、采样/编辑器开销、提示与空态统一、无障碍与组件测试 |
 | [P11 契约与合并器](./p11-inventory-contracts.md) | 工具/来源/实例身份、证据合并、alias 与 Rust/TS 契约 |
 | [P11 Node 来源与探针](./p11-node-sources.md) | mise / brew / nvm / PATH 的只读发现、受限探针与预算 |
 | [P11 查询与详情](./p11-inventory-ui.md) | 清单查询/取消、来源重试、过期缓存与 Node 详情 |

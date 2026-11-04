@@ -29,6 +29,7 @@ import { useMachineInstall } from "../lib/useMachineInstall";
 import { KNOWN_RUNTIMES, TOOL_ICON_PATHS } from "../data/catalog";
 import "./EnvironmentView.css";
 import { Notice } from "./ui/notice";
+import { StateBlock } from "./ui/state-block";
 
 /** 工具徽标：先走显式映射，再按 /tools/{name}.svg 通用查找，都没有则回退名称缩写 */
 function ToolBadge({ name }: { name: string }) {
@@ -543,13 +544,13 @@ export default function EnvironmentView({
           )}
 
           {loading && cards.length === 0 ? (
-            <div className="empty">正在读取环境…</div>
+            <StateBlock size="md">正在读取环境…</StateBlock>
           ) : cards.length === 0 ? (
-            <div className="empty">
+            <StateBlock size="md">
               {error
                 ? "读取未完成，安装情况未知。可重试读取管理列表。"
                 : "未从这些管理入口发现运行时记录。可展开本页的「更多工具与兼容渠道」核对其他来源。"}
-            </div>
+            </StateBlock>
           ) : (
             <div className="tool-grid">
               {cards.map((tool) => {
@@ -612,7 +613,7 @@ export default function EnvironmentView({
                       <div className="tool-card-body">
                         <div className="version-list">
                           {tool.versions.length === 0 && (
-                            <div className="empty small">
+                            <StateBlock size="sm">
                               {ext.length
                                 ? `由 ${[...new Set(ext.map((s) => s.manager))].join(", ")} 托管 · ${
                                     KNOWN_RUNTIMES.includes(tool.name)
@@ -620,7 +621,7 @@ export default function EnvironmentView({
                                       : "无法用 mise 安装"
                                   }`
                                 : "尚未安装版本"}
-                            </div>
+                            </StateBlock>
                           )}
                           {tool.versions.map((v) => {
                             const isActive = activeSet.has(v.version);
