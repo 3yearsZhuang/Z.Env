@@ -16,7 +16,8 @@ Homebrew 的版本承诺与 mise/uv 不同：formula 随渠道更新，不能承
 - 新增 [Homebrew Python 写适配](../src-tauri/src/operation_plan/python_brew.rs)。
 - formula 白名单：仅 `python` 与 `python@3.N`（N=8..99）；拒绝 `python3`、精确补丁版、第三方 tap。
   安装请求不得携带精确版本；预览承诺明确“版本由执行时 formula 决定”。
-- 能力证据：`brew --prefix`、`--cellar`、`info --json=v2 --formula`；安装路径不读取反向依赖，只有卸载预览/重验才调用 `uses --installed`。
+- 能力证据：`brew --prefix`、`--cellar`、`info --json=v2 --formula` 并行读取；安装路径不读取反向依赖，只有卸载预览/重验才调用 `uses --installed`。
+  每次 brew 调用都有 Ruby 启动开销，并行后预览/重验/核验的墙钟时间不再叠加四次启动；冷启动仍主要受首次 API/portable ruby 下载影响。
   keg 直接读取 `info` 的 `installed` 数组（权威），比额外的 `list --versions` 少一次子进程，也避免
   `Caskroom` 缺失时 `brew list` 误报失败。
 - 安装门禁：该 formula 已有任何 keg 时拒绝，不覆盖、不静默升级；argv 固定为

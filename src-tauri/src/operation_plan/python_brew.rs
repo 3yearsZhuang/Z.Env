@@ -74,17 +74,33 @@ fn facts(
     formula: &str,
     with_dependents: bool,
 ) -> Result<Facts, PlanError> {
-    let prefix = PathBuf::from(output(program, options, &["--prefix"])?.trim());
-    let cellar = PathBuf::from(output(program, options, &["--cellar"])?.trim());
+    // brew 每次调用都有 Ruby 启动开销；prefix/cellar/info(/uses) 互不依赖，并行读取。
+    let (prefix, cellar, info, uses) = std::thread::scope(|scope| {
+        let prefix = scope.spawn(|| output(program, options, &["--prefix"]));
+        let cellar = scope.spawn(|| output(program, options, &["--cellar"]));
+        let info = scope.spawn(|| {
+            output(
+                program,
+                options,
+                &["info", "--json=v2", "--formula", formula],
+            )
+        });
+        let uses = with_dependents
+            .then(|| scope.spawn(|| output(program, options, &["uses", "--installed", formula])));
+        (
+            prefix.join().unwrap_or(Err(PlanError::Command)),
+            cellar.join().unwrap_or(Err(PlanError::Command)),
+            info.join().unwrap_or(Err(PlanError::Command)),
+            uses.map(|handle| handle.join().unwrap_or(Err(PlanError::Command))),
+        )
+    });
+    let prefix = PathBuf::from(prefix?.trim());
+    let cellar = PathBuf::from(cellar?.trim());
     if !prefix.is_absolute() || !cellar.is_absolute() {
         return Err(PlanError::EvidenceUnavailable);
     }
-    let info: serde_json::Value = serde_json::from_str(&output(
-        program,
-        options,
-        &["info", "--json=v2", "--formula", formula],
-    )?)
-    .map_err(|_| denied("Homebrew formula 信息格式不支持"))?;
+    let info: serde_json::Value =
+        serde_json::from_str(&info?).map_err(|_| denied("Homebrew formula 信息格式不支持"))?;
     let formula_info = info
         .get("formulae")
         .and_then(|value| value.as_array())
@@ -109,16 +125,15 @@ fn facts(
     if kegs.len() > 32 {
         return Err(denied("Homebrew keg 数量超出预算"));
     }
-    let dependents = if with_dependents {
-        let uses = output(program, options, &["uses", "--installed", formula])?;
-        uses.lines()
+    let dependents = match uses {
+        Some(uses) => uses?
+            .lines()
             .map(str::trim)
             .filter(|line| !line.is_empty())
             .take(64)
             .map(|line| line.chars().take(128).collect())
-            .collect()
-    } else {
-        vec![]
+            .collect(),
+        None => vec![],
     };
     Ok(Facts {
         prefix,
