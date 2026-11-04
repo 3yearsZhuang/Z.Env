@@ -91,6 +91,8 @@ export default function EnvironmentView({
   const [pythonFocus, setPythonFocus] = useState(0);
   const [compatibilityOpen, setCompatibilityOpen] = useState(false);
   const [compatibilityVisited, setCompatibilityVisited] = useState(false);
+  const [capabilityOpen, setCapabilityOpen] = useState(false);
+  const [capabilityVisited, setCapabilityVisited] = useState(false);
   const [catalogNodeFocus, setCatalogNodeFocus] = useState(0);
   const consumedCompatibility = useRef(0);
   const openCompatibility = () => {
@@ -330,10 +332,11 @@ export default function EnvironmentView({
     <div className="view">
       <div className="view-head">
         <div>
+          <div className="view-eyebrow">TOOLCHAIN</div>
           <h1>本机工具</h1>
           <p className="view-sub">
-            查看工具来源、安装实例与验证结果，也可以管理全局环境变量、预设和快照。 Node.js
-            来源清单独立于 mise；项目要求和终端实际使用的版本需分别验证。
+            先看实机装了什么，再核对来源与操作能力。安装实例、全局环境变量与可复用预设分为三块；
+            Node 与 Python 的来源清单彼此独立，装好不等于项目或终端已生效。
           </p>
         </div>
       </div>
@@ -342,9 +345,9 @@ export default function EnvironmentView({
       <div className="tab-bar" role="tablist" aria-label="环境页区块">
         {(
           [
-            ["runtime", "工具与来源"],
-            ["vars", "环境变量"],
-            ["preset", "环境预设"],
+            ["runtime", "安装实例"],
+            ["vars", "全局变量"],
+            ["preset", "可复用预设"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -374,21 +377,44 @@ export default function EnvironmentView({
         aria-labelledby="env-tab-runtime"
         style={{ display: pane === "runtime" ? undefined : "none" }}
       >
-        <ToolCatalogPanel
-          active={active && pane === "runtime"}
-          read={catalogRead}
-          pythonRead={pythonRead}
-          onShowPython={() => {
-            setDetailTool("python");
-            setPythonVisited(true);
-            setPythonFocus((n) => n + 1);
-          }}
-          onShowNode={() => {
-            setDetailTool("node");
-            setCatalogNodeFocus((n) => n + 1);
-          }}
-          onShowCompatibility={openCompatibility}
-        />
+        {/* 实例优先：先用工具切换器选择运行时，再看下方实机清单 */}
+        <div className="runtime-switch" role="group" aria-label="选择运行时清单">
+          <button
+            className={`runtime-switch-btn ${detailTool === "node" ? "active" : ""}`}
+            aria-pressed={detailTool === "node"}
+            onClick={() => {
+              setDetailTool("node");
+              setCatalogNodeFocus((n) => n + 1);
+            }}
+          >
+            <span className="runtime-switch-name">Node.js</span>
+            <span className="runtime-switch-meta">
+              {catalogRead.loading
+                ? "读取中…"
+                : catalogRead.error
+                  ? "读取失败"
+                  : "mise / nvm / Homebrew"}
+            </span>
+          </button>
+          <button
+            className={`runtime-switch-btn ${detailTool === "python" ? "active" : ""}`}
+            aria-pressed={detailTool === "python"}
+            onClick={() => {
+              setDetailTool("python");
+              setPythonVisited(true);
+              setPythonFocus((n) => n + 1);
+            }}
+          >
+            <span className="runtime-switch-name">Python</span>
+            <span className="runtime-switch-meta">
+              {pythonRead.loading
+                ? "读取中…"
+                : pythonRead.error
+                  ? "读取失败"
+                  : "mise / Homebrew / pyenv / uv / PATH"}
+            </span>
+          </button>
+        </div>
         <div hidden={detailTool !== "node"}>
           <NodeInventoryPanel
             active={active && pane === "runtime" && detailTool === "node"}
@@ -409,6 +435,36 @@ export default function EnvironmentView({
             </Suspense>
           </div>
         )}
+        <details
+          className="runtime-capability"
+          open={capabilityOpen}
+          onToggle={(event) => {
+            setCapabilityOpen(event.currentTarget.open);
+            if (event.currentTarget.open) setCapabilityVisited(true);
+          }}
+        >
+          <summary>工具能力台账</summary>
+          <p className="runtime-management-note">
+            核对每个工具的身份、接入渠道与项目核对范围；这里只说明“能不能做”，具体操作仍需生成计划并核对目标。
+          </p>
+          {capabilityVisited && (
+            <ToolCatalogPanel
+              active={active && pane === "runtime" && capabilityOpen}
+              read={catalogRead}
+              pythonRead={pythonRead}
+              onShowPython={() => {
+                setDetailTool("python");
+                setPythonVisited(true);
+                setPythonFocus((n) => n + 1);
+              }}
+              onShowNode={() => {
+                setDetailTool("node");
+                setCatalogNodeFocus((n) => n + 1);
+              }}
+              onShowCompatibility={openCompatibility}
+            />
+          )}
+        </details>
         <details
           className="runtime-management"
           open={compatibilityOpen}

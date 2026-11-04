@@ -162,7 +162,7 @@ describe("本机工具页的读取边界", () => {
   it("Node 导航意图切回运行时，普通切页不覆盖已选择的环境变量区块", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<EnvironmentView nodeDetailsRequest={0} />);
-    await user.click(screen.getByRole("tab", { name: "环境变量" }));
+    await user.click(screen.getByRole("tab", { name: "全局变量" }));
     expect(
       screen
         .getByRole("region", { name: "Node 只读清单", hidden: true })
@@ -170,14 +170,14 @@ describe("本机工具页的读取边界", () => {
     ).toBe("false");
     rerender(<EnvironmentView nodeDetailsRequest={1} />);
     await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "工具与来源" }).getAttribute("aria-selected")).toBe(
+      expect(screen.getByRole("tab", { name: "安装实例" }).getAttribute("aria-selected")).toBe(
         "true",
       ),
     );
-    await user.click(screen.getByRole("tab", { name: "环境变量" }));
+    await user.click(screen.getByRole("tab", { name: "全局变量" }));
     rerender(<EnvironmentView active={false} nodeDetailsRequest={1} />);
     rerender(<EnvironmentView active nodeDetailsRequest={1} />);
-    expect(screen.getByRole("tab", { name: "环境变量" }).getAttribute("aria-selected")).toBe(
+    expect(screen.getByRole("tab", { name: "全局变量" }).getAttribute("aria-selected")).toBe(
       "true",
     );
   });
@@ -185,9 +185,9 @@ describe("本机工具页的读取边界", () => {
   it("环境重建完成为 Node 清单提供刷新意图", async () => {
     const user = userEvent.setup();
     render(<EnvironmentView />);
-    await user.click(screen.getByRole("tab", { name: "环境预设" }));
+    await user.click(screen.getByRole("tab", { name: "可复用预设" }));
     await user.click(screen.getByRole("button", { name: "模拟重建完成" }));
-    await user.click(screen.getByRole("tab", { name: "工具与来源" }));
+    await user.click(screen.getByRole("tab", { name: "安装实例" }));
     expect(screen.getByRole("region", { name: "Node 只读清单" }).getAttribute("data-refresh")).toBe(
       "1",
     );
@@ -204,6 +204,7 @@ describe("本机工具页的读取边界", () => {
     const user = userEvent.setup();
     const { rerender } = render(<EnvironmentView />);
     expect(screen.queryByRole("region", { name: "兼容软件列表" })).toBeNull();
+    await user.click(screen.getByText("工具能力台账"));
     await user.click(screen.getByRole("button", { name: "打开兼容渠道" }));
     const session = await screen.findByRole("textbox", { name: "兼容渠道会话" });
     await user.clear(session);
@@ -224,16 +225,16 @@ describe("本机工具页的读取边界", () => {
   it("旧软件导航意图打开同页兼容入口，普通切页保留区块选择", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<EnvironmentView compatibilityRequest={0} />);
-    await user.click(screen.getByRole("tab", { name: "环境变量" }));
+    await user.click(screen.getByRole("tab", { name: "全局变量" }));
     rerender(<EnvironmentView compatibilityRequest={1} />);
     await screen.findByRole("region", { name: "兼容软件列表" });
-    expect(screen.getByRole("tab", { name: "工具与来源" }).getAttribute("aria-selected")).toBe(
+    expect(screen.getByRole("tab", { name: "安装实例" }).getAttribute("aria-selected")).toBe(
       "true",
     );
-    await user.click(screen.getByRole("tab", { name: "环境变量" }));
+    await user.click(screen.getByRole("tab", { name: "全局变量" }));
     rerender(<EnvironmentView active={false} compatibilityRequest={1} />);
     rerender(<EnvironmentView compatibilityRequest={1} />);
-    expect(screen.getByRole("tab", { name: "环境变量" }).getAttribute("aria-selected")).toBe(
+    expect(screen.getByRole("tab", { name: "全局变量" }).getAttribute("aria-selected")).toBe(
       "true",
     );
   });
@@ -241,7 +242,8 @@ describe("本机工具页的读取边界", () => {
     const user = userEvent.setup();
     render(<EnvironmentView />);
     expect(screen.queryByRole("region", { name: "Python 只读清单" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "打开 Python 清单" }));
+    // 新的运行时切换器是第一入口，不需要先展开能力台账
+    await user.click(screen.getByRole("button", { name: /Python/ }));
     const python = await screen.findByRole("region", { name: "Python 只读清单" });
     expect(python.getAttribute("data-active")).toBe("true");
     expect(
@@ -249,10 +251,16 @@ describe("本机工具页的读取边界", () => {
         .getByRole("region", { name: "Node 只读清单", hidden: true })
         .getAttribute("data-active"),
     ).toBe("false");
-    await user.click(screen.getByRole("button", { name: "打开 Node 清单" }));
+    await user.click(screen.getByRole("button", { name: /Node.js/ }));
     expect(python.getAttribute("data-active")).toBe("false");
     expect(screen.getByRole("region", { name: "Node 只读清单" }).getAttribute("data-active")).toBe(
       "true",
     );
+    // 能力台账仍可从折叠入口打开，并切回同一套 Python 清单
+    await user.click(screen.getByText("工具能力台账"));
+    await user.click(screen.getByRole("button", { name: "打开 Python 清单" }));
+    expect(
+      screen.getByRole("region", { name: "Python 只读清单" }).getAttribute("data-active"),
+    ).toBe("true");
   });
 });
