@@ -1,8 +1,10 @@
 .python-inventory {
   min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
   line-height: 1.7;
   font-size: 13px;
 }
@@ -36,9 +38,10 @@
 }
 .python-source-grid section {
   min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
+  padding: 14px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-2);
 }
 .python-source-grid h3 {
   margin: 0;
@@ -63,10 +66,11 @@
   list-style: none;
 }
 .python-instance-list > li {
-  margin: 10px 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
+  margin: 8px 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-2);
 }
 .python-instance-list summary {
   cursor: pointer;

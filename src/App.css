@@ -38,14 +38,51 @@
   display: none;
 }
 
-@media (max-width: 560px) {
+/* 紧凑模式：遮罩与抽屉在 900px 以下同时生效（侧栏在此宽度切换为抽屉） */
+@media (max-width: 900px) {
   .workspace-nav-backdrop {
     display: block;
     position: fixed;
     inset: 0;
     z-index: 44;
     border: 0;
-    background: #0005;
+    background: rgb(0 0 0 / 32%);
+    backdrop-filter: blur(2px);
+    animation: backdrop-in 0.18s ease;
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 抽屉关闭时的悬浮打开按钮 */
+.compact-nav-toggle {
+  display: none;
+}
+@media (max-width: 900px) {
+  .compact-nav-toggle {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 46;
+    width: 40px;
+    height: 40px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: var(--bg-card);
+    color: var(--text);
+    box-shadow: var(--surface-shadow);
+    cursor: pointer;
+  }
+  .compact-nav-toggle:hover {
+    background: var(--surface-2);
   }
 }
 

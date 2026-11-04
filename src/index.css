@@ -14,6 +14,7 @@
   --popover: #ffffff;
   --popover-foreground: #101114;
   --primary: #3482ff;
+  --primary-strong: #2f6fe0;
   --primary-foreground: #ffffff;
   --secondary: #f7f8fa;
   --secondary-foreground: #101114;
@@ -47,6 +48,7 @@
   --popover: #202126;
   --popover-foreground: #f5f6f8;
   --primary: #4b93ff;
+  --primary-strong: #2a63cc;
   --primary-foreground: #06121f;
   --secondary: #202126;
   --secondary-foreground: #f5f6f8;

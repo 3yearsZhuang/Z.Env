@@ -165,6 +165,7 @@ export default function SettingsView({ onEaster }: Props) {
     <div className="view">
       <div className="view-head">
         <div>
+          <div className="view-eyebrow">PREFERENCES</div>
           <h1>设置</h1>
           <p className="view-sub">关于与偏好</p>
         </div>
