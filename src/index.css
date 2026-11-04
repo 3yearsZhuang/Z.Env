@@ -1,4 +1,4 @@
-/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（冷灰中性色 + 蓝色主色）。
+/* 设计系统入口：Tailwind v4 + shadcn 设计令牌（MiuiX / HyperOS 风格：米白底、悬浮圆角卡片、低饱和蓝）。
  * 明/暗两套令牌在此集中定义；styles.css 的旧变量（--bg/--accent 等）全部映射到这里，
  * 明暗切换由 App.tsx 解析（auto 跟随系统）后切换 <html> 上的 .dark 类。 */
 @import "tailwindcss";
@@ -6,61 +6,68 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f6f8fb;
-  --foreground: #202b3d;
+  /* MiuiX / HyperOS 基调：米白底、纯白悬浮卡片、低饱和蓝主色。 */
+  --background: #f2f3f5;
+  --foreground: #101114;
   --card: #ffffff;
-  --card-foreground: #202b3d;
+  --card-foreground: #101114;
   --popover: #ffffff;
-  --popover-foreground: #202b3d;
-  --primary: #3666e8;
+  --popover-foreground: #101114;
+  --primary: #3482ff;
   --primary-foreground: #ffffff;
-  --secondary: #eef2f8;
-  --secondary-foreground: #202b3d;
-  --muted: #eef2f8;
-  --muted-foreground: #66758c;
-  --accent: #eef2f8;
-  --accent-foreground: #202b3d;
-  --destructive: #dc2626;
-  --success: #178263;
-  --warning: #a66b13;
-  --border: #e3e9f1;
-  --input: #dce3ed;
-  --chart-cpu: #4874ee;
-  --chart-memory: #8570d7;
-  --chart-disk: #be8b35;
-  --chart-network: #199b91;
-  --surface-shadow: 0 2px 8px #263a5b04;
-  --ring: #93c5fd;
-  --radius: 0.625rem;
+  --secondary: #f7f8fa;
+  --secondary-foreground: #101114;
+  --muted: #f7f8fa;
+  --muted-foreground: #6b7280;
+  --accent: #e8f1ff;
+  --accent-foreground: #1f6ae0;
+  --destructive: #e34b4b;
+  --success: #14b87a;
+  --warning: #e08b1e;
+  --border: #e7e8ec;
+  --input: #f2f3f5;
+  --chart-cpu: #3482ff;
+  --chart-memory: #8b7bf0;
+  --chart-disk: #e0a13a;
+  --chart-network: #17b3a3;
+  --surface-2: #f7f8fa;
+  --surface-3: #eef0f3;
+  --surface-shadow: 0 1px 2px rgb(16 17 20 / 4%), 0 8px 24px rgb(16 17 20 / 6%);
+  --surface-shadow-sm: 0 1px 2px rgb(16 17 20 / 5%), 0 2px 8px rgb(16 17 20 / 4%);
+  --ring: #9cc2ff;
+  --radius: 0.875rem;
   color-scheme: light;
 }
 
 .dark {
-  --background: #0b0c0f;
-  --foreground: #f4f4f5;
-  --card: #15171c;
-  --card-foreground: #f4f4f5;
-  --popover: #15171c;
-  --popover-foreground: #f4f4f5;
-  --primary: #5b9dff;
-  --primary-foreground: #0b1220;
-  --secondary: #1b1e25;
-  --secondary-foreground: #e4e4e7;
-  --muted: #1b1e25;
-  --muted-foreground: #9ba1ad;
-  --accent: #1b1e25;
-  --accent-foreground: #f4f4f5;
-  --destructive: #ef6b74;
-  --success: #43c08a;
-  --warning: #e0b45a;
-  --border: #262a33;
-  --input: #262a33;
+  --background: #000000;
+  --foreground: #f5f6f8;
+  --card: #17181b;
+  --card-foreground: #f5f6f8;
+  --popover: #202126;
+  --popover-foreground: #f5f6f8;
+  --primary: #4b93ff;
+  --primary-foreground: #06121f;
+  --secondary: #202126;
+  --secondary-foreground: #f5f6f8;
+  --muted: #202126;
+  --muted-foreground: #9aa0aa;
+  --accent: #17233a;
+  --accent-foreground: #8fbaff;
+  --destructive: #ff6b6b;
+  --success: #35d39a;
+  --warning: #f0ab4a;
+  --border: #2a2c31;
+  --input: #202126;
   --ring: #2f6bd8;
-  --chart-cpu: #79a4ff;
-  --chart-memory: #b19bf1;
-  --chart-disk: #dab36d;
-  --chart-network: #50c4b9;
-  --surface-shadow: 0 2px 8px #0000000a;
+  --chart-cpu: #6ea6ff;
+  --chart-memory: #a99bf5;
+  --chart-disk: #f0b95c;
+  --chart-network: #48d0c0;
+  --surface-2: #202126;
+  --surface-3: #26282e;
+  --surface-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 45%);
+  --surface-shadow-sm: 0 1px 2px rgb(0 0 0 / 35%), 0 4px 14px rgb(0 0 0 / 30%);
   color-scheme: dark;
 }
 
@@ -84,10 +91,12 @@
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-ring: var(--ring);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-sm: calc(var(--radius) - 6px);
 }
 
 @layer base {
@@ -101,6 +110,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family:
+      "SF Pro Text",
+      -apple-system,
+      BlinkMacSystemFont,
+      "PingFang SC",
+      "Microsoft YaHei",
+      sans-serif;
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
   }

@@ -11,7 +11,7 @@
   --bg: var(--background);
   --bg-soft: var(--secondary);
   --bg-card: var(--card);
-  --bg-hover: var(--muted);
+  --bg-hover: var(--surface-2);
   /* 注意：--border 由 index.css 按明/暗主题定义，这里不要再写 `--border: var(--border)`。
      自引用会形成 CSS 自定义属性循环 → 变量计算值失效 → 全站 var(--border) 边框全部消失。 */
   --text: var(--foreground);
@@ -22,10 +22,15 @@
   --green-soft: color-mix(in srgb, var(--success) 14%, transparent);
   --red: var(--destructive);
   --red-soft: color-mix(in srgb, var(--destructive) 12%, transparent);
-  --radius: 12px;
+  --radius: 18px;
+  --radius-sm: 12px;
   --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei",
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Microsoft YaHei",
     sans-serif;
 }
 
@@ -63,12 +68,12 @@ body.glass .content {
 body.glass .content .empty {
   background: var(--bg-card);
 }
-/* 侧边栏亚克力 */
+/* 侧边栏：悬浮卡片保持实色，不再做整条亚克力背景 */
 body.glass .sidebar {
-  background: color-mix(in srgb, var(--bg-card) 92%, var(--bg-soft));
-  backdrop-filter: blur(30px) saturate(1.5) brightness(1.06);
-  -webkit-backdrop-filter: blur(30px) saturate(1.5) brightness(1.06);
-  border-right: 1px solid var(--border);
+  background: var(--bg-card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-right: 0;
 }
 /* 统一卡片表面 */
 body.glass .usage-card,
@@ -93,13 +98,16 @@ body.glass .input {
 
 /* ---------- 侧边栏 ---------- */
 .sidebar {
-  width: 216px;
+  width: 212px;
   flex-shrink: 0;
-  background: var(--bg-soft);
-  border-right: 1px solid var(--border);
+  margin: 12px 0 12px 12px;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--surface-shadow-sm);
   display: flex;
   flex-direction: column;
-  padding: 26px 14px 16px;
+  padding: 20px 12px 14px;
   position: relative;
   transition: width 0.18s ease;
 }
@@ -210,35 +218,34 @@ body.glass .input {
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 3px;
+  margin-top: 6px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 12px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
   color: var(--text-dim);
-  font-size: 13px;
-  border-radius: 8px;
+  font-size: 13.5px;
+  border-radius: 13px;
   cursor: pointer;
   text-align: left;
   transition:
-    background 0.15s,
-    color 0.15s;
+    background 0.16s ease,
+    color 0.16s ease;
 }
 .nav-item:hover {
-  background: var(--bg-card);
+  background: var(--surface-2);
   color: var(--text);
 }
 .nav-item.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 7%, transparent);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 650;
 }
 .nav-icon {
   width: 18px;
@@ -294,7 +301,7 @@ body.glass .input {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 32px 36px;
+  padding: 24px 26px 32px;
   min-width: 0;
   scrollbar-gutter: stable;
 }
@@ -312,10 +319,10 @@ body.glass .input {
   margin-bottom: 28px;
 }
 .view-head h1 {
-  font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -0.8px;
-  line-height: 1.4;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  line-height: 1.35;
 }
 .view-sub {
   color: var(--text-dim);
@@ -394,8 +401,9 @@ body.glass .input {
 
 .tool-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius);
+  box-shadow: var(--surface-shadow-sm);
   overflow: hidden;
 }
 .tool-card.open {
@@ -523,11 +531,11 @@ body.glass .input {
 
 /* ---------- 按钮 ---------- */
 .btn {
-  border: 1px solid var(--border);
-  background: var(--bg-hover);
+  border: 1px solid transparent;
+  background: var(--surface-2);
   color: var(--text);
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 8px 15px;
+  border-radius: 12px;
   font-size: 13px;
   cursor: pointer;
   display: inline-flex;
@@ -541,32 +549,34 @@ body.glass .input {
     border-color 0.15s;
 }
 .btn:hover:not(:disabled) {
-  border-color: var(--accent);
+  background: var(--surface-3);
 }
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--primary);
+  border-color: transparent;
   color: var(--primary-foreground);
   font-weight: 600;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 .btn.primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  background: var(--primary);
+  filter: brightness(1.06);
 }
 .btn.danger {
   color: var(--red);
 }
 .btn.danger:hover:not(:disabled) {
-  border-color: var(--red);
+  border-color: transparent;
   background: var(--red-soft);
 }
 .btn.xs {
   padding: 4px 10px;
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: 9px;
 }
 .btn.add {
   width: 100%;
@@ -622,9 +632,10 @@ body.glass .input {
 }
 .dialog {
   width: 420px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--surface-shadow);
   overflow: hidden;
   position: relative;
 }
@@ -837,16 +848,17 @@ body.glass .input {
 }
 .input {
   width: 100%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border: 1px solid transparent;
   color: var(--text);
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
   font-size: 13px;
 }
 .input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--primary);
+  background: var(--bg-card);
 }
 .input.grow {
   flex: 1;
@@ -1659,11 +1671,11 @@ button.soft-install {
 
 .panel {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  padding: 22px;
+  padding: 20px;
   box-shadow: var(--surface-shadow);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .panel-title {
   font-size: 14px;
@@ -3122,4 +3134,562 @@ button:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============ MiuiX 强化层 ============
+ * 更大胆的 HyperOS 观感：整块渐变头图、无边框融合列表、更大的字阶与阴影。
+ * 只做视觉覆盖，不改动结构类名，避免影响交互与测试。 */
+
+:root {
+  --hero-from: #4a8cff;
+  --hero-to: #2258d6;
+  --hero-glow: 0 18px 40px rgb(52 130 255 / 26%);
+}
+.dark {
+  --hero-from: #3568c9;
+  --hero-to: #16224a;
+  --hero-glow: 0 18px 44px rgb(0 0 0 / 55%);
+}
+
+/* 头图：页面标题区变成整块彩色渐变面板 */
+.view-head {
+  position: relative;
+  padding: 26px 28px;
+  margin-bottom: 18px;
+  border-radius: 26px;
+  color: #fff;
+  background:
+    radial-gradient(120% 150% at 100% 0%, rgb(255 255 255 / 26%) 0%, transparent 58%),
+    linear-gradient(135deg, var(--hero-from), var(--hero-to));
+  box-shadow: var(--hero-glow);
+  overflow: hidden;
+}
+.view-head::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  bottom: -110px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 10%);
+  pointer-events: none;
+}
+.view-head h1 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.9px;
+  color: #fff;
+}
+.view-sub {
+  color: rgb(255 255 255 / 82%);
+  font-size: 13.5px;
+  max-width: 760px;
+}
+.view-sub code {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+.view-head .btn {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+.view-head .btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 28%);
+}
+
+/* 面板进一步“去卡片化”：更薄阴影、更大内边距 */
+.panel {
+  border-radius: 22px;
+  padding: 22px 24px;
+  box-shadow: var(--surface-shadow-sm);
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  margin-bottom: 16px;
+}
+
+/* 工具卡片：融合式分组，而不是一格一格的盒子 */
+.tool-grid {
+  gap: 12px;
+}
+.tool-card {
+  border-radius: 22px;
+  box-shadow: var(--surface-shadow-sm);
+}
+.tool-card-head {
+  padding: 16px 20px;
+  gap: 14px;
+}
+.tool-card-head:hover {
+  background: var(--surface-2);
+}
+
+/* 列表行：行间细分隔线、无外框 */
+.usage-card {
+  border: 1px solid transparent;
+  border-radius: 22px;
+  padding: 18px 20px 16px;
+  box-shadow: var(--surface-shadow-sm);
+}
+.usage-title {
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+
+/* 徽标与胶囊：更圆、更淡 */
+.pill {
+  padding: 3px 10px;
+  font-size: 11px;
+  letter-spacing: 0.1px;
+}
+.btn {
+  border-radius: 14px;
+  padding: 9px 17px;
+}
+.btn.primary {
+  border-radius: 14px;
+}
+.input,
+select.input {
+  border-radius: 14px;
+}
+.dialog {
+  border-radius: 26px;
+}
+.dialog-head {
+  padding: 20px 22px 14px;
+}
+.dialog-head h3 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.dialog-body {
+  padding: 4px 22px 16px;
+}
+.dialog-foot {
+  padding: 14px 22px 18px;
+}
+
+/* 侧栏：更宽的悬浮面板、更大的选中态 */
+.sidebar {
+  width: 224px;
+  border-radius: 24px;
+  padding: 22px 12px 14px;
+}
+.nav-item {
+  padding: 11px 13px;
+  font-size: 14px;
+  border-radius: 15px;
+}
+.nav-item.active {
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+.brand-title {
+  font-size: 20px;
+  letter-spacing: -0.8px;
+}
+.brand-sub {
+  font-size: 11.5px;
+}
+.brand {
+  padding-bottom: 22px;
+}
+
+/* 标签页：pill 化 */
+.tab-bar {
+  gap: 6px;
+  padding: 5px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  width: fit-content;
+}
+.tab-btn {
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+.tab-btn.active {
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
+}
+
+/* 空状态：更大的留白与圆角 */
+.empty {
+  border-radius: 22px;
+  padding: 56px 24px;
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+/* 横幅：HyperOS 圆角提示条 */
+.banner {
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
+/* 概览：仪表盘改成一张横向英雄卡 */
+.gauges {
+  gap: 14px;
+  padding: 18px;
+  border-radius: 26px;
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow);
+}
+.gauge {
+  flex: 1;
+  min-width: 140px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface-2);
+  padding: 18px 16px;
+  transition: transform 0.18s ease;
+}
+.gauge:hover {
+  transform: translateY(-2px);
+}
+.gauge-track {
+  stroke: var(--surface-3);
+  stroke-width: 12;
+}
+.gauge-value {
+  stroke-width: 12;
+}
+.gauge-num {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* 概览区标题：更小、更克制 */
+.overview-section-heading h2,
+.view-eyebrow {
+  letter-spacing: 0.6px;
+}
+.view-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+/* 头图内控件适配 */
+.view-head .head-tools {
+  align-self: center;
+}
+.view-head .input,
+.view-head select.input {
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+  border-radius: 12px;
+}
+.view-head .input option {
+  color: var(--text);
+}
+.view-head .live-status {
+  color: #fff;
+}
+.view-head .btn-ghost {
+  color: #fff;
+  border-radius: 12px;
+}
+.view-head .btn-ghost:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
+/* ============ MiuiX 细节层：融合分组列表 ============ */
+
+/* 来源/分组容器：浅底块，不再描边 */
+.node-inventory-source,
+.channel-list,
+.disk-list,
+.net-list,
+.gpu-list {
+  border-radius: 18px;
+}
+.node-inventory-source {
+  border: 0;
+  background: var(--surface-2);
+  padding: 14px;
+}
+.node-inventory-source + .node-inventory-source {
+  margin-top: 8px;
+}
+.node-inventory-source h3 {
+  font-size: 12.5px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 数据行：行距更松、分隔线更淡、悬停有底色 */
+.disk-row,
+.net-row,
+.hw-row,
+.channel-row,
+.compact-row,
+.adopt-row {
+  padding: 11px 10px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.disk-row:hover,
+.net-row:hover,
+.hw-row:hover,
+.channel-row:hover,
+.compact-row:hover,
+.adopt-row:hover {
+  background: var(--surface-2);
+}
+.disk-row + .disk-row,
+.net-row + .net-row,
+.hw-row + .hw-row {
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* 头部与表头：降噪 */
+.node-inventory-head {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.node-inventory-list-head {
+  font-size: 11.5px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 表格：去掉外框，行分隔更淡 */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+th {
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+td,
+th {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+/* 代码与等宽信息：更柔和的底 */
+code,
+kbd,
+pre {
+  border-radius: 8px;
+}
+code {
+  background: var(--surface-2);
+  padding: 1px 6px;
+  font-size: 0.92em;
+}
+pre {
+  background: var(--surface-2);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+/* 分隔线统一更淡 */
+hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* 设置/单选行：HyperOS 列表项 —— 无边框，选中靠底色与对勾 */
+.setting-row {
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-2);
+  padding: 14px 16px;
+}
+.setting-row:hover {
+  background: var(--surface-3);
+}
+.setting-row.active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.setting-row.active .setting-radio {
+  border-color: currentColor;
+}
+.setting-row.active .setting-dot {
+  background: currentColor;
+}
+.setting-row .setting-desc,
+.setting-row.active .setting-desc {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+/* 表单标签与说明 */
+.field-label {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.setting-desc,
+.view-sub,
+.field-hint {
+  line-height: 1.75;
+}
+
+/* 选择器与输入：统一填充式 */
+select,
+textarea {
+  font: inherit;
+}
+select:not(.input),
+textarea:not(.input) {
+  border-radius: 14px;
+}
+
+/* 工具卡展开区：与头部同底色，靠内边距分隔 */
+.tool-card-body,
+.tool-card .body {
+  background: transparent;
+}
+
+/* 详情键值对 */
+dt {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+dd {
+  margin: 0;
+}
+
+/* 详情面板：统一大圆角浅底容器 */
+.project-environment,
+.runtime-management {
+  border: 0;
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--surface-shadow-sm);
+  padding: 20px 22px;
+}
+.project-env-heading h3,
+.runtime-management > summary {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.project-environment h4 {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 候选/实例卡片：融合列表块 */
+.project-environment section > div,
+.project-environment .candidate,
+.project-environment li {
+  border-radius: 14px;
+}
+.project-environment li {
+  list-style: none;
+}
+
+/* 操作计划弹窗：滚动区留白与提示卡 */
+.operation-plan-dialog {
+  border-radius: 26px;
+}
+.operation-plan-scroll {
+  padding-right: 4px;
+}
+.operation-plan-warning,
+.operation-plan-error {
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+/* 图表：更粗的线、更淡的网格、圆润端点 */
+.chart {
+  border-radius: 14px;
+}
+.chart-line {
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.gauge-num,
+.rate-block-num,
+.resource-meta {
+  font-variant-numeric: tabular-nums;
+}
+.usage-body,
+.gauge {
+  color: var(--text);
+}
+
+/* 页面切换：轻微上浮淡入 */
+.view {
+  animation: view-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view {
+    animation: none;
+  }
+}
+
+/* 交互过渡：按钮/行的按下反馈 */
+.btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.nav-item:active,
+.setting-row:active {
+  transform: scale(0.99);
+}
+.btn,
+.nav-item,
+.setting-row {
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
+}
+
+/* 深色校对：浅色模式下的浅灰块在深色里需要提亮一档 */
+.dark .empty,
+.dark .node-inventory-source,
+.dark .setting-row,
+.dark .gauges .gauge {
+  background: var(--surface-2);
+}
+.dark .setting-row:hover {
+  background: var(--surface-3);
+}
+.dark .setting-row.active {
+  background: var(--accent);
+}
+.dark .view-head {
+  box-shadow: 0 18px 44px rgb(0 0 0 / 55%);
+}
+.dark .donate-qr {
+  background: #fff;
 }

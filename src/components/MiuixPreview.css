@@ -1,0 +1,497 @@
+/* MiuiX / HyperOS 风格预览页：独立作用域，不影响正式界面。 */
+.miuix {
+  --mx-bg: #f2f3f5;
+  --mx-surface: #ffffff;
+  --mx-surface-2: #f7f8fa;
+  --mx-text: #101114;
+  --mx-text-2: #6b7280;
+  --mx-line: #e7e8ec;
+  --mx-accent: #3482ff;
+  --mx-accent-soft: #e8f1ff;
+  --mx-ok: #14b87a;
+  --mx-warn: #e08b1e;
+  --mx-danger: #e34b4b;
+  --mx-shadow: 0 1px 2px rgb(16 17 20 / 4%), 0 8px 24px rgb(16 17 20 / 6%);
+  --mx-radius: 20px;
+  min-height: 100vh;
+  padding: 28px;
+  background: #dfe1e5;
+  color: var(--mx-text);
+  font-family:
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}
+.miuix.dark {
+  --mx-bg: #000000;
+  --mx-surface: #17181b;
+  --mx-surface-2: #202126;
+  --mx-text: #f5f6f8;
+  --mx-text-2: #9aa0aa;
+  --mx-line: #2a2c31;
+  --mx-accent: #4b93ff;
+  --mx-accent-soft: #17233a;
+  --mx-ok: #35d39a;
+  --mx-warn: #f0ab4a;
+  --mx-danger: #ff6b6b;
+  --mx-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 45%);
+  background: #0a0a0b;
+}
+
+.miuix-frame {
+  max-width: 1080px;
+  margin: 0 auto;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--mx-bg);
+  box-shadow: var(--mx-shadow);
+  border: 1px solid rgb(0 0 0 / 6%);
+}
+.miuix.dark .miuix-frame {
+  border-color: #ffffff14;
+}
+
+.miuix-statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mx-text);
+  background: var(--mx-bg);
+}
+.miuix-statusbar-right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.miuix-layout {
+  display: flex;
+  min-height: 620px;
+}
+
+/* 侧栏：HyperOS 设置页的悬浮圆角面板 */
+.miuix-sidebar {
+  width: 208px;
+  flex-shrink: 0;
+  margin: 0 0 16px 16px;
+  padding: 18px 12px 14px;
+  border-radius: var(--mx-radius);
+  background: var(--mx-surface);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--mx-shadow);
+}
+.miuix-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px 18px;
+}
+.miuix-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  background: linear-gradient(145deg, #5aa2ff, #2f6fe4);
+}
+.miuix-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.miuix-brand-text strong {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+.miuix-brand-text small {
+  font-size: 11px;
+  color: var(--mx-text-2);
+}
+
+.miuix-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.miuix-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--mx-text-2);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.miuix-nav-item:hover {
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+}
+.miuix-nav-item.active {
+  background: var(--mx-accent-soft);
+  color: var(--mx-accent);
+  font-weight: 650;
+}
+
+.miuix-sidebar-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--mx-line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--mx-text-2);
+}
+.miuix-sidebar-foot small {
+  font-size: 10.5px;
+  padding-left: 4px;
+}
+.miuix-theme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* 内容区 */
+.miuix-content {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 18px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.miuix-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 6px 4px;
+}
+.miuix-head h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+.miuix-head p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--mx-text-2);
+}
+
+/* 主卡片：大圆角、柔和阴影、无边框 */
+.miuix-card {
+  background: var(--mx-surface);
+  border-radius: var(--mx-radius);
+  padding: 18px 18px 14px;
+  box-shadow: var(--mx-shadow);
+}
+.miuix-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.miuix-card-title h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.1px;
+}
+.miuix-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--mx-text-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.miuix-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+  border-radius: 24px;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, #7db4ff 0%, transparent 55%),
+    linear-gradient(135deg, #3f7cf5, #2a5fd0);
+  box-shadow: 0 12px 30px rgb(47 111 228 / 28%);
+}
+.miuix-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.miuix-hero-label {
+  font-size: 11.5px;
+  opacity: 0.82;
+}
+.miuix-hero-value {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+.miuix-hero-meta {
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+.miuix-hero-ring {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: rgb(255 255 255 / 16%);
+  border: 3px solid rgb(255 255 255 / 55%);
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 18%);
+}
+.miuix-hero-ring span {
+  font-size: 22px;
+  font-weight: 700;
+}
+.miuix-hero-ring small {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* 列表行 */
+.miuix-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-top: 1px solid var(--mx-line);
+}
+.miuix-row:first-of-type {
+  border-top: 0;
+}
+.miuix-row-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+  font-weight: 650;
+}
+.miuix-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.miuix-row-text strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.miuix-row-text small {
+  font-size: 11.5px;
+  color: var(--mx-text-2);
+}
+
+.miuix-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.miuix-pill.ok {
+  color: var(--mx-ok);
+  background: color-mix(in srgb, var(--mx-ok) 12%, transparent);
+}
+.miuix-pill.muted {
+  color: var(--mx-text-2);
+  background: var(--mx-surface-2);
+}
+
+.miuix-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .miuix-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 表单控件：填充式圆角，无重边框 */
+.miuix-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--mx-text-2);
+  margin-bottom: 12px;
+}
+.miuix-field select,
+.miuix-btn,
+.miuix-switch {
+  font: inherit;
+}
+.miuix-field select {
+  appearance: none;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+  font-size: 13px;
+}
+
+.miuix-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 2px;
+}
+.miuix-switch-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.miuix-switch-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.miuix-switch-row small {
+  font-size: 11.5px;
+  color: var(--mx-text-2);
+}
+.miuix-switch {
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mx-line);
+  cursor: pointer;
+  padding: 3px;
+  transition: background 0.18s ease;
+}
+.miuix-switch i {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
+  transition: transform 0.18s ease;
+}
+.miuix-switch.on {
+  background: var(--mx-ok);
+}
+.miuix-switch.on i {
+  transform: translateX(18px);
+}
+
+.miuix-banner {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  margin-bottom: 8px;
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+}
+.miuix-banner.success {
+  color: var(--mx-ok);
+  background: color-mix(in srgb, var(--mx-ok) 10%, transparent);
+}
+.miuix-banner.warn {
+  color: var(--mx-warn);
+  background: color-mix(in srgb, var(--mx-warn) 12%, transparent);
+}
+.miuix-banner.error {
+  color: var(--mx-danger);
+  background: color-mix(in srgb, var(--mx-danger) 10%, transparent);
+}
+
+.miuix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.miuix-btn {
+  border: 0;
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  background: var(--mx-surface-2);
+  color: var(--mx-text);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    background 0.15s ease;
+}
+.miuix-btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+.miuix-btn.primary {
+  background: var(--mx-accent);
+  color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--mx-accent) 35%, transparent);
+}
+.miuix-btn.danger {
+  color: var(--mx-danger);
+  background: color-mix(in srgb, var(--mx-danger) 10%, transparent);
+}
+.miuix-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.miuix-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.miuix-chip {
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mx-accent-soft);
+  color: var(--mx-accent);
+  font-weight: 550;
+}
+.miuix-chip.muted {
+  background: var(--mx-surface-2);
+  color: var(--mx-text-2);
+}
