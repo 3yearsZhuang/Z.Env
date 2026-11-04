@@ -20,7 +20,7 @@ vi.mock("../api", () => ({
   detectToolSources: vi.fn(),
   stableBinPath: vi.fn(),
   bindProjectPath: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(), save: vi.fn() }));
 vi.mock("./PresetLibrary", () => ({ default: () => <div>预设库</div> }));

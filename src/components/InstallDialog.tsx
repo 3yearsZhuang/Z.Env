@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   listRemoteVersions,
   listRemoteVersionsAsdf,
@@ -55,6 +55,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
       return [];
     }
   };
+
+  // 表单控件与标签关联：此前 <label> 没有 htmlFor，读屏与 getByLabelText 都找不到控件。
+  const sourceSelectId = useId();
+  const remoteSelectId = useId();
+  const manualInputId = useId();
 
   const [remote, setRemote] = useState<string[]>([]);
   const [source, setSource] = useState<RemoteSource>("mise");
@@ -269,8 +274,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
           {!busy && (
             <>
               <div className="source-row">
-                <span className="field-label">远程源</span>
+                <label className="field-label" htmlFor={sourceSelectId}>
+                  远程源
+                </label>
                 <select
+                  id={sourceSelectId}
                   className="input"
                   value={source}
                   onChange={(e) => {
@@ -294,8 +302,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                 <StateBlock size="sm">正在获取远程版本列表…</StateBlock>
               ) : filteredRemote.length > 0 ? (
                 <>
-                  <label className="field-label">选择远程版本</label>
+                  <label className="field-label" htmlFor={remoteSelectId}>
+                    选择远程版本
+                  </label>
                   <select
+                    id={remoteSelectId}
                     className="input"
                     value={selected}
                     onChange={(e) => {
@@ -359,8 +370,11 @@ export default function InstallDialog({ tool, external, onClose, onDone }: Props
                 </>
               )}
 
-              <label className="field-label">或手动输入版本号</label>
+              <label className="field-label" htmlFor={manualInputId}>
+                或手动输入版本号
+              </label>
               <input
+                id={manualInputId}
                 className="input"
                 placeholder={`例如 20.20.2 / latest / temurin-21.0.12`}
                 value={manual}

@@ -26,7 +26,7 @@ vi.mock("../api", () => ({
   uninstallSystemPackage: vi.fn(),
   uninstallVersion: vi.fn(),
   useVersion: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 vi.mock("../lib/useMachineInstall", () => ({
   useMachineInstall: () => ({ installBusy: false }),

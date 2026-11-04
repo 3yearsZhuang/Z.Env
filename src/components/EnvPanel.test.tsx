@@ -7,7 +7,7 @@ import EnvPanel from "./EnvPanel";
 vi.mock("../api", () => ({
   envCenterSet: vi.fn(),
   envCenterRemove: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
 const snap: EnvCenterSnapshot = {

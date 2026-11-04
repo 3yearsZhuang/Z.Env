@@ -6,7 +6,7 @@ import SettingsView from "./SettingsView";
 
 vi.mock("../api", () => ({
   historyList: vi.fn(),
-  errorMessage: (error: unknown) => String(error),
+  errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
 vi.mock("@tauri-apps/api/app", () => ({ getVersion: vi.fn(() => Promise.resolve("0.7.1")) }));
