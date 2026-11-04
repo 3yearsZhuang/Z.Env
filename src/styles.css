@@ -1645,8 +1645,8 @@ button:disabled {
   color: var(--muted-foreground);
   white-space: nowrap;
 }
-.live-status.paused .workspace-dot {
-  background: var(--muted-foreground);
+.live-status.idle .workspace-dot {
+  background: var(--warning);
 }
 .live-status.unavailable .workspace-dot {
   background: var(--destructive);
