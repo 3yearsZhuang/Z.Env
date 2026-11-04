@@ -4,7 +4,6 @@ import {
   detectToolSources,
   envCenterList,
   errorMessage,
-  getEnvInfo,
   listTools,
   managedAdopt,
   uninstallSystemPackage,
@@ -15,6 +14,7 @@ import {
   type EnvCenterSnapshot,
 } from "../api";
 import InstallDialog from "./InstallDialog";
+import { readEnvInfo } from "../lib/envInfo";
 import DoctorPanel from "./DoctorPanel";
 import EnvPanel from "./EnvPanel";
 import MachinePresetSection from "./MachinePresetSection";
@@ -189,7 +189,7 @@ export default function EnvironmentView({
           if (current()) setSources(result);
         })
         .catch((error) => failed("外部来源读取失败，保留上次数据", error)),
-      getEnvInfo()
+      readEnvInfo({ force: true })
         .then(async (env) => {
           const supported = new Set([...KNOWN_RUNTIMES]);
           const managers = env.pkg

@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkMise, getEnvInfo, systemStats, type SystemStats } from "../api";
+import { clearEnvInfoCache } from "../lib/envInfo";
 import Dashboard from "./Dashboard";
 
 vi.mock("../api", () => ({
@@ -39,6 +40,7 @@ async function flush() {
 }
 
 beforeEach(() => {
+  clearEnvInfoCache();
   vi.resetAllMocks();
   vi.useFakeTimers();
   vi.mocked(systemStats).mockResolvedValue(stats);

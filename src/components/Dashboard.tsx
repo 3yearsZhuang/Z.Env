@@ -21,15 +21,8 @@ import {
   X,
 } from "lucide-react";
 import type { Navigate } from "../lib/nav";
-import {
-  systemStats,
-  SystemStats,
-  checkMise,
-  MiseStatus,
-  getEnvInfo,
-  EnvInfo,
-  errorMessage,
-} from "../api";
+import { readEnvInfo } from "../lib/envInfo";
+import { systemStats, SystemStats, checkMise, MiseStatus, EnvInfo, errorMessage } from "../api";
 
 /** 保留的历史采样点数量 */
 const MAX_HISTORY = 60;
@@ -271,7 +264,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
     checkMise()
       .then(setMise)
       .catch(() => setMiseError(true));
-    getEnvInfo()
+    readEnvInfo()
       .then(setEnv)
       .catch(() => setEnv(null));
   }, []);
