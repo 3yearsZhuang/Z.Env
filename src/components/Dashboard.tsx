@@ -37,6 +37,9 @@ const MAX_HISTORY = 60;
 /** 首页资源采样间隔；不再暴露给用户调整。 */
 const REFRESH_MS = 2000;
 
+/** 窗口可见但已失焦时的采样间隔：用户在别的窗口工作时不必 2s 一次唤后端。 */
+const IDLE_REFRESH_MS = 10000;
+
 /** 环形使用率指示器（SVG） */
 function Ring({ percent, color, size = 110 }: { percent: number; color: string; size?: number }) {
   const r = 42;
@@ -197,14 +200,28 @@ function Card({
 }
 
 const SHORTCUTS = [
-  { tab: "tools", icon: Layers, title: "管理开发环境", description: "运行时版本与全局环境变量" },
+  // id 与 tab 分离：两个入口都跳到「本机工具」，用 tab 当 key 会重复。
   {
+    id: "runtime",
+    tab: "tools",
+    icon: Layers,
+    title: "管理开发环境",
+    description: "运行时版本与全局环境变量",
+  },
+  {
+    id: "projects",
     tab: "projects",
     icon: FolderKanban,
     title: "配置项目",
     description: "发现项目，管理 mise.toml",
   },
-  { tab: "tools", icon: Box, title: "查看工具与渠道", description: "核对工具定义、实例与可用操作" },
+  {
+    id: "channels",
+    tab: "tools",
+    icon: Box,
+    title: "查看工具与渠道",
+    description: "核对工具定义、实例与可用操作",
+  },
 ] as const;
 
 export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
@@ -220,6 +237,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idleCadence, setIdleCadence] = useState(false);
   const inFlight = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -258,10 +276,45 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
       .catch(() => setEnv(null));
   }, []);
 
+  // 采样调度：窗口聚焦时 2s、失焦时降到 10s、窗口隐藏时完全停止（回到前台立即补一次）。
+  // 后端每次轮询都会读一次电量与磁盘，空转轮询在桌面上是纯浪费。
   useEffect(() => {
+    let timer: number | undefined;
+    let disposed = false;
+
+    const schedule = () => {
+      if (disposed) return;
+      window.clearTimeout(timer);
+      if (document.hidden) return;
+      const focused = document.hasFocus();
+      setIdleCadence(!focused);
+      const delay = focused ? REFRESH_MS : IDLE_REFRESH_MS;
+      timer = window.setTimeout(() => {
+        void refresh().finally(schedule);
+      }, delay);
+    };
+
+    const onVisibility = () => {
+      if (!document.hidden) void refresh();
+      schedule();
+    };
+    const onFocus = () => {
+      void refresh();
+      schedule();
+    };
+
     void refresh();
-    const timer = window.setInterval(refresh, REFRESH_MS);
-    return () => window.clearInterval(timer);
+    schedule();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", schedule);
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", schedule);
+    };
   }, [refresh]);
 
   const diskTotal = stats?.disks.reduce((a, d) => a + d.totalGb, 0) ?? 0;
@@ -286,9 +339,16 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
           <p className="view-sub">掌握资源状态，让开发环境井然有序。</p>
         </div>
         <div className="head-tools dashboard-controls">
-          <span className={`live-status ${error ? "unavailable" : ""}`}>
+          <span
+            className={`live-status ${error ? "unavailable" : ""} ${idleCadence ? "idle" : ""}`}
+            title={
+              idleCadence
+                ? "窗口未聚焦：采样降到 10 秒一次，聚焦后恢复 2 秒"
+                : "窗口聚焦：每 2 秒采样"
+            }
+          >
             <span className="workspace-dot" />
-            {error ? "连接异常" : "自动更新"}
+            {error ? "连接异常" : idleCadence ? "低频采样" : "自动更新"}
           </span>
         </div>
       </div>
@@ -567,8 +627,8 @@ export default function Dashboard({ onNavigate }: { onNavigate: Navigate }) {
         <span>常用入口</span>
       </div>
       <div className="overview-shortcuts">
-        {SHORTCUTS.map(({ tab, icon: Icon, title, description }) => (
-          <button className="overview-shortcut" key={tab} onClick={() => onNavigate(tab)}>
+        {SHORTCUTS.map(({ id, tab, icon: Icon, title, description }) => (
+          <button className="overview-shortcut" key={id} onClick={() => onNavigate(tab)}>
             <span className="shortcut-icon">
               <Icon size={19} />
             </span>

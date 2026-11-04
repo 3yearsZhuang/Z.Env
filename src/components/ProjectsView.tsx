@@ -41,18 +41,6 @@ const ProjectEnvironmentPanel = lazy(() => import("./ProjectEnvironmentPanel"));
 const PAGE_SIZE = 6;
 type Operation = "loading" | "picking" | "saving" | "installing" | "binding" | "exporting";
 
-function useDarkMode(): boolean {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
-  useEffect(() => {
-    const observer = new MutationObserver(() =>
-      setDark(document.documentElement.classList.contains("dark")),
-    );
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-  return dark;
-}
-
 interface Props {
   onNavigate?: Navigate;
   active?: boolean;
@@ -62,7 +50,6 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
   const editor = useProjectEditor();
   const { path, setPath, content, setContent, target, original } = editor;
   const presets = useUserPresets();
-  const dark = useDarkMode();
   const [loaded, setLoaded] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null);
   const operationRef = useRef(false);
@@ -570,7 +557,6 @@ export default function ProjectsView({ onNavigate, active = true }: Props) {
               >
                 <TomlEditor
                   value={content}
-                  dark={dark}
                   onChange={(value) => {
                     if (!operationRef.current) setContent(value);
                   }}
