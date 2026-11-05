@@ -64,23 +64,6 @@ vi.mock("./NodeInventoryPanel", () => ({
     );
   },
 }));
-vi.mock("./ToolCatalogPanel", () => ({
-  default: ({
-    onShowCompatibility,
-    onShowPython,
-    onShowNode,
-  }: {
-    onShowCompatibility: () => void;
-    onShowPython: () => void;
-    onShowNode: () => void;
-  }) => (
-    <div>
-      统一工具目录<button onClick={onShowCompatibility}>打开兼容渠道</button>
-      <button onClick={onShowPython}>打开 Python 清单</button>
-      <button onClick={onShowNode}>打开 Node 清单</button>
-    </div>
-  ),
-}));
 vi.mock("./PythonInventoryPanel", () => ({
   default: ({ active }: { active: boolean }) => (
     <section aria-label="Python 只读清单" data-active={String(active)}>
@@ -223,8 +206,7 @@ describe("本机工具页的读取边界", () => {
     const user = userEvent.setup();
     const { rerender } = render(<EnvironmentView />);
     expect(screen.queryByRole("region", { name: "兼容软件列表" })).toBeNull();
-    await user.click(screen.getByText("工具能力台账"));
-    await user.click(screen.getByRole("button", { name: "打开兼容渠道" }));
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
     const session = await screen.findByRole("textbox", { name: "兼容渠道会话" });
     await user.clear(session);
     await user.type(session, "正在核对的内容");
@@ -275,12 +257,6 @@ describe("本机工具页的读取边界", () => {
     expect(screen.getByRole("region", { name: "Node 只读清单" }).getAttribute("data-active")).toBe(
       "true",
     );
-    // 能力台账仍可从折叠入口打开，并切回同一套 Python 清单
-    await user.click(screen.getByText("工具能力台账"));
-    await user.click(screen.getByRole("button", { name: "打开 Python 清单" }));
-    expect(
-      screen.getByRole("region", { name: "Python 只读清单" }).getAttribute("data-active"),
-    ).toBe("true");
   });
 });
 

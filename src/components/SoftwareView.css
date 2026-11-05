@@ -126,6 +126,27 @@
   gap: 7px;
   margin-top: auto;
 }
+/* 一个渠道 = 胶囊（安装 + 复制）+ 能力标签；标签来自统一目录，缺目录时不显示 */
+.support-package-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+.support-package-plan {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  color: var(--muted-foreground);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.support-package-plan.ready {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .support-package {
   display: inline-flex;
   align-items: stretch;

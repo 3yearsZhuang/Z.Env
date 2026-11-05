@@ -33,6 +33,8 @@ import { readEnvInfo } from "../lib/envInfo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./SoftwareView.css";
 import { StateBlock } from "./ui/state-block";
+import { findCatalogTool, readToolCatalog } from "../lib/toolCatalogCache";
+import type { EntrySupport, ToolCatalog } from "../api/toolCatalog";
 
 type LoadState = { status: "loading" | "ready" | "error"; error?: string };
 type CopyFeedback = { ok: boolean; message: string; command: string };
@@ -235,6 +237,14 @@ function SoftIcon({ name }: { name: string }) {
   );
 }
 
+/** 统一目录的接入状态 → 渠道行上的一行短标签（不猜、不夸大）。 */
+function planLabel(support: EntrySupport | undefined): string {
+  if (!support) return "未接入统一计划";
+  if (support.state === "integrated") return "可计划安装";
+  if (support.state === "unsupported") return "此平台不支持";
+  return "只读，未接入计划";
+}
+
 /** 命令展示与实际执行使用同一份规范包标识。 */
 function pkgCommand(pkg: ProviderPackage): string {
   if (pkg.manager === "brew") return `brew install --${pkg.kind} ${pkg.id}`;
@@ -268,6 +278,7 @@ export default function SoftwareView({
   const [systemAttempt, setSystemAttempt] = useState(0);
   const [sysInstalled, setSysInstalled] = useState<Record<string, Set<string>>>({});
   const [channel, setChannel] = useState<Item | null>(null);
+  const [catalog, setCatalog] = useState<ToolCatalog | null>(null);
   const [sysJob, setSysJob] = useState<{
     manager: string;
     name: string;
@@ -305,6 +316,22 @@ export default function SoftwareView({
       alive = false;
     };
   }, [catalogAttempt]);
+
+  // 统一目录只读一次：卡片据此标注「统一目录」与各渠道能否走计划
+  useEffect(() => {
+    if (!active) return;
+    let alive = true;
+    readToolCatalog()
+      .then((value) => {
+        if (alive) setCatalog(value);
+      })
+      .catch(() => {
+        /* 目录读取失败不阻塞列表：卡片退回旧版渠道视图 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [active]);
 
   useEffect(() => {
     if (!active) return;
@@ -614,6 +641,7 @@ export default function SoftwareView({
           const channels = (packagesByTool.get(item.name) || []).filter((pkg) =>
             available.has(pkg.manager),
           );
+          const catalogTool = findCatalogTool(catalog, item.name);
           return (
             <article className="support-card" key={item.name} aria-label={item.name}>
               <button
@@ -660,6 +688,7 @@ export default function SoftwareView({
                 ) : (
                   <span className="support-badge">官方下载</span>
                 )}
+                {catalogTool && <span className="support-badge">统一目录</span>}
               </div>
               {channelState.status !== "ready" ? (
                 <div className="support-card-state">
@@ -668,6 +697,10 @@ export default function SoftwareView({
               ) : channels.length > 0 ? (
                 <div className="support-package-list">
                   {channels.map((pkg) => {
+                    const channelSupport = catalogTool?.channels.find(
+                      (channel) => channel.providerId === pkg.manager,
+                    )?.installPlan;
+                    const plan = channelSupport?.state === "integrated" ? "ready" : "readonly";
                     const state =
                       envState.status !== "ready" ? envState : managerStates[pkg.manager];
                     const isHere =
@@ -685,39 +718,55 @@ export default function SoftwareView({
                             ? "已安装"
                             : "安装";
                     return (
-                      <div className="support-package" key={`${pkg.manager}:${pkg.kind}:${pkg.id}`}>
-                        <button
-                          type="button"
-                          className={`support-package-install ${isHere ? "support-package-installed" : ""}`}
-                          disabled={busy || isHere || state?.status !== "ready"}
-                          onClick={() => void doInstall(pkg)}
-                          aria-label={`${pkg.manager} ${label} ${item.name}`}
-                          title={pkgCommand(pkg)}
-                        >
-                          {installing ? (
-                            <LoaderCircle
-                              size={12}
-                              className="support-spinning"
-                              aria-hidden="true"
-                            />
-                          ) : isHere ? (
-                            <Check size={12} aria-hidden="true" />
-                          ) : (
-                            <Download size={12} aria-hidden="true" />
-                          )}
-                          <span>{pkg.manager}</span>
-                          <span className="support-package-state">{label}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="support-package-copy"
-                          onClick={() => void copy(pkg)}
-                          aria-label={`复制 ${item.name} 的 ${pkg.manager} 安装命令`}
-                          title="复制安装命令"
-                        >
-                          <Copy size={13} aria-hidden="true" />
-                        </button>
-                      </div>
+                      <span
+                        className="support-package-item"
+                        key={`${pkg.manager}:${pkg.kind}:${pkg.id}`}
+                      >
+                        <span className="support-package">
+                          <button
+                            type="button"
+                            className={`support-package-install ${isHere ? "support-package-installed" : ""}`}
+                            disabled={busy || isHere || state?.status !== "ready"}
+                            onClick={() => void doInstall(pkg)}
+                            aria-label={`${pkg.manager} ${label} ${item.name}`}
+                            title={pkgCommand(pkg)}
+                          >
+                            {installing ? (
+                              <LoaderCircle
+                                size={12}
+                                className="support-spinning"
+                                aria-hidden="true"
+                              />
+                            ) : isHere ? (
+                              <Check size={12} aria-hidden="true" />
+                            ) : (
+                              <Download size={12} aria-hidden="true" />
+                            )}
+                            <span>{pkg.manager}</span>
+                            <span className="support-package-state">{label}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="support-package-copy"
+                            onClick={() => void copy(pkg)}
+                            aria-label={`复制 ${item.name} 的 ${pkg.manager} 安装命令`}
+                            title="复制安装命令"
+                          >
+                            <Copy size={13} aria-hidden="true" />
+                          </button>
+                        </span>
+                        {catalogTool && (
+                          <span
+                            className={`support-package-plan ${plan}`}
+                            title={
+                              channelSupport?.reason ||
+                              `统一目录尚未收录 ${pkg.manager} 渠道，此处沿用旧版直接安装`
+                            }
+                          >
+                            {planLabel(channelSupport)}
+                          </span>
+                        )}
+                      </span>
                     );
                   })}
                 </div>
