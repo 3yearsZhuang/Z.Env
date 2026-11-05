@@ -293,12 +293,10 @@ export default function NodeInventoryPanel({
           <span className="node-inventory-icon">
             <FileSearch size={21} aria-hidden="true" />
           </span>
-          <div>
-            <h2 id={`${panelId}-heading`} ref={heading} tabIndex={-1}>
-              Node.js 本机清单
-            </h2>
-            <p>按来源保留文件证据，同版本的不同目录分别展示。</p>
-          </div>
+          {/* 运行时名称与实例数量已由上方切换卡表达，这里只保留无障碍名称与操作入口 */}
+          <h2 id={`${panelId}-heading`} ref={heading} tabIndex={-1} className="visually-hidden">
+            Node.js 本机清单
+          </h2>
         </div>
         <div className="node-inventory-actions">
           <button
@@ -399,7 +397,7 @@ export default function NodeInventoryPanel({
                 aria-label={`${provider.name} 来源`}
               >
                 <div className="node-inventory-source-top">
-                  <h3>{provider.name}</h3>
+                  <h3 title={provider.description}>{provider.name}</h3>
                   <button
                     type="button"
                     className="node-inventory-source-refresh"
@@ -424,7 +422,6 @@ export default function NodeInventoryPanel({
                       ? "未发现 Node.js 记录"
                       : "安装情况未知"}
                 </p>
-                <p className="node-inventory-source-description">{provider.description}</p>
                 <div className="node-inventory-source-flags">
                   {report?.coverage.truncated && <span>结果已截断</span>}
                   {report && !report.coverage.complete && <span>扫描范围未完整</span>}
@@ -494,7 +491,8 @@ export default function NodeInventoryPanel({
           </p>
         )}
         <p className="node-inventory-footnote">
-          版本探针只说明该文件可执行，不代表终端或项目正在使用它。PATH 文件观测与来源归属分别记录。
+          按来源保留文件证据，同版本的不同目录分别展示。版本探针只说明该文件可执行，不代表终端或项目正在使用它。PATH
+          文件观测与来源归属分别记录。
         </p>
       </div>
       {planning && snapshot && (

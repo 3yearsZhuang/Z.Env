@@ -101,12 +101,10 @@ export default function PythonInventoryPanel({
       aria-busy={state.loading}
     >
       <div className="python-inventory-heading">
-        <div>
-          <h2 ref={heading} tabIndex={-1} id={`${panelId}-heading`}>
-            Python 本机清单
-          </h2>
-          <p>macOS CPython 3 来源样板；项目虚拟环境、其他实现及特殊构建不作为已验证安装。</p>
-        </div>
+        {/* 运行时名称与状态已由上方切换卡表达，这里只保留无障碍名称与操作入口 */}
+        <h2 ref={heading} tabIndex={-1} id={`${panelId}-heading`} className="visually-hidden">
+          Python 本机清单
+        </h2>
         <div className="python-inventory-actions">
           <button
             className="btn"

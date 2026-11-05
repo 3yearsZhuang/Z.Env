@@ -518,7 +518,7 @@ export default function EnvironmentView({
           <h3 className="runtime-subsection">其他运行时与版本管理</h3>
           <div className="runtime-management-toolbar">
             <button className="btn-ghost" disabled={loading} onClick={() => void refresh()}>
-              {loading ? "读取管理列表中…" : "刷新管理列表"}
+              {loading ? "读取旧版数据中…" : "刷新旧版数据"}
             </button>
           </div>
           {loading && cards.length === 0 ? (
