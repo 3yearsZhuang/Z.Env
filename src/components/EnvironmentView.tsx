@@ -70,6 +70,15 @@ interface Props {
   onNavigate?: Navigate;
 }
 
+/** 切换卡副标题：只说清这个运行时现在是什么状态，来源细节留给下方清单。 */
+function runtimeSummary(read: CatalogReadState): string {
+  if (read.loading) return "读取中…";
+  if (read.error) return "读取失败";
+  if (!read.snapshot) return "点击查看实例";
+  const count = read.snapshot.installations.length;
+  return count > 0 ? `${count} 个安装实例` : "未发现安装实例";
+}
+
 /** 环境页顶部三个区块的顺序（tablist 键盘导航按此环绕） */
 const PANE_ORDER = ["runtime", "vars", "preset"] as const;
 
@@ -93,14 +102,14 @@ export default function EnvironmentView({
   const [detailTool, setDetailTool] = useState<"node" | "python">("node");
   const [pythonVisited, setPythonVisited] = useState(false);
   const [pythonFocus, setPythonFocus] = useState(0);
-  const [compatibilityOpen, setCompatibilityOpen] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
   const [compatibilityVisited, setCompatibilityVisited] = useState(false);
   const [capabilityOpen, setCapabilityOpen] = useState(false);
   const [capabilityVisited, setCapabilityVisited] = useState(false);
   const [catalogNodeFocus, setCatalogNodeFocus] = useState(0);
   const consumedCompatibility = useRef(0);
   const openCompatibility = () => {
-    setCompatibilityOpen(true);
+    setManagedExpanded(true);
     setCompatibilityVisited(true);
   };
   const [tools, setTools] = useState<ToolInfo[]>([]);
@@ -131,7 +140,7 @@ export default function EnvironmentView({
     if (active && compatibilityRequest > consumedCompatibility.current) {
       consumedCompatibility.current = compatibilityRequest;
       setPane("runtime");
-      setCompatibilityOpen(true);
+      setManagedExpanded(true);
       setCompatibilityVisited(true);
     }
   }, [active, compatibilityRequest]);
@@ -338,10 +347,7 @@ export default function EnvironmentView({
         <div>
           <div className="view-eyebrow">TOOLCHAIN</div>
           <h1>本机工具</h1>
-          <p className="view-sub">
-            先看实机装了什么，再核对来源与操作能力。安装实例、全局环境变量与可复用预设分为三块；
-            Node 与 Python 的来源清单彼此独立，装好不等于项目或终端已生效。
-          </p>
+          <p className="view-sub">先看实机装了什么，再核对来源与能否生效——装好不等于已生效。</p>
         </div>
       </div>
 
@@ -351,7 +357,7 @@ export default function EnvironmentView({
           [
             ["runtime", "安装实例"],
             ["vars", "全局变量"],
-            ["preset", "可复用预设"],
+            ["preset", "预设与快照"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -369,6 +375,14 @@ export default function EnvironmentView({
             onClick={() => setPane(key)}
           >
             {label}
+            {key === "vars" && (envSnap?.conflicts.length ?? 0) > 0 && (
+              <span
+                className="tab-badge"
+                aria-label={`${envSnap?.conflicts.length} 个环境变量冲突`}
+              >
+                {envSnap?.conflicts.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -392,13 +406,7 @@ export default function EnvironmentView({
             }}
           >
             <span className="runtime-switch-name">Node.js</span>
-            <span className="runtime-switch-meta">
-              {catalogRead.loading
-                ? "读取中…"
-                : catalogRead.error
-                  ? "读取失败"
-                  : "mise / nvm / Homebrew"}
-            </span>
+            <span className="runtime-switch-meta">{runtimeSummary(catalogRead)}</span>
           </button>
           <button
             className={`runtime-switch-btn ${detailTool === "python" ? "active" : ""}`}
@@ -410,13 +418,7 @@ export default function EnvironmentView({
             }}
           >
             <span className="runtime-switch-name">Python</span>
-            <span className="runtime-switch-meta">
-              {pythonRead.loading
-                ? "读取中…"
-                : pythonRead.error
-                  ? "读取失败"
-                  : "mise / Homebrew / pyenv / uv / PATH"}
-            </span>
+            <span className="runtime-switch-meta">{runtimeSummary(pythonRead)}</span>
           </button>
         </div>
         <div hidden={detailTool !== "node"}>
@@ -439,8 +441,27 @@ export default function EnvironmentView({
             </Suspense>
           </div>
         )}
+        {/* 装好 ≠ 生效：健康巡检放在实例清单正下方，不再埋进旧版折叠区 */}
         <details
-          className="runtime-capability"
+          className="runtime-management runtime-health"
+          open={healthOpen}
+          onToggle={(event) => setHealthOpen(event.currentTarget.open)}
+        >
+          <summary>环境健康巡检 · 装好不等于生效</summary>
+          <p className="runtime-management-note">
+            mise 可用性、shell 接入、PATH 重复与托管接入在这里一并检查；可修复项可就地处理。
+          </p>
+          {healthOpen && (
+            <DoctorPanel
+              onFixed={() => {
+                setInventoryRevision((revision) => revision + 1);
+                void refresh();
+              }}
+            />
+          )}
+        </details>
+        <details
+          className="runtime-management runtime-capability"
           open={capabilityOpen}
           onToggle={(event) => {
             setCapabilityOpen(event.currentTarget.open);
@@ -471,66 +492,17 @@ export default function EnvironmentView({
         </details>
         <details
           className="runtime-management"
-          open={compatibilityOpen}
-          onToggle={(event) => {
-            setCompatibilityOpen(event.currentTarget.open);
-            if (event.currentTarget.open) setCompatibilityVisited(true);
-          }}
-        >
-          <summary>更多工具与兼容渠道</summary>
-          <p className="runtime-management-note">
-            这里保留旧版工具与系统软件渠道，尚未全部接入统一来源、计划和项目验证。渠道信息不代表当前版本可安装或项目已生效。
-          </p>
-          {compatibilityVisited && (
-            <Suspense fallback={<p role="status">正在加载兼容渠道…</p>}>
-              <SoftwareView
-                active={active && pane === "runtime" && compatibilityOpen}
-                onInventoryChanged={() => setInventoryRevision((n) => n + 1)}
-                onShowNode={() => {
-                  setDetailTool("node");
-                  setCatalogNodeFocus((n) => n + 1);
-                }}
-              />
-            </Suspense>
-          )}
-        </details>
-        <details
-          className="runtime-management"
           open={managedExpanded}
           onToggle={(event) => setManagedExpanded(event.currentTarget.open)}
         >
-          <summary>其他运行时与管理操作</summary>
+          <summary>
+            其他工具与旧版渠道
+            {cards.length > 0 ? `（${cards.length} 个运行时）` : ""}
+          </summary>
           <p className="runtime-management-note">
-            Node.js
-            的来源、版本和路径以上方清单为准。下方保留各渠道的安装、全局配置与接入操作；配置成功不代表项目或终端已生效。
+            尚未接入统一来源与计划的旧入口：这里保留其他运行时的版本管理与系统软件渠道； Node/Python
+            的实机状态以上方清单为准。
           </p>
-          <div className="runtime-management-toolbar">
-            <button className="btn-ghost" disabled={loading} onClick={() => void refresh()}>
-              {loading ? "读取管理列表中…" : "刷新管理列表"}
-            </button>
-          </div>
-          {cards.length > 0 && (
-            <div
-              className={`banner ${envSnap && envSnap.conflicts.length > 0 ? "warn" : "info"}`}
-              style={{ cursor: envSnap && envSnap.conflicts.length > 0 ? "pointer" : "default" }}
-              onClick={() => envSnap && envSnap.conflicts.length > 0 && setPane("vars")}
-            >
-              本机已装 {cards.length} 个运行时
-              {envSnap && envSnap.conflicts.length > 0
-                ? ` · ${envSnap.conflicts.length} 个环境变量同名冲突 · 点击查看`
-                : ""}
-            </div>
-          )}
-
-          {/* 环境健康：装好 ≠ 生效——mise 可用性/shell 接入/PATH/托管在此巡检并可就地修复 */}
-          {managedExpanded && (
-            <DoctorPanel
-              onFixed={() => {
-                setInventoryRevision((revision) => revision + 1);
-                void refresh();
-              }}
-            />
-          )}
 
           {error && (
             <Notice tone="error" onDismiss={() => setError(null)}>
@@ -543,13 +515,19 @@ export default function EnvironmentView({
             </Notice>
           )}
 
+          <h3 className="runtime-subsection">其他运行时与版本管理</h3>
+          <div className="runtime-management-toolbar">
+            <button className="btn-ghost" disabled={loading} onClick={() => void refresh()}>
+              {loading ? "读取管理列表中…" : "刷新管理列表"}
+            </button>
+          </div>
           {loading && cards.length === 0 ? (
             <StateBlock size="md">正在读取环境…</StateBlock>
           ) : cards.length === 0 ? (
             <StateBlock size="md">
               {error
                 ? "读取未完成，安装情况未知。可重试读取管理列表。"
-                : "未从这些管理入口发现运行时记录。可展开本页的「更多工具与兼容渠道」核对其他来源。"}
+                : "未从这些管理入口发现运行时记录。可在下方「系统软件与兼容渠道」核对其他来源。"}
             </StateBlock>
           ) : (
             <div className="tool-grid">
@@ -740,6 +718,23 @@ export default function EnvironmentView({
                 );
               })}
             </div>
+          )}
+
+          <h3 className="runtime-subsection">系统软件与兼容渠道</h3>
+          <p className="runtime-management-note">
+            旧版系统软件渠道，尚未全部接入统一来源与项目验证；渠道信息不代表当前版本可安装或项目已生效。
+          </p>
+          {(compatibilityVisited || managedExpanded) && (
+            <Suspense fallback={<p role="status">正在加载兼容渠道…</p>}>
+              <SoftwareView
+                active={active && pane === "runtime" && managedExpanded}
+                onInventoryChanged={() => setInventoryRevision((n) => n + 1)}
+                onShowNode={() => {
+                  setDetailTool("node");
+                  setCatalogNodeFocus((n) => n + 1);
+                }}
+              />
+            </Suspense>
           )}
         </details>
       </div>
