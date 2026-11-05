@@ -20,7 +20,6 @@ import EnvPanel from "./EnvPanel";
 import MachinePresetSection from "./MachinePresetSection";
 import SnapshotPanel from "./SnapshotPanel";
 import NodeInventoryPanel from "./NodeInventoryPanel";
-import ToolCatalogPanel from "./ToolCatalogPanel";
 import type { CatalogReadState } from "../lib/catalogEvidence";
 const PythonInventoryPanel = lazy(() => import("./PythonInventoryPanel"));
 const SoftwareView = lazy(() => import("./SoftwareView"));
@@ -104,14 +103,8 @@ export default function EnvironmentView({
   const [pythonFocus, setPythonFocus] = useState(0);
   const [healthOpen, setHealthOpen] = useState(false);
   const [compatibilityVisited, setCompatibilityVisited] = useState(false);
-  const [capabilityOpen, setCapabilityOpen] = useState(false);
-  const [capabilityVisited, setCapabilityVisited] = useState(false);
   const [catalogNodeFocus, setCatalogNodeFocus] = useState(0);
   const consumedCompatibility = useRef(0);
-  const openCompatibility = () => {
-    setManagedExpanded(true);
-    setCompatibilityVisited(true);
-  };
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
   const [systemSources, setSystemSources] = useState<ToolSource[]>([]);
@@ -461,39 +454,13 @@ export default function EnvironmentView({
           )}
         </details>
         <details
-          className="runtime-management runtime-capability"
-          open={capabilityOpen}
-          onToggle={(event) => {
-            setCapabilityOpen(event.currentTarget.open);
-            if (event.currentTarget.open) setCapabilityVisited(true);
-          }}
-        >
-          <summary>工具能力台账</summary>
-          <p className="runtime-management-note">
-            核对每个工具的身份、接入渠道与项目核对范围；这里只说明“能不能做”，具体操作仍需生成计划并核对目标。
-          </p>
-          {capabilityVisited && (
-            <ToolCatalogPanel
-              active={active && pane === "runtime" && capabilityOpen}
-              read={catalogRead}
-              pythonRead={pythonRead}
-              onShowPython={() => {
-                setDetailTool("python");
-                setPythonVisited(true);
-                setPythonFocus((n) => n + 1);
-              }}
-              onShowNode={() => {
-                setDetailTool("node");
-                setCatalogNodeFocus((n) => n + 1);
-              }}
-              onShowCompatibility={openCompatibility}
-            />
-          )}
-        </details>
-        <details
           className="runtime-management"
           open={managedExpanded}
-          onToggle={(event) => setManagedExpanded(event.currentTarget.open)}
+          onToggle={(event) => {
+            setManagedExpanded(event.currentTarget.open);
+            // 访问过就常驻挂载：收起折叠区不应丢掉渠道会话与进行中的流式进度
+            if (event.currentTarget.open) setCompatibilityVisited(true);
+          }}
         >
           <summary>
             其他工具与旧版渠道

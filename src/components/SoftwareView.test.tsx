@@ -12,9 +12,16 @@ import {
   type ProviderPackage,
   type ToolInfo,
 } from "../api";
+import { toolCatalog } from "../api/toolCatalog";
 import { clearEnvInfoCache } from "../lib/envInfo";
+import { clearToolCatalogCache } from "../lib/toolCatalogCache";
+import type { ToolCatalog } from "../api/toolCatalog";
 import SoftwareView from "./SoftwareView";
 
+vi.mock("../api/toolCatalog", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/toolCatalog")>()),
+  toolCatalog: vi.fn(),
+}));
 vi.mock("../api", () => ({
   detectSystemInstalled: vi.fn(),
   getEnvInfo: vi.fn(),
@@ -52,9 +59,49 @@ const packages: ProviderPackage[] = [
   },
 ];
 
+const catalog: ToolCatalog = {
+  schemaVersion: 1,
+  platform: "macos",
+  coverageNote: "首批 7 项工具定义",
+  tools: [
+    {
+      definition: {
+        toolId: "node",
+        displayName: "Node.js",
+        aliases: ["nodejs"],
+        executableNames: ["node"],
+      },
+      category: "runtime",
+      description: "JavaScript 运行时",
+      documentationUrl: "https://nodejs.org/en",
+      projectCheck: { state: "integrated", reason: "已接入项目核对" },
+      channels: [
+        {
+          providerId: "brew",
+          packages: [],
+          inventory: { state: "integrated", reason: "安装收据与目录" },
+          installPlan: { state: "integrated", reason: "可生成安装计划" },
+          uninstallPlan: { state: "integrated", reason: "可生成卸载计划" },
+          bindingPlan: { state: "integrated", reason: "托管模式可绑定" },
+        },
+        {
+          providerId: "nvm",
+          packages: [],
+          inventory: { state: "integrated", reason: "版本目录" },
+          installPlan: { state: "notIntegrated", reason: "nvm 不提供安装计划，请用 nvm 自己安装" },
+          uninstallPlan: { state: "notIntegrated", reason: "nvm 不提供卸载计划" },
+          bindingPlan: { state: "notIntegrated", reason: "nvm 只提供只读观测" },
+        },
+      ],
+    },
+  ],
+};
+
 beforeEach(() => {
   clearEnvInfoCache();
+  clearToolCatalogCache();
   vi.resetAllMocks();
+  vi.mocked(toolCatalog).mockResolvedValue(catalog);
   vi.mocked(packageCatalog).mockResolvedValue(packages);
   vi.mocked(listTools).mockResolvedValue([]);
   vi.mocked(getEnvInfo).mockResolvedValue({
@@ -293,5 +340,58 @@ describe("支持列表的安装与状态反馈", () => {
       "all",
     );
     expect(screen.getAllByRole("article")).toHaveLength(2);
+  });
+});
+
+describe("统一目录能力标注", () => {
+  const nodePackages: ProviderPackage[] = [
+    { tool: "node", manager: "brew", id: "node@22", kind: "formula", platforms: ["macos"] },
+    {
+      tool: "node",
+      manager: "winget",
+      id: "OpenJS.NodeJS",
+      kind: "package",
+      platforms: ["windows"],
+    },
+  ];
+
+  it("目录收录的工具标「统一目录」，渠道行给出能否走计划", async () => {
+    vi.mocked(packageCatalog).mockResolvedValue(nodePackages);
+    render(<SoftwareView />);
+    await screen.findByRole("button", { name: "brew 安装 node" });
+
+    expect(screen.getByText("统一目录")).toBeTruthy();
+    expect(screen.getByText("可计划安装")).toBeTruthy();
+    // winget 不在统一目录的 provider 集合里 → 明确说明未接入，而不是默认它可计划
+    const wingetLabel = screen.getByText("未接入统一计划");
+    expect(wingetLabel.getAttribute("title")).toContain("winget");
+
+    // 不在统一目录里的工具只保留旧版渠道视图，不冒充已接入
+    const vscode = screen.getByRole("article", { name: "visual-studio-code" });
+    expect(within(vscode).queryByText("统一目录")).toBeNull();
+    expect(within(vscode).queryByText("可计划安装")).toBeNull();
+  });
+
+  it("目录里只读的渠道标注「只读，未接入计划」并带出原因", async () => {
+    vi.mocked(packageCatalog).mockResolvedValue([nodePackages[0]]);
+    vi.mocked(toolCatalog).mockResolvedValue({
+      ...catalog,
+      tools: [
+        {
+          ...catalog.tools[0],
+          channels: [
+            {
+              ...catalog.tools[0].channels[0],
+              installPlan: { state: "notIntegrated", reason: "brew 渠道尚未接入安装计划" },
+            },
+          ],
+        },
+      ],
+    });
+    render(<SoftwareView />);
+    await screen.findByRole("button", { name: "brew 安装 node" });
+
+    const label = screen.getByText("只读，未接入计划");
+    expect(label.getAttribute("title")).toContain("brew 渠道尚未接入安装计划");
   });
 });
