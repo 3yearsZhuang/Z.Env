@@ -103,7 +103,37 @@
   }
 }
 
-/* 能力台账：折叠区与旧版渠道同族，但标题强调“只读说明” */
+/* 折叠区内的二级标题：把「其他运行时」与「系统软件渠道」分开 */
+.runtime-subsection {
+  margin: 18px 0 10px;
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+.runtime-subsection:first-of-type {
+  margin-top: 4px;
+}
+
+/* tab 上的冲突计数：与「全局变量」区块一一对应，避免在旧折叠区里重复一条横幅 */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--destructive-soft);
+  color: var(--destructive);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.tab-btn.active .tab-badge {
+  background: rgb(255 255 255 / 22%);
+  color: #fff;
+}
+
+/* 能力台账与健康巡检、旧版渠道同族：三个折叠区用同一张卡片，视觉上等距对齐 */
 .runtime-capability {
   min-width: 0;
 }

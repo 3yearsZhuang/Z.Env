@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useEffect } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,25 +32,37 @@ vi.mock("../api", () => ({
 vi.mock("../lib/useMachineInstall", () => ({
   useMachineInstall: () => ({ installBusy: false }),
 }));
+const probe = vi.hoisted(() => ({ nodeInstallations: 0 }));
 vi.mock("./NodeInventoryPanel", () => ({
   default: ({
     active,
     focusRequest,
     refreshRequest,
+    onReadState,
   }: {
     active: boolean;
     focusRequest: number;
     refreshRequest: number;
-  }) => (
-    <section
-      aria-label="Node 只读清单"
-      data-active={String(active)}
-      data-focus={focusRequest}
-      data-refresh={refreshRequest}
-    >
-      外部 Node 实例
-    </section>
-  ),
+    onReadState?: (state: unknown) => void;
+  }) => {
+    useEffect(() => {
+      onReadState?.({
+        snapshot: { installations: Array.from({ length: probe.nodeInstallations }, () => ({})) },
+        loading: false,
+        error: null,
+      });
+    }, [onReadState]);
+    return (
+      <section
+        aria-label="Node 只读清单"
+        data-active={String(active)}
+        data-focus={focusRequest}
+        data-refresh={refreshRequest}
+      >
+        外部 Node 实例
+      </section>
+    );
+  },
 }));
 vi.mock("./ToolCatalogPanel", () => ({
   default: ({
@@ -93,6 +106,7 @@ vi.mock("./SnapshotPanel", () => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  probe.nodeInstallations = 0;
   vi.mocked(listTools).mockResolvedValue([]);
   vi.mocked(detectToolSources).mockResolvedValue([]);
   vi.mocked(getEnvInfo).mockResolvedValue({
@@ -136,18 +150,23 @@ describe("本机工具页的读取边界", () => {
     expect(doctorFix).not.toHaveBeenCalled();
   });
 
-  it("展开管理操作后 mise 失败仍保留外部运行时，修复仅在明确点击后执行", async () => {
+  it("环境健康独立成区块，修复仅在明确展开并点击后执行", async () => {
     const user = userEvent.setup();
     vi.mocked(listTools).mockRejectedValue(new Error("mise 不可用"));
     vi.mocked(detectToolSources).mockResolvedValue([
       { tool: "python", version: "3.12.1", manager: "pyenv", path: "/fixture/pyenv/3.12.1" },
     ]);
     render(<EnvironmentView />);
-    await user.click(screen.getByText("其他运行时与管理操作"));
+
+    // 旧版折叠区仍保留外部运行时
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
     expect(await screen.findByText("python")).toBeTruthy();
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(managedReconcile).not.toHaveBeenCalled();
     expect(doctorFix).not.toHaveBeenCalled();
+
+    // 健康巡检不再埋在旧版折叠区里，而是清单下方的独立区块
+    await user.click(screen.getByText(/环境健康巡检/));
     await user.click(await screen.findByRole("button", { name: "一键修复" }));
     await waitFor(() => expect(doctorFix).toHaveBeenCalledExactlyOnceWith("managed-health"));
     await waitFor(() =>
@@ -185,7 +204,7 @@ describe("本机工具页的读取边界", () => {
   it("环境重建完成为 Node 清单提供刷新意图", async () => {
     const user = userEvent.setup();
     render(<EnvironmentView />);
-    await user.click(screen.getByRole("tab", { name: "可复用预设" }));
+    await user.click(screen.getByRole("tab", { name: "预设与快照" }));
     await user.click(screen.getByRole("button", { name: "模拟重建完成" }));
     await user.click(screen.getByRole("tab", { name: "安装实例" }));
     expect(screen.getByRole("region", { name: "Node 只读清单" }).getAttribute("data-refresh")).toBe(
@@ -209,7 +228,7 @@ describe("本机工具页的读取边界", () => {
     const session = await screen.findByRole("textbox", { name: "兼容渠道会话" });
     await user.clear(session);
     await user.type(session, "正在核对的内容");
-    await user.click(screen.getByText("更多工具与兼容渠道"));
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
     await waitFor(() =>
       expect(
         screen
@@ -219,7 +238,7 @@ describe("本机工具页的读取边界", () => {
     );
     rerender(<EnvironmentView active={false} />);
     rerender(<EnvironmentView />);
-    await user.click(screen.getByText("更多工具与兼容渠道"));
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
     expect((session as HTMLInputElement).value).toBe("正在核对的内容");
   });
   it("旧软件导航意图打开同页兼容入口，普通切页保留区块选择", async () => {
@@ -262,5 +281,66 @@ describe("本机工具页的读取边界", () => {
     expect(
       screen.getByRole("region", { name: "Python 只读清单" }).getAttribute("data-active"),
     ).toBe("true");
+  });
+});
+
+describe("本机工具页的简明性", () => {
+  it("切换卡只说清状态：未读取、实例数量、读取失败三种文案", async () => {
+    const user = userEvent.setup();
+    probe.nodeInstallations = 3;
+    render(<EnvironmentView />);
+
+    const nodeCard = screen.getByRole("button", { name: /Node\.js/ });
+    expect(nodeCard.textContent).toContain("3 个安装实例");
+    // Python 未展开过，不谎报数量
+    expect(screen.getByRole("button", { name: /Python/ }).textContent).toContain("点击查看实例");
+
+    // 切换卡不再罗列来源清单（来源细节留给下方清单面板）
+    expect(nodeCard.textContent).not.toContain("mise / nvm / Homebrew");
+    await user.click(screen.getByRole("tab", { name: "全局变量" }));
+    await user.click(screen.getByRole("tab", { name: "安装实例" }));
+    expect(screen.getByRole("button", { name: /Node\.js/ }).textContent).toContain("3 个安装实例");
+  });
+
+  it("环境健康是独立区块，展开才巡检", async () => {
+    const user = userEvent.setup();
+    render(<EnvironmentView />);
+    expect(doctorRun).not.toHaveBeenCalled();
+
+    await user.click(screen.getByText(/环境健康巡检/));
+    await waitFor(() => expect(doctorRun).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("托管接入 · 注意")).toBeTruthy();
+  });
+
+  it("旧版入口合并为一个折叠区，内含运行时管理与系统软件两段", async () => {
+    const user = userEvent.setup();
+    render(<EnvironmentView />);
+    expect(screen.getAllByText(/其他工具与旧版渠道/)).toHaveLength(1);
+
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
+    expect(await screen.findByText("其他运行时与版本管理")).toBeTruthy();
+    expect(screen.getByText("系统软件与兼容渠道")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "兼容软件列表" })).toBeTruthy();
+  });
+
+  it("环境变量冲突在区块标签上计数，不再重复一条横幅", async () => {
+    vi.mocked(envCenterList).mockResolvedValue({
+      configPath: "/fixture/config.toml",
+      exists: true,
+      entries: [],
+      conflicts: [
+        { key: "HTTP_PROXY", miseValue: "a", systemValue: "b" },
+        { key: "PATH", miseValue: "c", systemValue: "d" },
+      ],
+      systemEnv: [],
+    });
+    const user = userEvent.setup();
+    render(<EnvironmentView />);
+
+    const varsTab = await screen.findByRole("tab", { name: /全局变量/ });
+    await waitFor(() => expect(varsTab.textContent).toContain("2"));
+    expect(screen.queryByText(/个环境变量同名冲突/)).toBeNull();
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
+    expect(screen.queryByText(/本机已装 0 个运行时/)).toBeNull();
   });
 });
