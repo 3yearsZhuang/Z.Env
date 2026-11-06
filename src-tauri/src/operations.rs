@@ -162,11 +162,16 @@ impl WriteScope<'_> {
 
 fn next_scope_nonce() -> Result<u64, AppError> {
     static NEXT_NONCE: AtomicU64 = AtomicU64::new(1);
-    NEXT_NONCE
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |nonce| {
-            nonce.checked_add(1)
-        })
-        .map_err(|_| AppError::Other("内部写任务序号已耗尽".into()))
+    let mut nonce = NEXT_NONCE.load(Ordering::Relaxed);
+    loop {
+        let next = nonce
+            .checked_add(1)
+            .ok_or_else(|| AppError::Other("内部写任务序号已耗尽".into()))?;
+        match NEXT_NONCE.compare_exchange_weak(nonce, next, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => return Ok(nonce),
+            Err(current) => nonce = current,
+        }
+    }
 }
 
 impl Guard {
