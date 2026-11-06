@@ -47,6 +47,7 @@
 | [Python 补偿安全 2026-11-07](./python-compensation-safety-2026-11-07.md) | 完整写后状态、收据清理与取消后终态扫描 |
 | [配方执行设计 2026-11-07](./recipe-execution-design-2026-11-07.md) | 第 51 项最小范围、父任务阶段、部分成功与恢复契约 |
 | [配方契约底座 2026-11-07](./recipe-contract-foundation-2026-11-07.md) | 严格 Recipe 请求/计划/记录模型、固定阶段与 v1 journal 预算 |
+| [配方父作用域 2026-11-07](./recipe-parent-stage-core-2026-11-07.md) | 内部阶段核心、父互斥与取消、唯一查询身份；执行仍关闭 |
 | [Node/Python 卡片入口 2026-11-06](./tool-card-actions-2026-11-06.md) | 清单导航、渠道计划、读取会话与交互验收 |
 | [跨平台执行底座](./cross-platform-foundation.md) | Windows 有界探针、Job 对象、稳定文件身份与显式环境策略 |
 | [原生 launcher](./cross-platform-launcher.md) | 按实例启动、显式环境与 shim/桌面接入边界 |

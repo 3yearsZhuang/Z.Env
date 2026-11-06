@@ -3,6 +3,10 @@
 日期：2026-11-07（Asia/Shanghai）。设计基线 `35688bd`，第 50 项已合并为 [PR #10](https://github.com/3yearsZhuang/Z.Env/pull/10)。
 状态：**实施设计；执行尚未接入，现有配方 `executable` 仍为 false。**
 
+严格请求/计划/记录底座已随 [PR #12](https://github.com/3yearsZhuang/Z.Env/pull/12) 合并；
+当前 [父作用域与阶段核心切片](./recipe-parent-stage-core-2026-11-07.md) 为旧 Tool 抽出内部驱动，
+未签发准备、提交扫描凭证、混合 journal 和 Recipe 执行仍在后续范围。
+
 ## 首个执行范围
 
 首个版本限定 macOS、一个显式项目、Node/Python 各至多一个精确版本、原生 mise、`project/direct` 配置选择。
