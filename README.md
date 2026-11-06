@@ -163,7 +163,7 @@ cargo fmt --check
 
 ## CI / 发布
 
-- **ci.yml**：版本一致性与文档链接校验 → 前端 lint / test / build + prettier 门禁；生产依赖 npm audit 的 high 及以上阻断，完整依赖审计作为报告；
+- **ci.yml**：版本一致性与文档链接校验 → 前端 lint / test / build + prettier 门禁；完整依赖 npm audit（含开发依赖）的 high 及以上阻断，与发布门禁一致；
   后端在 macOS / Windows / Linux 上执行 fmt + clippy（-D warnings）+ test + build。
 - **release.yml**：推送 `v*` 标签触发，tauri-action 在 macOS / Windows / Linux 三平台打包，
   生成应用内更新所需的 `latest.json` 与 minisign 签名工件。

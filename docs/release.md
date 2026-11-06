@@ -21,12 +21,12 @@
 
 1. **三处版本号同步升位**：`package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml`
    （Cargo.lock 随之更新）。`npm run check:version` 门禁校验，CI 首步执行。
-2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台。当前策略为生产依赖 high 及以上阻断，完整依赖审计作报告；每次按实际通告、依赖归属和修复方案处理，不沿用旧豁免理由。2026-11-06 完整审计仍有 1 high / 9 moderate，生产依赖为 0，详情见 [审核记录](./workspace-audit-2026-11-06.md)：
+2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台。完整依赖审计包含开发依赖，high 及以上在 CI 和发布流程均阻断。2026-11-06 的开发依赖维护已清除此前 1 high / 9 moderate；锁图、限定覆盖与当前验证见 [依赖维护记录](./dependency-maintenance-2026-11-06.md)。每次发布仍须重新查询审计结果：
    ```bash
    npm ci
    npm run check:version && npm run check:docs && npm run lint && npm test && npm run format:check
    npm run build && npm audit --omit=dev --audit-level=high
-   npm audit --audit-level=high # 完整报告；出现漏洞时逐项评估并记录
+   npm audit --audit-level=high # 完整依赖门禁，high 及以上阻断
    cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
    cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
    cargo test --manifest-path src-tauri/Cargo.toml
