@@ -202,6 +202,57 @@ fn during_gate<T>(
 }
 
 #[test]
+fn node_declaration_changed_during_python_preparation_invalidates_the_mixed_recipe() {
+    let fixture = Fixture::new();
+    mise_gate(&fixture);
+    fixture
+        .query
+        .begin("node-before-project-change".into(), None)
+        .unwrap()
+        .execute(fixture.options.common.clone())
+        .unwrap();
+    fixture.python("python-before-node-project-change");
+    let project = fixture.root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+    let package = project.join("package.json");
+    fs::write(&package, r#"{"engines":{"node":">=22 <23"}}"#).unwrap();
+    fs::write(
+        project.join("pyproject.toml"),
+        "[project]\nrequires-python='>=3.12,<3.13'\n",
+    )
+    .unwrap();
+    let request = PythonProjectRequest {
+        request_id: "mixed-project-read".into(),
+        snapshot_request_id: "python-before-node-project-change".into(),
+        path: project.to_string_lossy().into(),
+    };
+    let result = thread::scope(|scope| {
+        let mut barrier = ProbeBarrier::new(fixture.root.path());
+        let worker = scope.spawn(|| {
+            preview_recipe(
+                &[requested("node", "22.23.3"), requested("python", "3.12.12")],
+                Some(&request),
+                &fixture.options,
+                &fixture.service,
+                &fixture.query,
+                &fixture.root.path().join(".config/mise/config.toml"),
+            )
+        });
+        barrier.wait();
+        fs::write(&package, r#"{"engines":{"node":">=24 <25"}}"#).unwrap();
+        barrier.release();
+        worker.join().unwrap()
+    });
+    assert!(result.unwrap_err().contains("Node 项目声明"));
+    assert_eq!(
+        fs::read_to_string(&package).unwrap(),
+        r#"{"engines":{"node":">=24 <25"}}"#
+    );
+    fixture.assert_readonly();
+    assert_no_install_artifacts(&fixture);
+}
+
+#[test]
 fn missing_exact_python_uses_real_mise_gate_and_preserves_each_tool_binding_without_writes() {
     let fixture = Fixture::new();
     mise_gate(&fixture);
