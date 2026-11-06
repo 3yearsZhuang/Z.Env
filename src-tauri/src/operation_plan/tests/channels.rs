@@ -22,7 +22,7 @@ fn node(path: &Path, version: &str) {
     );
 }
 #[cfg(unix)]
-fn setup_mise(f: &Fixture) {
+pub(super) fn setup_mise(f: &Fixture) {
     let root = f._dir.path();
     let installs = f.options.mise_data_dir.join("installs/node");
     let locator = installs.join("22.1.0");

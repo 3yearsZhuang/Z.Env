@@ -6,7 +6,17 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async () => () => {}),
 }));
 
-import { errorMessage } from "./api";
+import { errorMessage, recipePreview } from "./api";
+import { invoke } from "@tauri-apps/api/core";
+
+it("配方兼容整机参数，并将显式项目快照传给只读命令", async () => {
+  const tools = [{ name: "python", version: "3.12.14" }];
+  await recipePreview(tools);
+  expect(invoke).toHaveBeenLastCalledWith("recipe_preview", { tools, project: null });
+  const project = { requestId: "project", snapshotRequestId: "python-snapshot", path: "/project" };
+  await recipePreview(tools, project);
+  expect(invoke).toHaveBeenLastCalledWith("recipe_preview", { tools, project });
+});
 
 describe("errorMessage", () => {
   it("透传字符串错误", () => {

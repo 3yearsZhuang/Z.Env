@@ -47,7 +47,7 @@ impl InventoryTool {
             Self::Python => "python",
         })
     }
-    fn providers(self) -> &'static [ProviderId] {
+    pub(crate) fn providers(self) -> &'static [ProviderId] {
         match self {
             Self::Node => &PROVIDERS,
             Self::Python => &crate::providers::python::PROVIDERS,
@@ -109,12 +109,15 @@ pub struct InventoryQueryService {
     state: Arc<Mutex<QueryState>>,
 }
 
+/// 同一时点捕获的逐工具快照；未读取的工具保留为空，不触发扫描。
+pub(crate) type CapturedInventories = BTreeMap<InventoryTool, Option<(u64, InventorySnapshot)>>;
+
 fn lock_state(state: &Mutex<QueryState>) -> MutexGuard<'_, QueryState> {
     // 临界区只修改本模块状态；恢复中毒锁可确保异常退出仍能归还扫描槽。
     state.lock().unwrap_or_else(|error| error.into_inner())
 }
 
-fn validate_request_id(request_id: &str) -> Result<(), QueryError> {
+pub(crate) fn validate_request_id(request_id: &str) -> Result<(), QueryError> {
     if request_id.is_empty()
         || request_id.len() > 128
         || !request_id
@@ -134,6 +137,57 @@ fn remember_bounded(queue: &mut VecDeque<String>, request_id: String, limit: usi
 }
 
 impl InventoryQueryService {
+    /// 在同一个状态锁内捕获相关工具；调用方在锁外核对文件和渠道。
+    pub(crate) fn capture_snapshots(
+        &self,
+        tools: &[InventoryTool],
+    ) -> Result<CapturedInventories, QueryError> {
+        let state = lock_state(&self.state);
+        if state.active.is_some() {
+            return Err(QueryError::Busy);
+        }
+        Ok(tools
+            .iter()
+            .copied()
+            .map(|tool| {
+                let snapshot = state
+                    .caches
+                    .get(&tool)
+                    .and_then(|cache| cache.committed.clone());
+                (tool, snapshot)
+            })
+            .collect())
+    }
+
+    /// 返回只读报告前重验捕获身份，避免混合不同轮次或遗忘新出现的清单。
+    pub(crate) fn validate_snapshots(
+        &self,
+        captured: &CapturedInventories,
+    ) -> Result<(), QueryError> {
+        let state = lock_state(&self.state);
+        if state.active.is_some() {
+            return Err(QueryError::Busy);
+        }
+        for (tool, expected) in captured {
+            let current = state
+                .caches
+                .get(tool)
+                .and_then(|cache| cache.committed.as_ref());
+            let unchanged = match (expected, current) {
+                (None, None) => true,
+                (Some((generation, snapshot)), Some((current_generation, current_snapshot))) => {
+                    generation == current_generation
+                        && snapshot.request_id == current_snapshot.request_id
+                }
+                _ => false,
+            };
+            if !unchanged {
+                return Err(QueryError::Superseded);
+            }
+        }
+        Ok(())
+    }
+
     /// 只返回最近一次成功提交，活动扫描期间不能签发或执行计划。
     pub(crate) fn current_snapshot(&self) -> Result<(u64, InventorySnapshot), QueryError> {
         self.current_snapshot_for(InventoryTool::Node)

@@ -1,28 +1,29 @@
-//! 项目配方预览：把预设工具、项目声明与当前清单汇总为只读逐项报告。
-//! 本模块不写入、不安装、不改变项目文件；执行仍走各渠道的独立操作计划。
+//! 配方分别绑定工具清单，核对声明，再汇总既有计划门禁；不扫描、不写入。
 use crate::{
     domain::{Health, InventorySnapshot, ProviderId},
-    inventory::query::InventoryQueryService,
+    inventory::{
+        has_complete_coverage,
+        query::{validate_request_id, CapturedInventories, InventoryQueryService, InventoryTool},
+    },
     operation_plan::{OperationPlanService, PlanIntent, PlanRequest},
     preset::PresetTool,
-    project_environment::{PythonProjectEnvironment, RequirementState},
+    project_environment::{
+        inspect_python, match_python_request, Match, PythonProjectEnvironment, PythonProjectRequest,
+    },
     providers::python::PythonScanOptions,
 };
 use serde::Serialize;
+use std::path::Path;
 
-/// 配方中单项的处置：可直接复用、需安装、或当前不支持。
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum RecipeDisposition {
-    /// 清单中已有该精确版本的健康实例，可直接使用。
+    /// 已有无需重复安装的候选，不代表项目绑定或环境生效。
     Reuse,
-    /// 可通过受控计划安装。
+    /// 既有渠道允许精确安装，配方本身仍不执行。
     Install,
-    /// 项目声明与清单冲突。
     Conflict,
-    /// 渠道、版本语法或工具尚未接入。
     Unsupported,
-    /// 证据不足，不能判断。
     Unknown,
 }
 
@@ -36,23 +37,38 @@ pub struct RecipeStep {
     pub installation_id: Option<String>,
     pub version: Option<String>,
     pub reason: String,
-    /// 只读计划预览摘要；不执行、不消费计划。
+    /// 安装能力摘要，不包含可执行计划 ID。
     pub plan_ready: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecipeSnapshotBinding {
+    pub tool: InventoryTool,
+    pub request_id: Option<String>,
+    pub generation: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecipeReport {
     pub schema_version: u32,
-    pub snapshot_request_id: String,
+    /// 兼容字段：仅单工具且有清单时有值；混合配方使用 snapshot_bindings。
+    pub snapshot_request_id: Option<String>,
+    pub snapshot_bindings: Vec<RecipeSnapshotBinding>,
     pub steps: Vec<RecipeStep>,
-    /// 仅当所有步骤都可复用或已具备可执行计划时为 true。
+    /// 执行编排尚未接入，始终为 false。
     pub executable: bool,
     pub issues: Vec<String>,
 }
 
-const SUPPORTED: [&str; 2] = ["node", "python"];
-
+fn inventory_tool(name: &str) -> Option<InventoryTool> {
+    match name {
+        "node" => Some(InventoryTool::Node),
+        "python" => Some(InventoryTool::Python),
+        _ => None,
+    }
+}
 fn channel(provider: ProviderId) -> &'static str {
     match provider {
         ProviderId::Mise => "mise",
@@ -63,93 +79,178 @@ fn channel(provider: ProviderId) -> &'static str {
         ProviderId::Path => "path",
     }
 }
-
-fn exact_version(tool: &str, request: &str) -> bool {
-    if tool == "python" {
+fn exact_version(tool: InventoryTool, request: &str) -> bool {
+    if tool == InventoryTool::Python {
         return crate::providers::python::stable(request);
-    }
-    if tool != "node" {
-        return false;
     }
     let parts: Vec<_> = request.split('.').collect();
     parts.len() == 3
-        && parts
-            .iter()
-            .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+        && parts.iter().all(|part| {
+            !part.is_empty()
+                && part.len() <= 10
+                && part.bytes().all(|byte| byte.is_ascii_digit())
+                && (part.len() == 1 || !part.starts_with('0'))
+        })
+}
+fn complete(snapshot: &InventorySnapshot, tool: InventoryTool) -> bool {
+    tool.providers().iter().all(|expected| {
+        snapshot.providers.iter().any(|provider| {
+            provider.provider_id == *expected && has_complete_coverage(provider, &tool.id())
+        })
+    })
 }
 
-fn python_requirement(report: &PythonProjectEnvironment) -> Option<&str> {
-    report
-        .declarations
-        .iter()
-        .find_map(|declaration| declaration.requirement.as_deref())
-}
-
-/// 生成只读配方预览；不消费计划、不写入任何文件。
-pub fn preview(
+/// 命令与测试共用入口。锁内捕获、锁外读取/预览，返回前重验所有相关清单。
+pub fn preview_recipe(
     tools: &[PresetTool],
-    snapshot: &InventorySnapshot,
-    python: Option<&PythonProjectEnvironment>,
+    project: Option<&PythonProjectRequest>,
     options: &PythonScanOptions,
     service: &OperationPlanService,
     query: &InventoryQueryService,
+    config_path: &Path,
+) -> Result<RecipeReport, String> {
+    if tools.len() > 64 {
+        return Err("配方工具数量超出预算".into());
+    }
+    let mut related: Vec<_> = tools
+        .iter()
+        .filter_map(|tool| inventory_tool(&tool.name))
+        .collect();
+    if project.is_some() {
+        related.push(InventoryTool::Python);
+    }
+    let captured = query
+        .capture_snapshots(&related)
+        .map_err(|error| error.to_string())?;
+    let python = if let Some(request) = project {
+        validate_request_id(&request.request_id).map_err(|error| error.to_string())?;
+        validate_request_id(&request.snapshot_request_id).map_err(|error| error.to_string())?;
+        if request.path.len() > 4096 {
+            return Err("项目路径超出预算".into());
+        }
+        let (_, snapshot) = captured
+            .get(&InventoryTool::Python)
+            .and_then(Option::as_ref)
+            .ok_or("Python 清单不可用，请先完成读取")?;
+        if request.snapshot_request_id != snapshot.request_id {
+            return Err("Python 清单已变化，请重新核对项目".into());
+        }
+        Some(inspect_python(snapshot, request).map_err(str::to_owned)?)
+    } else {
+        None
+    };
+    let session = service.readonly_preview_session();
+    let report = evaluate(
+        tools,
+        &captured,
+        python.as_ref(),
+        options,
+        &session,
+        query,
+        config_path,
+    );
+    // 门禁可能需要子进程；期间项目文件也可能被外部工具改写。
+    if let (Some(request), Some(before)) = (project, python.as_ref()) {
+        let (_, snapshot) = captured[&InventoryTool::Python].as_ref().unwrap();
+        let after = inspect_python(snapshot, request).map_err(str::to_owned)?;
+        if !same_project_evidence(before, &after) {
+            return Err("项目声明已变化，请重新预览配方".into());
+        }
+    }
+    query
+        .validate_snapshots(&captured)
+        .map_err(|error| error.to_string())?;
+    if report.steps.iter().any(|step| step.plan_ready) && service.journal_failed() {
+        return Err("操作记录状态已变化，请重新预览安装能力".into());
+    }
+    Ok(report)
+}
+fn same_project_evidence(
+    before: &PythonProjectEnvironment,
+    after: &PythonProjectEnvironment,
+) -> bool {
+    before.project_directory == after.project_directory
+        && before.requirement_state == after.requirement_state
+        && before.files.len() == after.files.len()
+        && before.files.iter().zip(&after.files).all(|(a, b)| {
+            a.path == b.path
+                && a.canonical_path == b.canonical_path
+                && a.exists == b.exists
+                && a.sha256 == b.sha256
+        })
+}
+fn evaluate(
+    tools: &[PresetTool],
+    captured: &CapturedInventories,
+    python: Option<&PythonProjectEnvironment>,
+    options: &PythonScanOptions,
+    session: &OperationPlanService,
+    query: &InventoryQueryService,
+    config_path: &Path,
 ) -> RecipeReport {
     let mut steps = Vec::with_capacity(tools.len());
-    let mut issues = Vec::new();
     for tool in tools {
         let mut step = RecipeStep {
             tool: tool.name.clone(),
             request: Some(tool.version.clone()),
-            disposition: RecipeDisposition::Unsupported,
+            disposition: RecipeDisposition::Unknown,
             channel: None,
             installation_id: None,
             version: None,
             reason: String::new(),
             plan_ready: false,
         };
-        if !SUPPORTED.contains(&tool.name.as_str()) {
+        let Some(kind) = inventory_tool(&tool.name) else {
+            step.disposition = RecipeDisposition::Unsupported;
             step.reason = "只读配方当前仅覆盖 Node 与 Python".into();
-            issues.push(format!("{}：配方暂不支持", tool.name));
+            steps.push(step);
+            continue;
+        };
+        let Some((generation, snapshot)) = captured.get(&kind).and_then(Option::as_ref) else {
+            step.reason = "该工具尚无清单，请先完成读取".into();
+            steps.push(step);
+            continue;
+        };
+        if !complete(snapshot, kind) {
+            step.reason = "该工具来源缺失、失败、过期或覆盖不完整，保持未知".into();
             steps.push(step);
             continue;
         }
+        if !exact_version(kind, &tool.version) {
+            step.reason = "配方只接受精确 3 段版本；范围或别名需人工确认".into();
+            steps.push(step);
+            continue;
+        }
+        if kind == InventoryTool::Python {
+            if let Some(project) = python {
+                match match_python_request(project, &tool.version) {
+                    Match::Satisfied => {}
+                    Match::Mismatch => {
+                        step.disposition = RecipeDisposition::Conflict;
+                        step.reason = "项目声明互相冲突或请求版本不满足项目要求".into();
+                        steps.push(step);
+                        continue;
+                    }
+                    Match::Unknown => {
+                        step.reason = "项目包含未知声明，无法确认请求版本满足要求".into();
+                        steps.push(step);
+                        continue;
+                    }
+                }
+            }
+        }
         if let Some(item) = snapshot.installations.iter().find(|item| {
-            item.tool_id.0 == tool.name
+            item.tool_id == kind.id()
                 && item.health == Health::Healthy
                 && !item.stale
+                && item.provider_package.provider_id != ProviderId::Path
                 && item.version.as_deref() == Some(tool.version.as_str())
         }) {
             step.disposition = RecipeDisposition::Reuse;
             step.channel = Some(channel(item.provider_package.provider_id).into());
             step.installation_id = Some(item.installation_id.0.clone());
             step.version = item.version.clone();
-            step.reason = "清单中已有该精确版本的健康实例".into();
-            steps.push(step);
-            continue;
-        }
-        if tool.name == "python" {
-            if let Some(report) = python {
-                if report.requirement_state == RequirementState::Conflict {
-                    step.disposition = RecipeDisposition::Conflict;
-                    step.reason = python_requirement(report)
-                        .map(|requirement| format!("项目声明 {requirement} 与清单候选冲突"))
-                        .unwrap_or_else(|| "项目声明与清单候选冲突".into());
-                    issues.push(format!("{}：项目声明冲突", tool.name));
-                    steps.push(step);
-                    continue;
-                }
-            }
-        }
-        if !exact_version(&tool.name, &tool.version) {
-            step.disposition = RecipeDisposition::Unknown;
-            step.reason = "配方只接受精确 3 段版本；范围或别名需人工确认".into();
-            issues.push(format!("{}：{} 无法只读判断", tool.name, tool.version));
-            steps.push(step);
-            continue;
-        }
-        if tool.name != "python" {
-            step.reason = "Node 的配方安装计划尚未接入统一计划服务".into();
-            issues.push(format!("{}：计划渠道未接入", tool.name));
+            step.reason = "已有该精确版本的健康候选，无需重复安装；项目绑定仍需独立核对".into();
             steps.push(step);
             continue;
         }
@@ -157,226 +258,77 @@ pub fn preview(
             snapshot_request_id: snapshot.request_id.clone(),
             intent: PlanIntent::Install {
                 provider_id: ProviderId::Mise,
-                package_id: "python".into(),
+                package_id: tool.name.clone(),
                 version: Some(tool.version.clone()),
             },
         };
-        let config = options.common.home.join(".config/mise/config.toml");
-        match service.preview_python(query, request, options.clone(), config) {
+        let result = match kind {
+            InventoryTool::Node => session.preview(
+                query,
+                request,
+                options.common.clone(),
+                config_path.to_owned(),
+            ),
+            InventoryTool::Python => {
+                session.preview_python(query, request, options.clone(), config_path.to_owned())
+            }
+        };
+        match result {
+            Ok(plan)
+                if plan.snapshot_request_id != snapshot.request_id
+                    || plan.snapshot_generation != generation.to_string() =>
+            {
+                step.reason = "计划绑定的清单已变化，请重新预览".into()
+            }
             Ok(plan) if plan.capability.can_execute => {
                 step.disposition = RecipeDisposition::Install;
                 step.channel = Some("mise".into());
-                step.reason = "可通过 mise 精确预编译计划安装".into();
+                step.version = Some(tool.version.clone());
+                step.reason = "既有 mise 精确安装门禁通过，可另行打开操作计划".into();
                 step.plan_ready = true;
             }
             Ok(plan) => {
                 step.reason = plan
                     .capability
                     .reason
-                    .unwrap_or_else(|| "当前渠道不可执行".into());
-                issues.push(format!("{}：计划不可执行", tool.name));
+                    .unwrap_or_else(|| "当前安装能力无法确认".into())
             }
-            Err(error) => {
-                step.disposition = RecipeDisposition::Unknown;
-                step.reason = format!("计划预览失败：{error:?}");
-                issues.push(format!("{}：无法生成计划", tool.name));
-            }
+            Err(error) => step.reason = format!("安装能力无法确认：{error}"),
         }
         steps.push(step);
     }
-    let executable = steps.iter().all(|step| match step.disposition {
-        RecipeDisposition::Reuse => true,
-        RecipeDisposition::Install => step.plan_ready,
-        _ => false,
-    });
+    let issues = steps
+        .iter()
+        .filter(|step| {
+            matches!(
+                step.disposition,
+                RecipeDisposition::Conflict
+                    | RecipeDisposition::Unsupported
+                    | RecipeDisposition::Unknown
+            )
+        })
+        .map(|step| format!("{}：{}", step.tool, step.reason))
+        .collect();
+    let snapshot_bindings: Vec<_> = captured
+        .iter()
+        .map(|(tool, snapshot)| RecipeSnapshotBinding {
+            tool: *tool,
+            request_id: snapshot.as_ref().map(|(_, s)| s.request_id.clone()),
+            generation: snapshot.as_ref().map(|(g, _)| g.to_string()),
+        })
+        .collect();
     RecipeReport {
-        schema_version: 1,
-        snapshot_request_id: snapshot.request_id.clone(),
+        schema_version: 2,
+        snapshot_request_id: if snapshot_bindings.len() == 1 {
+            snapshot_bindings[0].request_id.clone()
+        } else {
+            None
+        },
+        snapshot_bindings,
         steps,
-        executable,
+        executable: false,
         issues,
     }
 }
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domain::{
-        Installation, InstallationId, Ownership, PackageKind, Platform, ProviderId,
-        ProviderPackage, ToolId,
-    };
-
-    use crate::project_environment::{Issue, PythonProjectEnvironment, PythonSelection};
-    use crate::providers::NodeScanOptions;
-
-    fn options() -> PythonScanOptions {
-        PythonScanOptions {
-            common: NodeScanOptions {
-                platform: Platform::Macos,
-                home: std::path::PathBuf::from("/tmp/zenv-recipe-home"),
-                mise_data_dir: std::path::PathBuf::from("/tmp/zenv-recipe-mise"),
-                nvm_dir: std::path::PathBuf::from("/tmp/zenv-recipe-nvm"),
-                brew_cellars: vec![],
-                path_entries: vec![],
-                limits: Default::default(),
-            },
-            pyenv_root: std::path::PathBuf::from("/tmp/zenv-recipe-pyenv"),
-            uv_python_dir: std::path::PathBuf::from("/tmp/zenv-recipe-uv"),
-        }
-    }
-
-    fn snapshot(items: Vec<Installation>) -> InventorySnapshot {
-        InventorySnapshot {
-            schema_version: 1,
-            request_id: "snapshot".into(),
-            observed_at: 0,
-            tools: vec![],
-            providers: vec![],
-            installations: items,
-            aliases: vec![],
-        }
-    }
-
-    fn installation(
-        provider: ProviderId,
-        tool: &str,
-        version: &str,
-        health: Health,
-        stale: bool,
-    ) -> Installation {
-        Installation {
-            installation_id: InstallationId::from(format!("{tool}-{provider:?}-{version}")),
-            provider_package: ProviderPackage {
-                provider_id: provider,
-                package_id: tool.into(),
-                kind: PackageKind::Runtime,
-                platform: Platform::Macos,
-            },
-            tool_id: ToolId::from(tool),
-            locator: format!("/tmp/{tool}/{version}"),
-            executable_path: None,
-            canonical_executable_path: None,
-            version: Some(version.into()),
-            architecture: None,
-            health,
-            ownership: Ownership::Observed,
-            evidence: vec![],
-            stale,
-        }
-    }
-
-    fn python_report(state: RequirementState) -> PythonProjectEnvironment {
-        PythonProjectEnvironment {
-            schema_version: 1,
-            request_id: "python".into(),
-            snapshot_request_id: "snapshot".into(),
-            project_directory: "/tmp/project".into(),
-            observed_at: 0,
-            declarations: vec![],
-            requirement_state: state,
-            candidates: vec![],
-            inventory_complete: true,
-            selection: PythonSelection {
-                kind: "none".into(),
-                path: None,
-                requirement: None,
-                reason: None,
-            },
-            issues: vec![Issue {
-                code: "test".into(),
-                message: "test".into(),
-            }],
-            files: vec![],
-        }
-    }
-
-    #[test]
-    fn recipe_reuses_exact_healthy_installation_without_planning() {
-        let service = OperationPlanService::new("/tmp/zenv-recipe-journal-unused.json".into());
-        let query = InventoryQueryService::default();
-        let report = preview(
-            &[PresetTool {
-                name: "node".into(),
-                version: "22.23.3".into(),
-            }],
-            &snapshot(vec![installation(
-                ProviderId::Mise,
-                "node",
-                "22.23.3",
-                Health::Healthy,
-                false,
-            )]),
-            None,
-            &options(),
-            &service,
-            &query,
-        );
-        assert_eq!(report.steps.len(), 1);
-        assert_eq!(report.steps[0].disposition, RecipeDisposition::Reuse);
-        assert_eq!(report.steps[0].channel.as_deref(), Some("mise"));
-        assert!(!report.steps[0].plan_ready);
-        assert!(report.executable);
-        assert!(report.issues.is_empty());
-    }
-
-    #[test]
-    fn recipe_reports_conflict_unsupported_and_unknown_without_writes() {
-        let service = OperationPlanService::new("/tmp/zenv-recipe-journal-unused2.json".into());
-        let query = InventoryQueryService::default();
-        let report = preview(
-            &[
-                PresetTool {
-                    name: "python".into(),
-                    version: "3.13.15".into(),
-                },
-                PresetTool {
-                    name: "java".into(),
-                    version: "21".into(),
-                },
-                PresetTool {
-                    name: "node".into(),
-                    version: "22".into(),
-                },
-            ],
-            &snapshot(vec![installation(
-                ProviderId::Mise,
-                "python",
-                "3.13.15",
-                Health::Broken,
-                false,
-            )]),
-            Some(&python_report(RequirementState::Conflict)),
-            &options(),
-            &service,
-            &query,
-        );
-        assert_eq!(report.steps[0].disposition, RecipeDisposition::Conflict);
-        assert_eq!(report.steps[1].disposition, RecipeDisposition::Unsupported);
-        assert_eq!(report.steps[2].disposition, RecipeDisposition::Unknown);
-        assert!(!report.executable);
-        assert_eq!(report.issues.len(), 3);
-        assert!(!std::path::Path::new("/tmp/zenv-recipe-mise").exists());
-    }
-
-    #[test]
-    fn recipe_ignores_stale_or_broken_installations() {
-        let service = OperationPlanService::new("/tmp/zenv-recipe-journal-unused3.json".into());
-        let query = InventoryQueryService::default();
-        let report = preview(
-            &[PresetTool {
-                name: "node".into(),
-                version: "22.23.3".into(),
-            }],
-            &snapshot(vec![
-                installation(ProviderId::Mise, "node", "22.23.3", Health::Healthy, true),
-                installation(ProviderId::Nvm, "node", "22.23.3", Health::Broken, false),
-            ]),
-            None,
-            &options(),
-            &service,
-            &query,
-        );
-        assert_ne!(report.steps[0].disposition, RecipeDisposition::Reuse);
-        assert!(!report.executable);
-    }
-}
+mod tests;

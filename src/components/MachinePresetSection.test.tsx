@@ -47,8 +47,12 @@ it("预设弹窗显示只读配方检查计数且不阻塞安装", async () => {
     { name: "node", version: "22" },
   ]);
   vi.mocked(recipePreview).mockResolvedValue({
-    schemaVersion: 1,
-    snapshotRequestId: "s",
+    schemaVersion: 2,
+    snapshotRequestId: null,
+    snapshotBindings: [
+      { tool: "python", requestId: "s", generation: "2" },
+      { tool: "node", requestId: "n", generation: "1" },
+    ],
     executable: false,
     issues: ["node：22 无法只读判断"],
     steps: [

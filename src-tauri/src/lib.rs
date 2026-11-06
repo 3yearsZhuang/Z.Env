@@ -688,38 +688,21 @@ async fn recipe_preview(
     }
     let options = providers::python::PythonScanOptions::from_environment()
         .map_err(|_| "无法读取项目上下文")?;
-    let (_, snapshot) = inventory
-        .current_snapshot()
-        .map_err(|_| "清单不可用，请先完成读取")?;
-    let python = match project {
-        Some(request) => {
-            let expected = request.snapshot_request_id.clone();
-            let lease = inventory
-                .begin_tool(
-                    request.request_id.clone(),
-                    None,
-                    inventory::query::InventoryTool::Python,
-                )
-                .map_err(|e| e.to_string())?;
-            Some(
-                lease
-                    .read_snapshot(&expected, |snapshot, _| {
-                        project_environment::inspect_python(snapshot, &request)
-                    })
-                    .map_err(|e| e.to_string())?
-                    .map_err(|e| e.to_string())?,
-            )
-        }
-        None => None,
-    };
-    Ok(recipe::preview(
-        &tools,
-        &snapshot,
-        python.as_ref(),
-        &options,
-        service.inner(),
-        inventory.inner(),
-    ))
+    let config = env_center::global_config_path().ok_or("无法读取全局配置路径")?;
+    let service = service.inner().clone();
+    let inventory = inventory.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        recipe::preview_recipe(
+            &tools,
+            project.as_ref(),
+            &options,
+            &service,
+            &inventory,
+            &config,
+        )
+    })
+    .await
+    .map_err(|_| "配方预览线程中断，请重试".to_owned())?
 }
 
 /// Python 绑定收据列表；只读私有账本，不探测安装或改写配置。

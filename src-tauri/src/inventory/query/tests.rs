@@ -95,6 +95,127 @@ fn execute(
         .unwrap()
 }
 
+fn execute_python(service: &InventoryQueryService, id: &str) -> InventorySnapshot {
+    let scans = InventoryTool::Python
+        .providers()
+        .iter()
+        .copied()
+        .map(|provider| {
+            let mut scan = scan(provider, &[]);
+            scan.report.coverage.tool_ids = vec![ToolId::from("python")];
+            scan
+        })
+        .collect();
+    service
+        .begin_tool(id.into(), None, InventoryTool::Python)
+        .unwrap()
+        .execute_with(|_, _| scans)
+        .unwrap()
+}
+
+#[test]
+fn captured_snapshots_preserve_missing_tools_without_registering_or_scanning() {
+    let service = InventoryQueryService::default();
+    execute_python(&service, "python-seed");
+    let generation = lock_state(&service.state).generation;
+    let captured = service
+        .capture_snapshots(&[InventoryTool::Node, InventoryTool::Python])
+        .unwrap();
+    assert!(captured[&InventoryTool::Node].is_none());
+    assert_eq!(
+        captured[&InventoryTool::Python]
+            .as_ref()
+            .unwrap()
+            .1
+            .request_id,
+        "python-seed"
+    );
+    assert_eq!(lock_state(&service.state).generation, generation);
+    assert!(!lock_state(&service.state)
+        .caches
+        .contains_key(&InventoryTool::Node));
+    assert_eq!(service.validate_snapshots(&captured), Ok(()));
+    let lease = service.begin("later".into(), None).unwrap();
+    assert_eq!(
+        service.capture_snapshots(&[InventoryTool::Python]).err(),
+        Some(QueryError::Busy)
+    );
+    assert_eq!(service.validate_snapshots(&captured), Err(QueryError::Busy));
+    drop(lease);
+    assert_eq!(service.validate_snapshots(&captured), Ok(()));
+}
+
+#[test]
+fn captured_snapshots_bind_each_tool_generation_and_reject_refresh() {
+    let service = InventoryQueryService::default();
+    execute(&service, "node-seed", None, complete_scans());
+    execute_python(&service, "python-seed");
+    let captured = service
+        .capture_snapshots(&[InventoryTool::Node, InventoryTool::Python])
+        .unwrap();
+    let (node_generation, node) = captured[&InventoryTool::Node].as_ref().unwrap();
+    let (python_generation, python) = captured[&InventoryTool::Python].as_ref().unwrap();
+    assert!(node_generation < python_generation);
+    assert_eq!(node.request_id, "node-seed");
+    assert_eq!(python.request_id, "python-seed");
+    assert_eq!(service.validate_snapshots(&captured), Ok(()));
+    execute_python(&service, "python-refreshed");
+    assert_eq!(
+        service.validate_snapshots(&captured),
+        Err(QueryError::Superseded)
+    );
+    assert_eq!(python.request_id, "python-seed");
+    assert_eq!(
+        service.current_snapshot().unwrap().1.request_id,
+        "node-seed"
+    );
+}
+
+#[test]
+fn captured_missing_snapshot_cannot_silently_become_available() {
+    let service = InventoryQueryService::default();
+    execute(&service, "node-seed", None, complete_scans());
+    let captured = service
+        .capture_snapshots(&[InventoryTool::Node, InventoryTool::Python])
+        .unwrap();
+    execute_python(&service, "python-now-available");
+    assert_eq!(
+        service.validate_snapshots(&captured),
+        Err(QueryError::Superseded)
+    );
+}
+
+#[test]
+fn captured_snapshots_validate_generation_and_request_identity_independently() {
+    let service = InventoryQueryService::default();
+    execute(&service, "node-seed", None, complete_scans());
+    let captured = service.capture_snapshots(&[InventoryTool::Node]).unwrap();
+    let mut wrong_generation = captured.clone();
+    wrong_generation
+        .get_mut(&InventoryTool::Node)
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .0 += 1;
+    assert_eq!(
+        service.validate_snapshots(&wrong_generation),
+        Err(QueryError::Superseded)
+    );
+    let mut wrong_request = captured.clone();
+    wrong_request
+        .get_mut(&InventoryTool::Node)
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .1
+        .request_id = "another-request".into();
+    assert_eq!(
+        service.validate_snapshots(&wrong_request),
+        Err(QueryError::Superseded)
+    );
+    assert_eq!(service.validate_snapshots(&captured), Ok(()));
+}
+
 #[test]
 fn request_ids_are_restricted_and_recent_reuse_is_rejected() {
     let service = InventoryQueryService::default();
