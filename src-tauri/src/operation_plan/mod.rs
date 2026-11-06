@@ -165,6 +165,17 @@ impl OperationPlanService {
             })),
         }
     }
+    /// 配方摘要共用既有能力门禁，但临时计划不得淘汰用户已打开的计划。
+    /// 不恢复或持久化 journal；返回的会话仅供只读预览，随后整体丢弃。
+    pub(crate) fn readonly_preview_session(&self) -> Self {
+        let state = lock(&self.state);
+        let session = Self::new(state.journal.path.clone());
+        lock(&session.state).journal_failed = state.journal_failed;
+        session
+    }
+    pub(crate) fn journal_failed(&self) -> bool {
+        lock(&self.state).journal_failed
+    }
     /// 启动时只恢复已有 journal，新的只读会话不创建数据目录。
     pub fn recover(&self) -> Result<(), PlanError> {
         let mut state = lock(&self.state);

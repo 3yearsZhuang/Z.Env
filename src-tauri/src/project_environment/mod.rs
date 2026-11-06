@@ -15,6 +15,7 @@ use constraint::{Constraint, Version};
 use files::Reader;
 pub use model::*;
 pub use python::inspect_python;
+pub(crate) use python::match_python_request;
 use std::path::Path;
 
 pub(super) fn now() -> u64 {

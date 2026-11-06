@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import type { PythonProjectRequest } from "./api/pythonProject";
 
 export { inventorySnapshot, inventoryCancel } from "./api/inventoryQuery";
 
@@ -578,15 +579,23 @@ export interface RecipeStep {
 
 export interface RecipeReport {
   schemaVersion: number;
-  snapshotRequestId: string;
+  snapshotRequestId: string | null;
+  snapshotBindings: {
+    tool: "node" | "python";
+    requestId: string | null;
+    generation: string | null;
+  }[];
   steps: RecipeStep[];
   executable: boolean;
   issues: string[];
 }
 
 /** 只读配方预览：汇总预设工具、项目声明与清单；不改写项目、不安装工具 */
-export function recipePreview(tools: PresetTool[]): Promise<RecipeReport> {
-  return invoke("recipe_preview", { tools, project: null });
+export function recipePreview(
+  tools: PresetTool[],
+  project: PythonProjectRequest | null = null,
+): Promise<RecipeReport> {
+  return invoke("recipe_preview", { tools, project });
 }
 
 /** 通用错误信息提取 */

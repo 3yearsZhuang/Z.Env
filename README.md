@@ -180,7 +180,7 @@ cargo fmt --check
 Node 多来源清单、统一操作与限定项目环境已接入；Python 五来源清单、mise/uv/Homebrew/pyenv 安装卸载、
 项目声明与 mise 绑定/解绑、补偿及实际解析核验已接入。各渠道的隔离实机证据见实施记录；
 已有虚拟环境核对、Node Homebrew 写入/托管、更多渠道失败取消场景和打包桌面 IPC 仍需补齐。
-[项目配方](./docs/p14-project-recipes.md)目前提供只读预览，快照与约束判断修正、执行编排及重试继续按计划推进。
+[项目配方](./docs/p14-project-recipes.md)按 Node/Python 独立快照和项目要求提供只读预览，安装能力沿用既有门禁；执行编排及重试继续按计划推进。
 Java/Go/Rust/Git/uv 新适配、Windows/Linux 新流程、诊断运维和快照迁移尚未完成。
 
 2026-11-06 的 [工作区与 PR 审核](./docs/workspace-audit-2026-11-06.md)记录当前代码、CI、实机与发布边界。

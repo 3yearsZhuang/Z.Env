@@ -436,6 +436,7 @@ fn mise_config(text: &str, path: &Path, loaded: &mut Loaded) {
         .iter()
         .any(|key| value.get(*key).is_some())
     {
+        loaded.unknown = true;
         issue(
             &mut loaded.issues,
             "configurationIncludes",
@@ -685,6 +686,41 @@ pub fn inspect_python(
     })
 }
 
+/// 仅匹配已读取的项目声明；不依赖当前候选，也不重新读取项目文件。
+pub(crate) fn match_python_request(report: &PythonProjectEnvironment, version: &str) -> Match {
+    match report.requirement_state {
+        RequirementState::Conflict => return Match::Mismatch,
+        RequirementState::Unknown => return Match::Unknown,
+        RequirementState::Unspecified => return Match::Satisfied,
+        RequirementState::Supported => {}
+    }
+    let Some(version) = Version::parse(version) else {
+        return Match::Unknown;
+    };
+    if report.declarations.is_empty() || report.declarations.len() > MAX_DECLARATIONS {
+        return Match::Unknown;
+    }
+    let mut combined = Requirement::default();
+    for declaration in &report.declarations {
+        if !declaration.supported || declaration.reason.is_some() {
+            return Match::Unknown;
+        }
+        let Some(requirement) = declaration
+            .requirement
+            .as_deref()
+            .and_then(Requirement::parse)
+        else {
+            return Match::Unknown;
+        };
+        combined.merge(&requirement);
+    }
+    if combined.matches(version) {
+        Match::Satisfied
+    } else {
+        Match::Mismatch
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -846,6 +882,75 @@ mod tests {
         );
         let report = inspect_python(&snapshot(vec![], true), &request(directory.path())).unwrap();
         assert_eq!(report.requirement_state, RequirementState::Unknown);
+    }
+
+    #[test]
+    fn request_match_uses_all_captured_declarations_without_candidates_or_rereading() {
+        let directory = tempfile::tempdir().unwrap();
+        write(directory.path(), "mise.toml", "[tools]\npython = '3.12'\n");
+        write(
+            directory.path(),
+            "pyproject.toml",
+            "[project]\nrequires-python = '>=3.12.10,<3.13,!=3.12.13'\n",
+        );
+        let report = inspect_python(&snapshot(vec![], true), &request(directory.path())).unwrap();
+        assert!(report.candidates.is_empty());
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Satisfied);
+        for version in ["3.12.9", "3.12.13", "3.13.1"] {
+            assert_eq!(match_python_request(&report, version), Match::Mismatch);
+        }
+        assert_eq!(match_python_request(&report, "latest"), Match::Unknown);
+        write(directory.path(), "mise.toml", "[tools]\npython = '3.13'\n");
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Satisfied);
+    }
+
+    #[test]
+    fn request_match_preserves_conflict_unknown_and_unspecified_states() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut report =
+            inspect_python(&snapshot(vec![], true), &request(directory.path())).unwrap();
+        assert_eq!(report.requirement_state, RequirementState::Unspecified);
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Satisfied);
+        report.requirement_state = RequirementState::Conflict;
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Mismatch);
+        report.requirement_state = RequirementState::Unknown;
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Unknown);
+        report.requirement_state = RequirementState::Supported;
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Unknown);
+        report.declarations.push(Declaration {
+            source: "mise.toml".into(),
+            path: directory.path().join("mise.toml").to_string_lossy().into(),
+            requirement: Some("3.12".into()),
+            supported: false,
+            reason: None,
+        });
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Unknown);
+        report.declarations[0].supported = true;
+        report.declarations[0].requirement = Some("^3.12".into());
+        assert_eq!(match_python_request(&report, "3.12.14"), Match::Unknown);
+    }
+
+    #[test]
+    fn mise_includes_extends_and_settings_keep_project_requirements_unknown() {
+        let directory = tempfile::tempdir().unwrap();
+        for extra in [
+            "include = ['other.toml']",
+            "extends = ['other.toml']",
+            "[settings]\nidiomatic_version_file_enable_tools = ['python']",
+        ] {
+            for tools in ["", "[tools]\npython = '3.12'\n"] {
+                write(directory.path(), "mise.toml", &format!("{extra}\n{tools}"));
+                let report =
+                    inspect_python(&snapshot(vec![], true), &request(directory.path())).unwrap();
+                assert_eq!(report.requirement_state, RequirementState::Unknown);
+                assert!(report
+                    .issues
+                    .iter()
+                    .any(|issue| issue.code == "configurationIncludes"));
+                assert_eq!(match_python_request(&report, "3.12.14"), Match::Unknown);
+                assert_eq!(report.declarations.is_empty(), tools.is_empty());
+            }
+        }
     }
 
     #[test]

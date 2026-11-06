@@ -1,5 +1,7 @@
 use super::*;
 #[cfg(unix)]
+mod recipe_cache;
+#[cfg(unix)]
 use std::sync::atomic::AtomicUsize;
 
 #[cfg(unix)]
