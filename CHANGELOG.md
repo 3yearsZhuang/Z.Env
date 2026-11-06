@@ -1,6 +1,6 @@
 # 更新日志
 
-## 未发布 — 2026-10-20
+## 未发布
 
 > 面向用户的变化摘要。开发决策、验证边界与逐工作包记录见 [docs/README.md](./docs/README.md)，
 > 发布步骤见 [docs/release.md](./docs/release.md)。

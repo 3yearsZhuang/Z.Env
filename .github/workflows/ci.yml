@@ -31,8 +31,8 @@ jobs:
       - name: Type-check & build
         run: npm run build
       - name: Security audit (production dependencies)
-        # 生产依赖存在 high 及以上漏洞时阻断；devDependencies 的 Vite/launch-editor
-        # 通告暂无修复，单独报告但不阻断（不进入发布产物）。
+        # 生产依赖存在 high 及以上漏洞时阻断；完整依赖审计单独报告。
+        # 按每次实际通告与修复方案处理开发依赖，不沿用旧的无修复豁免理由。
         run: npm audit --omit=dev --audit-level=high
       - name: Security audit (all dependencies, advisory)
         continue-on-error: true
