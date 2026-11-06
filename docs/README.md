@@ -26,6 +26,7 @@
 | [P9 / 38 审计修复](./audit-fixes.md) | 项目绑定、TOML 配置、任务互斥、包 ID、Linux、快照、托管与日志脱敏 |
 | [P10 / 39 前端优化](./frontend-polish.md) | 项目搜索分页、状态反馈、键盘操作、任务取消、按需加载 |
 | [前端体系收敛与开销优化](./frontend-optimization.md) | 死规则与覆盖规则清理、令牌与刻度统一、采样/编辑器开销、提示与空态统一、无障碍与组件测试 |
+| [工作区与 PR 审核 2026-11-06](./workspace-audit-2026-11-06.md) | PR #7 回退、验证证据、工作区整理、能力/配方缺口与迭代切片 |
 | [P11 契约与合并器](./p11-inventory-contracts.md) | 工具/来源/实例身份、证据合并、alias 与 Rust/TS 契约 |
 | [P11 Node 来源与探针](./p11-node-sources.md) | mise / brew / nvm / PATH 的只读发现、受限探针与预算 |
 | [P11 查询与详情](./p11-inventory-ui.md) | 清单查询/取消、来源重试、过期缓存与 Node 详情 |
@@ -38,7 +39,12 @@
 | [P14 Python 计划与重验](./p14-python-plans.md) | 四渠道安装意图预览、受控重新验证与工具隔离 |
 | [P14 Python mise 安装/卸载](./p14-python-mise.md) | core:python 精确预编译安装、受控设置与隔离实机闭环 |
 | [P14 Python uv 安装/卸载](./p14-python-uv.md) | uv 托管 CPython、别名识别、受控环境与真实安装/卸载验收 |
+| [P14 Python 项目与绑定](./p14-python-project.md) | 声明解析、mise 绑定/解绑、实际解析核验与补偿 |
+| [P14 Python Homebrew](./p14-python-brew.md) | core formula 写渠道、依赖门禁与可丢弃前缀验收 |
+| [P14 Python pyenv](./p14-python-pyenv.md) | 受控源码编译、安装/卸载与可丢弃环境验收 |
+| [P14 项目配方](./p14-project-recipes.md) | 只读预览、当前边界与后续执行编排 |
 | [跨平台执行底座](./cross-platform-foundation.md) | Windows 有界探针、Job 对象、稳定文件身份与显式环境策略 |
+| [原生 launcher](./cross-platform-launcher.md) | 按实例启动、显式环境与 shim/桌面接入边界 |
 | [统一操作计划 v2](./operation-plan-v2.md) | tagged subject、步骤图投影、v1 兼容与执行边界 |
 
 ## 历史档案（只增不改）
@@ -48,6 +54,7 @@
 | [开发志 P0–P8](./archive/devlog-P0-P8.md) | 2026-09-29 → 2026-10-02 的完整执行档案；条目编号被 `plan.md` 引用 |
 | [接手记录 2026-10-19](./archive/workspace-handoff-2026-10-19.md) | 规划接手、对话汇总与验证边界 |
 | [接手记录 2026-10-20](./archive/workspace-handoff-2026-10-20.md) | 三平台扩展接手、恢复包与归档核实 |
+| [活计划历史状态快照 2026-11-06](./archive/plan-status-2026-11-06.md) | 整理前的历史状态与测试基线；当前进度移回活计划 |
 
 ## 记录约定
 

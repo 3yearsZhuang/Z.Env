@@ -42,7 +42,7 @@
 **本机工具**（运行时、变量、预设与快照）
 
 - **Node.js 只读清单（macOS 试点）**：独立读取 mise、Homebrew、nvm 和 PATH；按目录保留实例、版本、归属与文件证据，来源失败明确未知并可单独重试。支持取消、过期数据与同文件关联；查看和刷新不触发修复。其它平台新清单明确未支持，既有管理入口继续保留。
-- **Python 只读清单（macOS 试点）**：分别读取 mise、Homebrew、pyenv、uv 和 PATH 的 CPython 3；uv 次版本别名只作观测，不冒充精确实例；未知 PATH 文件不自动执行。绑定与项目虚拟环境仍标未接入。
+- **Python 只读清单（macOS 试点）**：分别读取 mise、Homebrew、pyenv、uv 和 PATH 的 CPython 3；uv 次版本别名只作观测，不冒充精确实例；未知 PATH 文件不自动执行。项目声明与 mise 绑定见下项，已有项目虚拟环境核对仍待补齐。
 - **Python 项目声明与绑定**：解析 `mise.toml`、`.python-version`、`pyproject.toml` 的 `requires-python` 与 `.tool-versions`，按 PEP 440 子集匹配本机 Python 候选；健康 mise 实例可预览并写入项目/全局 `[tools] python`，显示配置差异、拒绝外部修改；已绑定项可解除并恢复原值，失败回滚带私有收据，写入后用 `mise which` 核对实际解析路径。
 - **Node / Python 操作计划（macOS 试点）**：Node 的 mise/Homebrew 安装、受支持卸载、绑定与项目环境已接入；Python 的 mise/uv 精确安装、Homebrew core formula 安装/卸载（依赖/归属门禁）与项目绑定已接入，并在可丢弃前缀完成真实 formula 安装/卸载；pyenv 受控源码编译也已在可丢弃环境完成真实 CPython 编译/卸载。执行前按快照、目标、配置和文件指纹重验，计划过期或外部变化须重新预览；重新验证记录步骤状态，应用重启后未完成任务标为中断，不自动重放。
 - 旧运行时管理与体检位于“其他运行时与管理操作”折叠区；修复需明确点击。
@@ -163,7 +163,7 @@ cargo fmt --check
 
 ## CI / 发布
 
-- **ci.yml**：版本一致性校验 → 前端 lint / test / build + prettier 门禁 + 完整 npm audit（含开发依赖，high 及以上阻断）；
+- **ci.yml**：版本一致性与文档链接校验 → 前端 lint / test / build + prettier 门禁；生产依赖 npm audit 的 high 及以上阻断，完整依赖审计作为报告；
   后端在 macOS / Windows / Linux 上执行 fmt + clippy（-D warnings）+ test + build。
 - **release.yml**：推送 `v*` 标签触发，tauri-action 在 macOS / Windows / Linux 三平台打包，
   生成应用内更新所需的 `latest.json` 与 minisign 签名工件。
@@ -174,9 +174,17 @@ cargo fmt --check
 
 ## 迭代计划
 
-文档总览与记录约定见 [docs/README.md](./docs/README.md)。迭代单一事实源是 [plan.md](./plan.md)（只放向前看的活计划）。[一站式开发工具中心重构规划](./docs/refactor-plan.md) 已完成：以 macOS Node.js 为首个样板，按多来源清单、统一操作、项目环境、工具配方、诊断运维与快照迁移六阶段推进。P11 的[领域契约](./docs/p11-inventory-contracts.md)、[Node 只读来源](./docs/p11-node-sources.md)和[查询与详情](./docs/p11-inventory-ui.md)已完成；P12 已完成 [PR-04 操作计划与中断记录](./docs/p12-operation-plans.md)，[PR-05 安装/卸载渠道](./docs/p12-node-operations.md)已实现并通过 mise 隔离实机闭环，[PR-06 绑定与补偿](./docs/p12-node-bindings.md)也已接入并通过隔离实机验证。[P13 项目环境闭环](./docs/p13-project-environment.md)的 macOS Node 限定范围已完成，声明、候选、配置选择和受控/应用 PATH/终端状态独立判断；复杂隐式配置保持未知。Homebrew 真实渠道与打包桌面 IPC 验收待补；P14 的[统一工具目录与导航](./docs/p14-tool-catalog.md)已接入，首批 7 项定义按来源、平台明确接入范围，兼容渠道收进本机工具页；[Python 五来源只读清单](./docs/p14-python-sources.md)也已接入，[Python 安装计划预览和受控重新验证](./docs/p14-python-plans.md)已接入；[Python mise 安装/卸载](./docs/p14-python-mise.md)已完成隔离实机闭环，[Python uv 安装/卸载](./docs/p14-python-uv.md)也已通过真实 uv 隔离闭环；Homebrew/pyenv 写渠道、绑定、工具适配与项目配方仍待实现，P14 保持进行中。各记录分别说明自动验证、macOS 实测与尚未完成的渠道、桌面和发布验收。历史对话与接手基线见 [工作区接手汇总](./docs/archive/workspace-handoff-2026-10-19.md)。
-P9 审计修复与验证记录见 [docs/audit-fixes.md](./docs/audit-fixes.md)，P10 前端优化见 [docs/frontend-polish.md](./docs/frontend-polish.md)。
-完整执行档案（动因 / 备选取舍 / 踩坑 / 验证数据）见 [docs/devlog-P0-P8.md](./docs/archive/devlog-P0-P8.md)。
+文档索引见 [docs/README.md](./docs/README.md)，当前状态与下一步统一维护在 [plan.md](./plan.md)。
+既定目标是 [七类工具三平台闭环](./docs/cross-platform-implementation.md)，现有 macOS Node/Python 样板继续扩展。
+
+Node 多来源清单、统一操作与限定项目环境已接入；Python 五来源清单、mise/uv/Homebrew/pyenv 安装卸载、
+项目声明与 mise 绑定/解绑、补偿及实际解析核验已接入。各渠道的隔离实机证据见实施记录；
+已有虚拟环境核对、Node Homebrew 写入/托管、更多渠道失败取消场景和打包桌面 IPC 仍需补齐。
+[项目配方](./docs/p14-project-recipes.md)目前提供只读预览，快照与约束判断修正、执行编排及重试继续按计划推进。
+Java/Go/Rust/Git/uv 新适配、Windows/Linux 新流程、诊断运维和快照迁移尚未完成。
+
+2026-11-06 的 [工作区与 PR 审核](./docs/workspace-audit-2026-11-06.md)记录当前代码、CI、实机与发布边界。
+最新公开版本仍为 v0.7.1，新能力尚未随新版发布。历史执行与接手记录保留在 [docs/archive/](./docs/archive/)。
 
 ## 相关链接
 

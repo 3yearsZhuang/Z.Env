@@ -3,7 +3,7 @@
 推送 `v*` 标签触发 release.yml，三平台打包并产出应用内更新元数据。以下按序执行；
 「已知坑」是历次发版实踩的记录，开工前先过一遍。
 
-2026-10-20：P9–P14、Python uv 渠道与跨平台底座仍未发布；本机自动验证通过不代表三平台实机验收完成。
+2026-11-06：最新公开版本仍为 v0.7.1，公开版之后主线新增的 P9–P14、新 Python 渠道与跨平台底座尚未随新版发布；本机和三平台 CI 自动验证通过不代表桌面实机验收完成。
 发布前必须完成 [审计修复验收清单](./audit-fixes.md#发布前实机验收)，记录系统版本和结果。
 
 ## 前置配置（一次性，均已就位，排障时核对）
@@ -21,11 +21,12 @@
 
 1. **三处版本号同步升位**：`package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml`
    （Cargo.lock 随之更新）。`npm run check:version` 门禁校验，CI 首步执行。
-2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台。审计以生产依赖阻断，devDependencies 的 Vite/launch-editor 通告暂无修复，完整审计仅作报告：
+2. **在仓库根目录执行本地门禁**。CI 与发布 workflow 在 Linux、Windows、macOS 均执行 Rust 格式、Clippy 和测试；本地只验证当前平台。当前策略为生产依赖 high 及以上阻断，完整依赖审计作报告；每次按实际通告、依赖归属和修复方案处理，不沿用旧豁免理由。2026-11-06 完整审计仍有 1 high / 9 moderate，生产依赖为 0，详情见 [审核记录](./workspace-audit-2026-11-06.md)：
    ```bash
    npm ci
    npm run check:version && npm run check:docs && npm run lint && npm test && npm run format:check
    npm run build && npm audit --omit=dev --audit-level=high
+   npm audit --audit-level=high # 完整报告；出现漏洞时逐项评估并记录
    cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
    cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
    cargo test --manifest-path src-tauri/Cargo.toml
