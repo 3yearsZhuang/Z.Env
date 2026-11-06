@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -17,6 +17,7 @@ import { clearEnvInfoCache } from "../lib/envInfo";
 import { clearToolCatalogCache } from "../lib/toolCatalogCache";
 import type { ToolCatalog } from "../api/toolCatalog";
 import SoftwareView from "./SoftwareView";
+import type { InventoryInstallTarget } from "../lib/inventoryNavigation";
 
 vi.mock("../api/toolCatalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/toolCatalog")>()),
@@ -33,7 +34,7 @@ vi.mock("../api", () => ({
 }));
 vi.mock("../data/catalog", () => ({
   CAT_KEYS_ALL: ["语言", "编辑器"],
-  KNOWN_RUNTIMES: ["node", "python"],
+  KNOWN_RUNTIMES: ["node", "python", "ruby"],
   SOFTWARE: [
     { name: "visual-studio-code", desc: "代码编辑器", url: "https://code.visualstudio.com" },
   ],
@@ -57,6 +58,11 @@ const packages: ProviderPackage[] = [
     kind: "package",
     platforms: ["windows"],
   },
+];
+
+const nodePythonPackages: ProviderPackage[] = [
+  ...packages,
+  { tool: "python", manager: "brew", id: "python@3.13", kind: "formula", platforms: ["macos"] },
 ];
 
 const catalog: ToolCatalog = {
@@ -97,6 +103,35 @@ const catalog: ToolCatalog = {
   ],
 };
 
+const previewCatalog: ToolCatalog = {
+  ...catalog,
+  tools: (["node", "python"] as const).map((toolId) => ({
+    ...catalog.tools[0],
+    definition: {
+      toolId,
+      displayName: toolId === "node" ? "Node.js" : "Python",
+      aliases: toolId === "node" ? ["nodejs"] : [],
+      executableNames: [toolId],
+    },
+    channels: (toolId === "node"
+      ? (["mise", "brew"] as const)
+      : (["mise", "brew", "pyenv", "uv"] as const)
+    ).map((providerId) => ({
+      ...catalog.tools[0].channels[0],
+      providerId,
+      packages: [
+        {
+          providerId,
+          packageId:
+            providerId === "brew" ? (toolId === "node" ? "node@22" : "python@3.13") : toolId,
+          kind: providerId === "brew" ? ("formula" as const) : ("runtime" as const),
+          platform: "macos" as const,
+        },
+      ],
+    })),
+  })),
+};
+
 beforeEach(() => {
   clearEnvInfoCache();
   clearToolCatalogCache();
@@ -123,7 +158,11 @@ async function ready() {
   await screen.findByRole("button", { name: "winget 安装 visual-studio-code" });
   await waitFor(() =>
     expect(
-      (screen.getByRole("button", { name: "brew 安装 node" }) as HTMLButtonElement).disabled,
+      (
+        screen.getByRole("button", {
+          name: "winget 安装 visual-studio-code",
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(false),
   );
 }
@@ -142,7 +181,9 @@ describe("支持列表的安装与状态反馈", () => {
     expect(showNode).toHaveBeenCalledTimes(1);
     expect(installSystemPackage).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("查看本机实例")).toBeTruthy();
+    expect(
+      within(screen.getByRole("article", { name: "node" })).getByText("查看本机实例"),
+    ).toBeTruthy();
   });
 
   it("复制按钮可用键盘触发，保留规范包 ID 且不触发卡片或安装", async () => {
@@ -186,8 +227,7 @@ describe("支持列表的安装与状态反馈", () => {
       expect.any(String),
     );
     expect(
-      (screen.getByRole("button", { name: "查看 node 的运行时版本" }) as HTMLButtonElement)
-        .disabled,
+      (screen.getByRole("button", { name: "查看 node 的本机实例" }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (
@@ -197,13 +237,13 @@ describe("支持列表的安装与状态反馈", () => {
       ).disabled,
     ).toBe(true);
     expect(
-      (screen.getByRole("button", { name: "brew 安装 node" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "brew 预览计划 node" }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (screen.getByRole("button", { name: "复制 node 的 brew 安装命令" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
-    await user.click(screen.getByRole("button", { name: "brew 安装 node" }));
+    await user.click(screen.getByRole("button", { name: "brew 预览计划 node" }));
     expect(installSystemPackage).toHaveBeenCalledTimes(1);
     const jobId = vi.mocked(installSystemPackage).mock.calls[0][3];
     act(() =>
@@ -242,10 +282,10 @@ describe("支持列表的安装与状态反馈", () => {
     const runtimeError = await screen.findByText("运行时安装状态检测失败");
     const systemError = await screen.findByText("winget 安装状态检测失败");
     expect(
-      within(screen.getByRole("article", { name: "node" })).getByText("状态未知"),
+      within(screen.getByRole("article", { name: "ruby" })).getByText("状态未知"),
     ).toBeTruthy();
     expect(
-      (screen.getByRole("button", { name: "查看 node 的运行时版本" }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: "查看 ruby 的运行时版本" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect(
@@ -257,9 +297,9 @@ describe("支持列表的安装与状态反馈", () => {
     ).toBe(true);
     vi.mocked(listTools).mockResolvedValue([
       {
-        name: "node",
-        versions: [{ version: "22.10.0", installed: true }],
-        active_versions: ["22.10.0"],
+        name: "ruby",
+        versions: [{ version: "3.4.0", installed: true }],
+        active_versions: ["3.4.0"],
       },
     ]);
     vi.mocked(detectSystemInstalled).mockResolvedValue([]);
@@ -274,9 +314,9 @@ describe("支持列表的安装与状态反馈", () => {
       }),
     );
     await ready();
-    expect(within(screen.getByRole("article", { name: "node" })).getByText("已安装")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "查看 node 的运行时版本" }));
-    expect(screen.getByRole("dialog", { name: "运行时安装" }).textContent).toContain("22.10.0");
+    expect(within(screen.getByRole("article", { name: "ruby" })).getByText("已安装")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "查看 ruby 的运行时版本" }));
+    expect(screen.getByRole("dialog", { name: "运行时安装" }).textContent).toContain("3.4.0");
   });
 
   it("安装渠道加载失败可在弹窗重试，官方下载始终可访问", async () => {
@@ -339,7 +379,332 @@ describe("支持列表的安装与状态反馈", () => {
     expect((screen.getByRole("combobox", { name: "工具类型" }) as HTMLSelectElement).value).toBe(
       "all",
     );
-    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(screen.getAllByRole("article")).toHaveLength(4);
+  });
+});
+
+describe("Node 与 Python 卡片的清单和安装预览", () => {
+  it("目录迟到时先就绪的 Node/Python 包渠道保持禁用，目录到达后仅走原生包计划", async () => {
+    const user = userEvent.setup();
+    const preview = vi.fn();
+    let resolveCatalog!: (value: ToolCatalog) => void;
+    vi.mocked(toolCatalog).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCatalog = resolve;
+        }),
+    );
+    vi.mocked(packageCatalog).mockResolvedValue(nodePythonPackages);
+    render(<SoftwareView onPreviewInstall={preview} />);
+    await ready();
+    expect(detectSystemInstalled).toHaveBeenCalledWith("brew");
+
+    for (const toolId of ["node", "python"] as const) {
+      const button = screen.getByRole("button", { name: `brew 能力读取中 ${toolId}` });
+      expect((button as HTMLButtonElement).disabled).toBe(true);
+      await user.click(button);
+    }
+    expect(installSystemPackage).not.toHaveBeenCalled();
+    expect(preview).not.toHaveBeenCalled();
+
+    await act(async () => resolveCatalog(previewCatalog));
+    for (const toolId of ["node", "python"] as const) {
+      await user.click(screen.getByRole("button", { name: `brew 预览计划 ${toolId}` }));
+    }
+    expect(preview.mock.calls).toEqual([
+      [
+        { toolId: "node", providerId: "brew", packageId: "node@22" },
+        screen.getByRole("button", { name: "brew 预览计划 node" }),
+      ],
+      [
+        { toolId: "python", providerId: "brew", packageId: "python@3.13" },
+        screen.getByRole("button", { name: "brew 预览计划 python" }),
+      ],
+    ]);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it.each(["tool", "channel"] as const)(
+    "已读取目录缺少 Node %s 时能力仍未知，不推断为未接入而直接安装",
+    async (missing) => {
+      const user = userEvent.setup();
+      vi.mocked(toolCatalog).mockResolvedValue({
+        ...previewCatalog,
+        tools:
+          missing === "tool"
+            ? previewCatalog.tools.filter((tool) => tool.definition.toolId !== "node")
+            : previewCatalog.tools.map((tool) =>
+                tool.definition.toolId === "node"
+                  ? {
+                      ...tool,
+                      channels: tool.channels.filter((channel) => channel.providerId !== "brew"),
+                    }
+                  : tool,
+              ),
+      });
+      render(<SoftwareView onPreviewInstall={vi.fn()} />);
+      await ready();
+      const button = screen.getByRole("button", { name: "brew 能力未知 node" });
+      expect((button as HTMLButtonElement).disabled).toBe(true);
+      await user.click(button);
+      expect(installSystemPackage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["notIntegrated", "unsupported"] as const)(
+    "目录明确标注 %s 的来源保留兼容安装并传递原生包 ID",
+    async (state) => {
+      const user = userEvent.setup();
+      const preview = vi.fn();
+      vi.mocked(toolCatalog).mockResolvedValue({
+        ...catalog,
+        tools: catalog.tools.map((tool) => ({
+          ...tool,
+          channels: tool.channels.map((channel) => ({
+            ...channel,
+            installPlan: { state, reason: "此来源未接入安装计划" },
+          })),
+        })),
+      });
+      render(<SoftwareView onPreviewInstall={preview} />);
+      await ready();
+      await user.click(screen.getByRole("button", { name: "brew 安装 node" }));
+      await waitFor(() => expect(installSystemPackage).toHaveBeenCalledTimes(1));
+      expect(installSystemPackage).toHaveBeenCalledWith(
+        "brew",
+        "node@22",
+        "formula",
+        expect.any(String),
+      );
+      expect(preview).not.toHaveBeenCalled();
+    },
+  );
+
+  it("旧 mise 查询失败时，Node 和 Python 仍对称进入清单", async () => {
+    const user = userEvent.setup();
+    const showInventory = vi.fn();
+    vi.mocked(listTools).mockRejectedValue(new Error("mise unavailable"));
+    render(<SoftwareView onShowInventory={showInventory} />);
+    await screen.findByText("运行时安装状态检测失败");
+
+    for (const toolId of ["node", "python"] as const) {
+      const button = screen.getByRole("button", { name: `查看 ${toolId} 的本机实例` });
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+      button.focus();
+      await user.keyboard("{Enter}");
+    }
+    expect(showInventory.mock.calls).toEqual([["node"], ["python"]]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it("默认 mise 安装预览不依赖旧版本列表和系统渠道检测", async () => {
+    const user = userEvent.setup();
+    const preview = vi.fn();
+    vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+    vi.mocked(listTools).mockRejectedValue(new Error("mise unavailable"));
+    vi.mocked(getEnvInfo).mockRejectedValue(new Error("环境检测失败"));
+    vi.mocked(packageCatalog).mockRejectedValue(new Error("旧包目录不可用"));
+    render(<SoftwareView onPreviewInstall={preview} />);
+
+    for (const toolId of ["node", "python"] as const) {
+      const button = await screen.findByRole("button", { name: `mise 预览计划 ${toolId}` });
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+      await user.click(button);
+    }
+    expect(preview.mock.calls).toEqual([
+      [
+        { toolId: "node", providerId: "mise", packageId: "node" },
+        screen.getByRole("button", { name: "mise 预览计划 node" }),
+      ],
+      [
+        { toolId: "python", providerId: "mise", packageId: "python" },
+        screen.getByRole("button", { name: "mise 预览计划 python" }),
+      ],
+    ]);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it.each(["installed", "failed"] as const)(
+    "brew 旧检测为 %s 时仍可预览，保留 Node/Python 原生包 ID",
+    async (state) => {
+      const user = userEvent.setup();
+      const preview = vi.fn();
+      vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+      vi.mocked(packageCatalog).mockResolvedValue(nodePythonPackages);
+      vi.mocked(detectSystemInstalled).mockImplementation(async (manager) => {
+        if (manager !== "brew") return [];
+        if (state === "failed") throw new Error("brew 检测失败");
+        return ["node@22", "python@3.13"];
+      });
+      render(<SoftwareView onPreviewInstall={preview} />);
+      await ready();
+
+      for (const toolId of ["node", "python"] as const) {
+        const button = screen.getByRole("button", { name: `brew 预览计划 ${toolId}` });
+        expect((button as HTMLButtonElement).disabled).toBe(false);
+        await user.click(button);
+      }
+      expect(preview.mock.calls).toEqual([
+        [
+          { toolId: "node", providerId: "brew", packageId: "node@22" },
+          screen.getByRole("button", { name: "brew 预览计划 node" }),
+        ],
+        [
+          { toolId: "python", providerId: "brew", packageId: "python@3.13" },
+          screen.getByRole("button", { name: "brew 预览计划 python" }),
+        ],
+      ]);
+      expect(installSystemPackage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("pyenv 和 uv 使用目录声明的来源及包身份，展开预览不会执行安装", async () => {
+    const user = userEvent.setup();
+    const preview = vi.fn();
+    vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+    render(<SoftwareView onPreviewInstall={preview} />);
+    await ready();
+    const python = screen.getByRole("article", { name: "python" });
+    await user.click(within(python).getByText("来源与能力"));
+    for (const providerId of ["pyenv", "uv"] as const) {
+      await user.click(
+        within(python).getByRole("button", { name: `${providerId} 预览计划 python python` }),
+      );
+    }
+    expect(preview.mock.calls).toEqual([
+      [
+        { toolId: "python", providerId: "pyenv", packageId: "python" },
+        screen.getByRole("button", { name: "pyenv 预览计划 python python" }),
+      ],
+      [
+        { toolId: "python", providerId: "uv", packageId: "python" },
+        screen.getByRole("button", { name: "uv 预览计划 python python" }),
+      ],
+    ]);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it("复制、清单和预览是独立按钮，复制不会触发另两个操作", async () => {
+    const user = userEvent.setup();
+    const clipboard = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    const showInventory = vi.fn();
+    const preview = vi.fn();
+    const { container } = render(
+      <SoftwareView onShowInventory={showInventory} onPreviewInstall={preview} />,
+    );
+    await ready();
+    await user.click(screen.getByRole("button", { name: "复制 node 的 brew 安装命令" }));
+    expect(clipboard).toHaveBeenCalledWith("brew install --formula node@22");
+    expect(showInventory).not.toHaveBeenCalled();
+    expect(preview).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "查看 node 的本机实例" }));
+    expect(showInventory).toHaveBeenCalledExactlyOnceWith("node");
+    expect(preview).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "brew 预览计划 node" }));
+    expect(preview).toHaveBeenCalledExactlyOnceWith(
+      {
+        toolId: "node",
+        providerId: "brew",
+        packageId: "node@22",
+      } satisfies InventoryInstallTarget,
+      screen.getByRole("button", { name: "brew 预览计划 node" }),
+    );
+    expect(showInventory).toHaveBeenCalledTimes(1);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+    expect(container.querySelector("button button")).toBeNull();
+  });
+
+  it("未聚焦的鼠标点击把各来源的实际计划按钮透传为 opener，不依赖 activeElement", async () => {
+    const preview = vi.fn();
+    vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+    vi.mocked(packageCatalog).mockResolvedValue(nodePythonPackages);
+    render(<SoftwareView onPreviewInstall={preview} />);
+    await ready();
+    const python = screen.getByRole("article", { name: "python" });
+    fireEvent.click(within(python).getByText("来源与能力"));
+    const actions: { label: string; target: InventoryInstallTarget }[] = [
+      {
+        label: "mise 预览计划 node",
+        target: { toolId: "node", providerId: "mise", packageId: "node" },
+      },
+      {
+        label: "mise 预览计划 python",
+        target: { toolId: "python", providerId: "mise", packageId: "python" },
+      },
+      {
+        label: "brew 预览计划 node",
+        target: { toolId: "node", providerId: "brew", packageId: "node@22" },
+      },
+      {
+        label: "brew 预览计划 python",
+        target: { toolId: "python", providerId: "brew", packageId: "python@3.13" },
+      },
+      {
+        label: "pyenv 预览计划 python python",
+        target: { toolId: "python", providerId: "pyenv", packageId: "python" },
+      },
+      {
+        label: "uv 预览计划 python python",
+        target: { toolId: "python", providerId: "uv", packageId: "python" },
+      },
+    ];
+    for (const { label, target } of actions) {
+      const button = screen.getByRole("button", { name: label });
+      expect(document.activeElement).toBe(document.body);
+      // 图标点击会冒泡，currentTarget 必须仍是按钮，而不是 svg 或先前焦点。
+      fireEvent.click(button.querySelector("svg") ?? button);
+      expect(preview).toHaveBeenLastCalledWith(target, button);
+      expect(document.activeElement).toBe(document.body);
+    }
+    expect(preview).toHaveBeenCalledTimes(actions.length);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it("缺少清单或计划回调时禁用入口，绝不回退为旧版安装", async () => {
+    const user = userEvent.setup();
+    vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+    render(<SoftwareView />);
+    await ready();
+    const python = screen.getByRole("article", { name: "python" });
+    await user.click(within(python).getByText("来源与能力"));
+    for (const label of [
+      "查看 node 的本机实例",
+      "查看 python 的本机实例",
+      "mise 预览计划 node",
+      "mise 预览计划 python",
+      "brew 预览计划 node",
+      "pyenv 预览计划 python python",
+      "uv 预览计划 python python",
+    ]) {
+      const button = screen.getByRole("button", { name: label });
+      expect((button as HTMLButtonElement).disabled).toBe(true);
+      await user.click(button);
+    }
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it("未接入 mise 安装计划时不展示默认预览入口", async () => {
+    vi.mocked(toolCatalog).mockResolvedValue({
+      ...previewCatalog,
+      tools: previewCatalog.tools.map((tool) => ({
+        ...tool,
+        channels: tool.channels.map((channel) => ({
+          ...channel,
+          installPlan: { state: "notIntegrated", reason: "只读来源" },
+        })),
+      })),
+    });
+    render(<SoftwareView onPreviewInstall={vi.fn()} />);
+    await ready();
+    expect(screen.queryByRole("button", { name: "mise 预览计划 node" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "mise 预览计划 python" })).toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "brew 安装 node" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
   });
 });
 
@@ -358,13 +723,14 @@ describe("统一目录能力标注", () => {
   it("目录收录的工具标「统一目录」，渠道行给出能否走计划", async () => {
     vi.mocked(packageCatalog).mockResolvedValue(nodePackages);
     render(<SoftwareView />);
-    await screen.findByRole("button", { name: "brew 安装 node" });
+    await screen.findByRole("button", { name: "brew 预览计划 node" });
 
     expect(screen.getByText("统一目录")).toBeTruthy();
     expect(screen.getByText("可计划安装")).toBeTruthy();
-    // winget 不在统一目录的 provider 集合里 → 明确说明未接入，而不是默认它可计划
-    const wingetLabel = screen.getByText("未接入统一计划");
-    expect(wingetLabel.getAttribute("title")).toContain("winget");
+    // 未登记来源的能力仍未知，不能推断为未接入并直接写入。
+    const wingetEntry = screen.getByRole("button", { name: "winget 能力未知 node" });
+    expect((wingetEntry as HTMLButtonElement).disabled).toBe(true);
+    expect(wingetEntry.getAttribute("title")).toContain("winget");
 
     // 不在统一目录里的工具只保留旧版渠道视图，不冒充已接入
     const vscode = screen.getByRole("article", { name: "visual-studio-code" });
@@ -396,23 +762,45 @@ describe("统一目录能力标注", () => {
   });
 
   it.each(["目录 IPC 不可用", "工具目录格式不受支持或能力记录不完整"])(
-    "%s 时明确提示，独立重试恢复能力且旧渠道仍可用",
+    "%s 时 Node/Python 渠道禁用，独立重试后恢复原生包计划且其他旧渠道可用",
     async (message) => {
       const user = userEvent.setup();
+      const preview = vi.fn();
       vi.mocked(toolCatalog).mockRejectedValueOnce(new Error(message));
-      const { unmount } = render(<SoftwareView />);
+      vi.mocked(toolCatalog).mockResolvedValue(previewCatalog);
+      vi.mocked(packageCatalog).mockResolvedValue(nodePythonPackages);
+      const { unmount } = render(<SoftwareView onPreviewInstall={preview} />);
       await ready();
 
       const alert = await screen.findByRole("alert");
       expect(within(alert).getByText("工具能力读取失败")).toBeTruthy();
       expect(within(alert).getByText(message)).toBeTruthy();
       expect(screen.queryByText("统一目录")).toBeNull();
-      expect(
-        (screen.getByRole("button", { name: "brew 安装 node" }) as HTMLButtonElement).disabled,
-      ).toBe(false);
+      for (const toolId of ["node", "python"] as const) {
+        const button = screen.getByRole("button", { name: `brew 能力未知 ${toolId}` });
+        expect((button as HTMLButtonElement).disabled).toBe(true);
+        await user.click(button);
+      }
+      expect(preview).not.toHaveBeenCalled();
+      expect(installSystemPackage).not.toHaveBeenCalled();
 
       await user.click(within(alert).getByRole("button", { name: "重试" }));
-      expect(await screen.findByText("统一目录")).toBeTruthy();
+      expect(
+        await within(screen.getByRole("article", { name: "node" })).findByText("统一目录"),
+      ).toBeTruthy();
+      for (const toolId of ["node", "python"] as const) {
+        await user.click(screen.getByRole("button", { name: `brew 预览计划 ${toolId}` }));
+      }
+      expect(preview.mock.calls).toEqual([
+        [
+          { toolId: "node", providerId: "brew", packageId: "node@22" },
+          screen.getByRole("button", { name: "brew 预览计划 node" }),
+        ],
+        [
+          { toolId: "python", providerId: "brew", packageId: "python@3.13" },
+          screen.getByRole("button", { name: "brew 预览计划 python" }),
+        ],
+      ]);
       expect(screen.queryByRole("alert")).toBeNull();
       expect(toolCatalog).toHaveBeenCalledTimes(2);
       expect(packageCatalog).toHaveBeenCalledTimes(1);
@@ -422,7 +810,9 @@ describe("统一目录能力标注", () => {
       // 成功目录在会话内复用：再次挂载不再读取 IPC。
       unmount();
       render(<SoftwareView />);
-      expect(await screen.findByText("统一目录")).toBeTruthy();
+      expect(
+        await within(screen.getByRole("article", { name: "node" })).findByText("统一目录"),
+      ).toBeTruthy();
       expect(toolCatalog).toHaveBeenCalledTimes(2);
       expect(installSystemPackage).not.toHaveBeenCalled();
     },

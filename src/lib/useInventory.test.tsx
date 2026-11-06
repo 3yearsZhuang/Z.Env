@@ -375,3 +375,30 @@ it("接受取消后迟到成功不能发布为新鲜清单", async () => {
   expect(result.current.snapshot).toBeNull();
   expect(result.current.error).toContain("已取消");
 });
+
+it("计划就绪只属于当前激活周期，旧缓存不能在重新读取前获得资格", async () => {
+  const { result, rerender } = renderHook(({ active }) => useInventory(active), {
+    initialProps: { active: true },
+  });
+  expect(result.current.ready).toBe(false);
+  await waitFor(() => expect(result.current.ready).toBe(true));
+  const oldId = result.current.snapshot!.requestId;
+  rerender({ active: false });
+  expect(result.current.ready).toBe(false);
+  const next = deferred<InventorySnapshot>();
+  vi.mocked(inventorySnapshot).mockReturnValueOnce(next.promise);
+  rerender({ active: true });
+  expect(result.current.snapshot?.requestId).toBe(oldId);
+  expect(result.current.ready).toBe(false);
+  const calls = vi.mocked(inventorySnapshot).mock.calls;
+  const nextId = calls[calls.length - 1][0];
+  await act(async () => next.resolve(snapshot(nextId)));
+  await waitFor(() => expect(result.current.ready).toBe(true));
+  expect(result.current.snapshot?.requestId).toBe(nextId);
+  vi.mocked(inventorySnapshot).mockRejectedValueOnce("刷新失败");
+  await act(() => result.current.refresh());
+  expect(result.current.ready).toBe(false);
+  expect(result.current.snapshot?.requestId).toBe(nextId);
+  await act(() => result.current.refresh());
+  expect(result.current.ready).toBe(true);
+});

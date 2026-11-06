@@ -10,6 +10,7 @@ import {
   type OperationPlan,
   type ExecutionRecord,
 } from "../api/operationPlan";
+import { operationPlanV2 } from "../api/operationPlanV2";
 import OperationPlanDialog from "./OperationPlanDialog";
 vi.mock("../api", () => ({ operationCancel: vi.fn(), errorMessage: (e: unknown) => String(e) }));
 vi.mock("../api/operationPlan", () => ({
@@ -17,6 +18,7 @@ vi.mock("../api/operationPlan", () => ({
   operationPlan: vi.fn(),
   operationBindings: vi.fn(),
 }));
+vi.mock("../api/operationPlanV2", () => ({ operationPlanV2: vi.fn() }));
 function plan(): OperationPlan {
   return {
     schemaVersion: 1,
@@ -69,6 +71,14 @@ const finished = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(operationPlan).mockResolvedValue(plan());
+  vi.mocked(operationPlanV2).mockImplementation(async (envelope) => ({
+    schemaVersion: 2,
+    subject: envelope.subject,
+    plan: await (envelope.subject.toolId === "python"
+      ? operationPlan(envelope.request, "python")
+      : operationPlan(envelope.request)),
+    stepGraph: [],
+  }));
   vi.mocked(operationExecute).mockResolvedValue(result);
   vi.mocked(operationCancel).mockResolvedValue();
   vi.mocked(operationBindings).mockResolvedValue([]);
@@ -154,6 +164,7 @@ describe("操作计划预览与执行", () => {
     const preview = plan();
     preview.action = "unbind";
     preview.target.installationId = "old-instance";
+    preview.target.locator = "/missing/original";
     vi.mocked(operationPlan).mockResolvedValue(preview);
     vi.mocked(operationExecute).mockResolvedValue({
       ...result,
@@ -232,7 +243,11 @@ describe("操作计划预览与执行", () => {
       const user = userEvent.setup();
       const preview = plan();
       preview.action = action;
-      if (action === "install") preview.target.providerPackage.providerId = "mise";
+      preview.target.providerPackage.providerId = "mise";
+      if (action === "install") {
+        preview.target.installationId = null;
+        preview.target.locator = null;
+      }
       preview.impact = ["依赖可能安装或升级；项目和终端不会自动切换"];
       vi.mocked(operationPlan).mockResolvedValue(preview);
       vi.mocked(operationExecute).mockResolvedValue({ ...result, action, outcome });
@@ -266,6 +281,8 @@ describe("操作计划预览与执行", () => {
       const user = userEvent.setup();
       const preview = plan();
       preview.action = "install";
+      preview.target.installationId = null;
+      preview.target.locator = null;
       preview.target.providerPackage.providerId = "mise";
       vi.mocked(operationPlan).mockResolvedValue(preview);
       vi.mocked(operationExecute).mockResolvedValue({
@@ -361,6 +378,8 @@ describe("操作计划预览与执行", () => {
     const user = userEvent.setup();
     const preview = plan();
     preview.action = "install";
+    preview.target.installationId = null;
+    preview.target.locator = null;
     preview.target.providerPackage.providerId = "mise";
     preview.capability = { canPreview: true, canExecute: false, reason: "安装执行尚未开放" };
     vi.mocked(operationPlan).mockResolvedValue(preview);
@@ -536,8 +555,14 @@ it("Python 四渠道预览区分精确版本和 formula，没有写执行入口"
   vi.mocked(operationPlan).mockImplementation(async (request) => {
     const value = pythonPlan();
     value.action = "install";
-    if (request.intent.action === "install")
+    value.target.installationId = null;
+    value.target.locator = null;
+    if (request.intent.action === "install") {
       value.target.providerPackage.providerId = request.intent.providerId;
+      value.target.providerPackage.packageId = request.intent.packageId;
+      value.target.providerPackage.kind =
+        request.intent.providerId === "brew" ? "formula" : "runtime";
+    }
     value.capability = { canPreview: true, canExecute: false, reason: "安装执行未开放" };
     return value;
   });
@@ -587,11 +612,11 @@ it("Python 四渠道预览区分精确版本和 formula，没有写执行入口"
   );
   expect(operationExecute).not.toHaveBeenCalled();
 });
-it.each(["foreign", "write"])("Python 拒绝 %s 计划回复", async (mode) => {
+it.each(["foreign", "provider"])("Python 拒绝 %s 计划回复", async (mode) => {
   const user = userEvent.setup();
   const value = mode === "foreign" ? plan() : pythonPlan();
   value.action = "install";
-  value.target.providerPackage.providerId = mode === "write" ? "uv" : "mise";
+  value.target.providerPackage.providerId = mode === "provider" ? "uv" : "mise";
   vi.mocked(operationPlan).mockResolvedValue(value);
   render(
     <OperationPlanDialog
@@ -602,8 +627,6 @@ it.each(["foreign", "write"])("Python 拒绝 %s 计划回复", async (mode) => {
       onFinished={finished}
     />,
   );
-  if (mode === "write")
-    await user.selectOptions(screen.getByRole("combobox", { name: "安装来源" }), "uv");
   await user.type(screen.getByRole("textbox", { name: "Python 精确版本" }), "3.13.15");
   await user.click(screen.getByRole("button", { name: "生成预览" }));
   await screen.findByText(/计划与当前请求不匹配/);
@@ -617,6 +640,10 @@ it.each(["install", "uninstall"] as const)(
     const user = userEvent.setup();
     const value = pythonPlan();
     value.action = action;
+    if (action === "install") {
+      value.target.installationId = null;
+      value.target.locator = null;
+    }
     vi.mocked(operationPlan).mockResolvedValue(value);
     vi.mocked(operationExecute).mockResolvedValue({
       ...result,
@@ -647,3 +674,441 @@ it.each(["install", "uninstall"] as const)(
     expect(finished).toHaveBeenCalledOnce();
   },
 );
+
+it.each([
+  ["node", "homebrew/core/node@22", "node@22"],
+  ["python", "homebrew/core/python@3.13", "python@3.13"],
+  ["python", "python3", "homebrew/core/python3"],
+] as const)(
+  "%s 原生 Homebrew 入口保留包名，并显式请求 v2 工具计划",
+  async (toolId, nativeId, canonicalId) => {
+    const value = toolId === "python" ? pythonPlan() : plan();
+    value.action = "install";
+    value.target = {
+      providerPackage: {
+        providerId: "brew",
+        packageId: canonicalId,
+        kind: "formula",
+        platform: "macos",
+      },
+      installationId: null,
+      locator: null,
+    };
+    vi.mocked(operationPlan).mockResolvedValue(value);
+    render(
+      <OperationPlanDialog
+        toolId={toolId}
+        snapshotRequestId="snapshot"
+        installationId={null}
+        initialAction="install"
+        initialProviderId="brew"
+        initialPackageId={nativeId}
+        onClose={vi.fn()}
+        onFinished={finished}
+      />,
+    );
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: toolId === "python" ? "Python formula" : "Node formula",
+        }) as HTMLInputElement
+      ).value,
+    ).toBe(nativeId);
+    fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+    await screen.findByRole("button", { name: "执行安装" });
+    expect(operationPlanV2).toHaveBeenCalledExactlyOnceWith({
+      schemaVersion: 2,
+      subject: { kind: "tool", toolId },
+      request: {
+        snapshotRequestId: "snapshot",
+        intent: { action: "install", providerId: "brew", packageId: nativeId, version: null },
+      },
+    });
+    expect(operationExecute).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("combobox", { name: "安装来源" }), {
+      target: { value: "mise" },
+    });
+    expect(screen.queryByRole("button", { name: "执行安装" })).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "安装来源" }), {
+      target: { value: "brew" },
+    });
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: toolId === "python" ? "Python formula" : "Node formula",
+        }) as HTMLInputElement
+      ).value,
+    ).toBe(toolId);
+  },
+);
+
+it.each([
+  "snapshot",
+  "action",
+  "tool",
+  "provider",
+  "package",
+  "tap",
+  "kind",
+  "platform",
+  "installation",
+  "locator",
+  "missing-target",
+] as const)("安装拒绝不匹配的 %s 回复", async (mode) => {
+  const value = pythonPlan();
+  value.action = "install";
+  value.target = {
+    providerPackage: {
+      providerId: "brew",
+      packageId: "python@3.13",
+      kind: "formula",
+      platform: "macos",
+    },
+    installationId: null,
+    locator: null,
+  };
+  if (mode === "snapshot") value.snapshotRequestId = "foreign-snapshot";
+  if (mode === "action") value.action = "uninstall";
+  if (mode === "tool") value.toolId = "node";
+  if (mode === "provider") value.target.providerPackage.providerId = "mise";
+  if (mode === "package") value.target.providerPackage.packageId = "python@3.12";
+  if (mode === "tap") value.target.providerPackage.packageId = "foreign/tap/python@3.13";
+  if (mode === "kind") value.target.providerPackage.kind = "runtime";
+  if (mode === "platform") value.target.providerPackage.platform = "linux";
+  if (mode === "installation") value.target.installationId = "old-instance";
+  if (mode === "locator") value.target.locator = "/old/python";
+  if (mode === "missing-target") value.target = undefined as unknown as OperationPlan["target"];
+  vi.mocked(operationPlan).mockResolvedValue(value);
+  render(
+    <OperationPlanDialog
+      toolId="python"
+      snapshotRequestId="snapshot"
+      installationId={null}
+      initialProviderId="brew"
+      initialPackageId="python@3.13"
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  await screen.findByText(/计划与当前请求不匹配/);
+  expect(screen.queryByRole("region", { name: "后端操作计划" })).toBeNull();
+  expect(operationExecute).not.toHaveBeenCalled();
+});
+
+it("v2 subject 与目标工具不一致时不接受计划", async () => {
+  vi.mocked(operationPlanV2).mockResolvedValue({
+    schemaVersion: 2,
+    subject: { kind: "tool", toolId: "python" },
+    plan: plan(),
+    stepGraph: [],
+  });
+  show();
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  await screen.findByText(/计划与当前请求不匹配/);
+  expect(screen.queryByRole("button", { name: "执行重新验证" })).toBeNull();
+});
+
+it.each(["verify", "uninstall", "bind", "unbind"] as const)(
+  "Python %s 拒绝另一实例的计划",
+  async (action) => {
+    const value = pythonPlan();
+    value.action = action;
+    value.target.installationId = "foreign-instance";
+    vi.mocked(operationPlan).mockResolvedValue(value);
+    render(
+      <OperationPlanDialog
+        toolId="python"
+        snapshotRequestId="snapshot"
+        installationId="instance"
+        initialAction={action === "bind" || action === "unbind" ? action : undefined}
+        initialBinding={{ strategy: "direct", scope: "project", projectPath: "/project" }}
+        initialBindingId={action === "unbind" ? "binding" : undefined}
+        onClose={vi.fn()}
+        onFinished={finished}
+      />,
+    );
+    if (action === "uninstall")
+      fireEvent.change(screen.getByRole("combobox", { name: "计划操作" }), {
+        target: { value: "uninstall" },
+      });
+    fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+    await screen.findByText(/计划与当前请求不匹配/);
+    expect(screen.queryByRole("region", { name: "后端操作计划" })).toBeNull();
+  },
+);
+
+it.each(["mise", "uv", "pyenv", "brew"] as const)(
+  "Python %s 保留后端拒绝能力，签发可执行计划后才安装",
+  async (providerId) => {
+    const value = pythonPlan();
+    value.action = "install";
+    value.target = {
+      providerPackage: {
+        providerId,
+        packageId: providerId === "brew" ? "python3" : "python",
+        kind: providerId === "brew" ? "formula" : "runtime",
+        platform: "macos",
+      },
+      installationId: null,
+      locator: null,
+    };
+    value.capability = { canPreview: true, canExecute: false, reason: "尚未满足来源条件" };
+    vi.mocked(operationPlan).mockResolvedValue(value);
+    render(
+      <OperationPlanDialog
+        toolId="python"
+        snapshotRequestId="snapshot"
+        installationId={null}
+        initialProviderId={providerId}
+        initialPackageId={value.target.providerPackage.packageId}
+        onClose={vi.fn()}
+        onFinished={finished}
+      />,
+    );
+    if (providerId !== "brew")
+      fireEvent.change(screen.getByRole("textbox", { name: "Python 精确版本" }), {
+        target: { value: "3.13.15" },
+      });
+    fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+    await screen.findByText("尚未满足来源条件");
+    expect(screen.queryByRole("button", { name: "执行安装" })).toBeNull();
+    vi.mocked(operationPlan).mockResolvedValue({
+      ...value,
+      capability: { canPreview: true, canExecute: true, reason: null },
+    });
+    vi.mocked(operationExecute).mockResolvedValue({
+      ...result,
+      toolId: "python",
+      action: "install",
+      outcome: "installed",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+    fireEvent.click(await screen.findByRole("button", { name: "执行安装" }));
+    await screen.findByText(/安装已通过来源重扫与版本验证/);
+    expect(operationExecute).toHaveBeenCalledExactlyOnceWith("server-plan");
+  },
+);
+
+it("快照变化使已有预览不可执行", async () => {
+  const { rerender } = show();
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  await screen.findByRole("button", { name: "执行重新验证" });
+  rerender(
+    <OperationPlanDialog
+      snapshotRequestId="changed-snapshot"
+      installationId="instance"
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  expect(screen.queryByRole("button", { name: "执行重新验证" })).toBeNull();
+  expect(operationExecute).not.toHaveBeenCalled();
+});
+
+it("用户显式关闭执行计划后，后台完成仍通知刷新且不重复执行", async () => {
+  const close = vi.fn();
+  let finish!: (result: ExecutionRecord) => void;
+  vi.mocked(operationExecute).mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  const { unmount } = render(
+    <OperationPlanDialog
+      snapshotRequestId="snapshot"
+      installationId="instance"
+      onClose={close}
+      onFinished={finished}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  fireEvent.click(await screen.findByRole("button", { name: "执行重新验证" }));
+  fireEvent.click(screen.getByText("关闭", { selector: "button" }));
+  expect(close).toHaveBeenCalledOnce();
+  unmount();
+  await act(async () => finish(result));
+  expect(finished).toHaveBeenCalledOnce();
+  expect(operationExecute).toHaveBeenCalledExactlyOnceWith("server-plan");
+});
+
+it("关闭计划将焦点归还导航前的可见入口", async () => {
+  const opener = document.createElement("button");
+  opener.textContent = "工具卡入口";
+  document.body.append(opener);
+  const { unmount } = render(
+    <OperationPlanDialog
+      snapshotRequestId="snapshot"
+      installationId="instance"
+      openerElement={opener}
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  unmount();
+  await waitFor(() => expect(document.activeElement).toBe(opener));
+  opener.remove();
+});
+
+it.each([
+  "hidden",
+  "collapsed",
+  "display",
+  "removed",
+  "disabled",
+  "fieldset",
+  "inert",
+  "unfocusable",
+] as const)("导航入口 %s 时焦点退回可见的对应运行时切换", async (mode) => {
+  const holder = document.createElement(
+    mode === "collapsed" ? "details" : mode === "fieldset" ? "fieldset" : "div",
+  );
+  const opener = document.createElement(mode === "unfocusable" ? "span" : "button");
+  if (mode === "disabled") (opener as HTMLButtonElement).disabled = true;
+  if (mode === "fieldset") (holder as HTMLFieldSetElement).disabled = true;
+  if (mode === "inert") holder.setAttribute("inert", "");
+  if (mode === "hidden") holder.hidden = true;
+  if (mode === "display") holder.style.display = "none";
+  if (mode === "collapsed") holder.append(document.createElement("summary"));
+  holder.append(opener);
+  document.body.append(holder);
+  const hiddenSwitch = document.createElement("button");
+  hiddenSwitch.dataset.runtimeSwitch = "node";
+  hiddenSwitch.hidden = true;
+  const fallback = document.createElement("button");
+  fallback.dataset.runtimeSwitch = "node";
+  document.body.append(hiddenSwitch, fallback);
+  const { unmount } = render(
+    <OperationPlanDialog
+      snapshotRequestId="snapshot"
+      installationId="instance"
+      openerElement={opener}
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  if (mode === "removed") holder.remove();
+  unmount();
+  await waitFor(() => expect(document.activeElement).toBe(fallback));
+  holder.remove();
+  hiddenSwitch.remove();
+  fallback.remove();
+});
+
+it("执行中的快照变化保留原计划显示，取消仍提交原签发任务 ID", async () => {
+  let finish!: (result: ExecutionRecord) => void;
+  vi.mocked(operationExecute).mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  const { rerender } = show();
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  fireEvent.click(await screen.findByRole("button", { name: "执行重新验证" }));
+  rerender(
+    <OperationPlanDialog
+      snapshotRequestId="changed-snapshot"
+      installationId="instance"
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  expect(screen.getByRole("region", { name: "后端操作计划" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "执行中…" })).toHaveProperty("disabled", true);
+  fireEvent.click(screen.getByRole("button", { name: "请求取消" }));
+  await waitFor(() => expect(operationCancel).toHaveBeenCalledExactlyOnceWith("server-plan"));
+  expect(screen.getByRole("button", { name: "等待取消完成…" })).toHaveProperty("disabled", true);
+  await act(async () => finish({ ...result, status: "cancelled", outcome: "cancelled" }));
+  expect(finished).toHaveBeenCalledOnce();
+});
+
+it.each([
+  ["node", "windows", false],
+  ["node", "linux", false],
+  ["python", "windows", false],
+  ["python", "linux", false],
+  ["node", "windows", true],
+  ["node", "linux", true],
+  ["python", "windows", true],
+  ["python", "linux", true],
+] as const)(
+  "%s %s 安装计划 canExecute=%s 保留只读平台边界",
+  async (toolId, platform, canExecute) => {
+    const value = toolId === "python" ? pythonPlan() : plan();
+    value.action = "install";
+    value.target = {
+      providerPackage: { providerId: "mise", packageId: toolId, kind: "runtime", platform },
+      installationId: null,
+      locator: null,
+    };
+    const reason =
+      toolId === "python"
+        ? "Python 计划仅支持 macOS 与绝对来源路径"
+        : "新操作计划当前仅支持 macOS Node 试点";
+    value.capability = { canPreview: false, canExecute, reason };
+    value.steps = [];
+    vi.mocked(operationPlan).mockResolvedValue(value);
+    render(
+      <OperationPlanDialog
+        toolId={toolId}
+        snapshotRequestId="snapshot"
+        installationId={null}
+        onClose={vi.fn()}
+        onFinished={finished}
+      />,
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: toolId === "python" ? "Python 精确版本" : "Node 精确版本",
+      }),
+      { target: { value: toolId === "python" ? "3.13.15" : "22.1.0" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+    if (canExecute) {
+      await screen.findByText(/计划与当前请求不匹配/);
+      expect(screen.queryByRole("region", { name: "后端操作计划" })).toBeNull();
+    } else {
+      await screen.findByText(reason);
+      expect(screen.getByRole("region", { name: "后端操作计划" })).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+    }
+    expect(screen.queryByRole("button", { name: "执行安装" })).toBeNull();
+    expect(operationExecute).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["node", "python"] as const)("%s 不接受未知平台的只读安装回复", async (toolId) => {
+  const value = toolId === "python" ? pythonPlan() : plan();
+  value.action = "install";
+  value.target = {
+    providerPackage: {
+      providerId: "mise",
+      packageId: toolId,
+      kind: "runtime",
+      platform: "unknown" as OperationPlan["target"]["providerPackage"]["platform"],
+    },
+    installationId: null,
+    locator: null,
+  };
+  value.capability = { canPreview: false, canExecute: false, reason: "平台未开放" };
+  vi.mocked(operationPlan).mockResolvedValue(value);
+  render(
+    <OperationPlanDialog
+      toolId={toolId}
+      snapshotRequestId="snapshot"
+      installationId={null}
+      onClose={vi.fn()}
+      onFinished={finished}
+    />,
+  );
+  fireEvent.change(
+    screen.getByRole("textbox", {
+      name: toolId === "python" ? "Python 精确版本" : "Node 精确版本",
+    }),
+    { target: { value: toolId === "python" ? "3.13.15" : "22.1.0" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+  await screen.findByText(/计划与当前请求不匹配/);
+  expect(screen.queryByText("平台未开放")).toBeNull();
+  expect(screen.queryByRole("button", { name: "执行安装" })).toBeNull();
+});

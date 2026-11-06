@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, FileSearch, RefreshCw, X } from "lucide-react";
 import type { Installation, InstallationAlias, ProviderId, ProviderReport } from "../api/inventory";
 import { useInventory } from "../lib/useInventory";
 import type { CatalogReadState } from "../lib/catalogEvidence";
+import type { InventoryInstallRequest, InventoryTool } from "../lib/inventoryNavigation";
 import "./NodeInventoryPanel.css";
 const OperationPlanDialog = lazy(() => import("./OperationPlanDialog"));
 
@@ -11,6 +12,11 @@ interface Props {
   focusRequest?: number;
   refreshRequest?: number;
   onReadState?: (state: CatalogReadState) => void;
+  installRequest?: InventoryInstallRequest;
+  onInstallRequestHandled?: (requestId: number) => void;
+  planDialogOwner?: InventoryTool | null;
+  claimPlanDialog?: (toolId: InventoryTool) => number | null;
+  releasePlanDialog?: (toolId: InventoryTool, token: number) => void;
 }
 
 const PROVIDERS: { id: ProviderId; name: string; description: string }[] = [
@@ -105,6 +111,7 @@ function InstanceRow({
   installations,
   instanceIds,
   onPlan,
+  planDisabled,
 }: {
   installation: Installation;
   summaryId: string;
@@ -113,6 +120,7 @@ function InstanceRow({
   installations: Installation[];
   instanceIds: Map<string, string>;
   onPlan: (installationId: string) => void;
+  planDisabled: boolean;
 }) {
   const { providerPackage } = installation;
   const provider = sourceName(providerPackage.providerId);
@@ -144,7 +152,11 @@ function InstanceRow({
           <ChevronDown size={16} aria-hidden="true" className="node-inventory-disclosure" />
         </summary>
         <div className="node-inventory-instance-body">
-          <button className="btn" onClick={() => onPlan(installation.installationId)}>
+          <button
+            className="btn"
+            disabled={planDisabled}
+            onClick={() => onPlan(installation.installationId)}
+          >
             预览此实例的操作
           </button>
           {stale && (
@@ -241,19 +253,126 @@ export default function NodeInventoryPanel({
   focusRequest = 0,
   refreshRequest = 0,
   onReadState,
+  installRequest,
+  onInstallRequestHandled,
+  planDialogOwner,
+  claimPlanDialog,
+  releasePlanDialog,
 }: Props) {
-  const { snapshot, loading, waiting, cancelling, error, refresh, cancel } = useInventory(active);
+  const { snapshot, loading, waiting, cancelling, error, ready, refresh, cancel } =
+    useInventory(active);
   useEffect(() => {
     onReadState?.({ snapshot, loading: loading || cancelling, error });
   }, [snapshot, loading, cancelling, error, onReadState]);
   const [planning, setPlanning] = useState<{
     installationId: string | null;
     initialAction?: "install" | "unbind";
+    initialProviderId?: InventoryInstallRequest["providerId"];
+    initialPackageId?: string;
+    openerElement?: HTMLElement | null;
+    ownershipToken?: number;
+  } | null>(null);
+  const foreignPlanning = Boolean(planDialogOwner && planDialogOwner !== "node");
+  const openPlan = useCallback(
+    (next: Omit<NonNullable<typeof planning>, "ownershipToken">) => {
+      if (planning || foreignPlanning) return false;
+      const token = claimPlanDialog?.("node");
+      if (claimPlanDialog && token === null) return false;
+      setPlanning({ ...next, ownershipToken: token ?? undefined });
+      return true;
+    },
+    [planning, foreignPlanning, claimPlanDialog],
+  );
+  const closePlan = useCallback(() => {
+    if (!planning) return;
+    setPlanning((current) => (current === planning ? null : current));
+    if (planning.ownershipToken !== undefined) releasePlanDialog?.("node", planning.ownershipToken);
+  }, [planning, releasePlanDialog]);
+  const handledInstalls = useRef(new Set<number>());
+  const [pendingInstall, setPendingInstall] = useState<{
+    request: InventoryInstallRequest;
+    baselineSnapshotId: string | undefined;
+    refreshRequested: boolean;
+    waitingForDialog: boolean;
   } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const lastFocusRequest = useRef(0);
   const lastRefreshRequest = useRef(refreshRequest);
   const panelId = `node-inventory-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+
+  useEffect(() => {
+    if (!installRequest || handledInstalls.current.has(installRequest.requestId)) {
+      setPendingInstall(null);
+      return;
+    }
+    setPendingInstall((pending) =>
+      pending?.request.requestId === installRequest.requestId
+        ? (planning || foreignPlanning) && !pending.waitingForDialog
+          ? { ...pending, waitingForDialog: true }
+          : pending
+        : {
+            request: installRequest,
+            baselineSnapshotId: snapshot?.requestId,
+            refreshRequested: false,
+            waitingForDialog: Boolean(planning || foreignPlanning),
+          },
+    );
+  }, [installRequest, snapshot?.requestId, planning, foreignPlanning]);
+
+  useEffect(() => {
+    if (
+      !pendingInstall ||
+      installRequest?.requestId !== pendingInstall.request.requestId ||
+      !active ||
+      planning ||
+      foreignPlanning
+    )
+      return;
+    if (pendingInstall.waitingForDialog) {
+      setPendingInstall({
+        ...pendingInstall,
+        baselineSnapshotId: snapshot?.requestId,
+        waitingForDialog: false,
+        refreshRequested: false,
+      });
+      return;
+    }
+    if (loading || waiting || cancelling || error) return;
+    if (ready && snapshot && snapshot.requestId !== pendingInstall.baselineSnapshotId) {
+      const request = pendingInstall.request;
+      if (
+        !openPlan({
+          installationId: null,
+          initialAction: "install",
+          initialProviderId: request.providerId,
+          initialPackageId: request.packageId,
+          openerElement: request.opener,
+        })
+      )
+        return;
+      handledInstalls.current.add(request.requestId);
+      setPendingInstall(null);
+      onInstallRequestHandled?.(request.requestId);
+    } else if (!pendingInstall.refreshRequested) {
+      setPendingInstall({ ...pendingInstall, refreshRequested: true });
+      void refresh();
+    }
+  }, [
+    pendingInstall,
+    installRequest,
+    active,
+    planning,
+    foreignPlanning,
+    openPlan,
+    loading,
+    waiting,
+    cancelling,
+    error,
+    ready,
+    snapshot,
+    refresh,
+    onInstallRequestHandled,
+  ]);
 
   useEffect(() => {
     if (!active || focusRequest <= 0 || lastFocusRequest.current === focusRequest) return;
@@ -301,16 +420,16 @@ export default function NodeInventoryPanel({
         <div className="node-inventory-actions">
           <button
             className="btn node-inventory-button"
-            disabled={!snapshot || loading || cancelling}
-            onClick={() => setPlanning({ installationId: null })}
+            disabled={!active || !ready || Boolean(planning) || foreignPlanning}
+            onClick={() => openPlan({ installationId: null })}
           >
             预览 Node 计划
           </button>
           <button
             type="button"
             className="btn node-inventory-button"
-            disabled={!snapshot || pending}
-            onClick={() => setPlanning({ installationId: null, initialAction: "unbind" })}
+            disabled={!active || !ready || Boolean(planning) || foreignPlanning}
+            onClick={() => openPlan({ installationId: null, initialAction: "unbind" })}
           >
             管理 Node 绑定
           </button>
@@ -320,7 +439,7 @@ export default function NodeInventoryPanel({
               className="btn node-inventory-button"
               disabled={cancelling}
               onClick={() => {
-                // 明确取消时同时丢弃当前排队意图，避免结束后立即再次扫描。
+                // 丢弃本轮外部刷新请求；安装导航意图保留，等待用户显式重试。
                 lastRefreshRequest.current = refreshRequest;
                 void cancel();
               }}
@@ -333,7 +452,7 @@ export default function NodeInventoryPanel({
             type="button"
             className="btn node-inventory-button"
             aria-label="刷新全部 Node.js 来源"
-            disabled={pending}
+            disabled={!active || pending || Boolean(planning)}
             onClick={() => void refresh()}
           >
             <RefreshCw
@@ -345,6 +464,22 @@ export default function NodeInventoryPanel({
           </button>
         </div>
       </div>
+      {pendingInstall && installRequest?.requestId === pendingInstall.request.requestId && (
+        <p role="status">
+          安装计划请求等待最新清单与当前计划结束。
+          <button
+            className="btn"
+            onClick={() => {
+              const id = pendingInstall.request.requestId;
+              handledInstalls.current.add(id);
+              setPendingInstall(null);
+              onInstallRequestHandled?.(id);
+            }}
+          >
+            取消安装计划请求
+          </button>
+        </p>
+      )}
 
       <div className="node-inventory-content">
         <p className="node-inventory-scope">只读发现 · 当前为 macOS 上的 Node.js 试点</p>
@@ -402,7 +537,7 @@ export default function NodeInventoryPanel({
                     type="button"
                     className="node-inventory-source-refresh"
                     aria-label={`${sourceReadSucceeded ? "刷新" : "重试"} ${provider.name} 来源`}
-                    disabled={pending}
+                    disabled={!active || pending || Boolean(planning)}
                     onClick={() => void refresh(provider.id)}
                   >
                     <RefreshCw size={12} aria-hidden="true" />
@@ -477,7 +612,8 @@ export default function NodeInventoryPanel({
                 }
                 installations={installations}
                 instanceIds={instanceIds}
-                onPlan={(installationId) => setPlanning({ installationId })}
+                planDisabled={!active || !ready || Boolean(planning) || foreignPlanning}
+                onPlan={(installationId) => openPlan({ installationId })}
               />
             ))}
           </ul>
@@ -501,7 +637,10 @@ export default function NodeInventoryPanel({
             snapshotRequestId={snapshot.requestId}
             installationId={planning.installationId}
             initialAction={planning.initialAction}
-            onClose={() => setPlanning(null)}
+            initialProviderId={planning.initialProviderId}
+            initialPackageId={planning.initialPackageId}
+            openerElement={planning.openerElement}
+            onClose={closePlan}
             onFinished={() => void refresh()}
           />
         </Suspense>

@@ -44,6 +44,7 @@
 | [P14 Python Homebrew](./p14-python-brew.md) | core formula 写渠道、依赖门禁与可丢弃前缀验收 |
 | [P14 Python pyenv](./p14-python-pyenv.md) | 受控源码编译、安装/卸载与可丢弃环境验收 |
 | [P14 项目配方](./p14-project-recipes.md) | 只读预览、当前边界与后续执行编排 |
+| [Node/Python 卡片入口 2026-11-06](./tool-card-actions-2026-11-06.md) | 清单导航、渠道计划、读取会话与交互验收 |
 | [跨平台执行底座](./cross-platform-foundation.md) | Windows 有界探针、Job 对象、稳定文件身份与显式环境策略 |
 | [原生 launcher](./cross-platform-launcher.md) | 按实例启动、显式环境与 shim/桌面接入边界 |
 | [统一操作计划 v2](./operation-plan-v2.md) | tagged subject、步骤图投影、v1 兼容与执行边界 |

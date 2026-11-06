@@ -9,6 +9,8 @@ export interface InventoryState {
   waiting: boolean;
   cancelling: boolean;
   error: string | null;
+  /** 当前激活周期的成功读取已完成；旧缓存不获得本轮计划入口资格。 */
+  ready: boolean;
   refresh: (providerId?: ProviderId) => Promise<void>;
   cancel: () => Promise<void>;
 }
@@ -56,6 +58,7 @@ export function useInventory(active: boolean, toolId: "node" | "python" = "node"
   const [error, setError] = useState<string | null>(null);
   const enabled = useRef(false);
   const generation = useRef(0);
+  const successfulGeneration = useRef<number | null>(null);
   const current = useRef<Request | null>(null);
   const inFlight = useRef<Promise<InventorySnapshot> | null>(null);
 
@@ -116,6 +119,7 @@ export function useInventory(active: boolean, toolId: "node" | "python" = "node"
         )
           throw new Error("清单工具范围与 Python 请求不匹配");
         setSnapshot(next);
+        successfulGeneration.current = request.generation;
         setError(null);
       } catch (reason) {
         if (!isCurrent(request)) return;
@@ -188,5 +192,14 @@ export function useInventory(active: boolean, toolId: "node" | "python" = "node"
     };
   }, [active, refresh]);
 
-  return { snapshot, loading, waiting, cancelling, error, refresh, cancel };
+  const ready =
+    active &&
+    enabled.current &&
+    successfulGeneration.current === generation.current &&
+    current.current === null &&
+    !loading &&
+    !waiting &&
+    !cancelling &&
+    error === null;
+  return { snapshot, loading, waiting, cancelling, error, ready, refresh, cancel };
 }

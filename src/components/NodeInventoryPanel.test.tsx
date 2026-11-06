@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharedFixture from "../../fixtures/inventory/contract-v1.json";
@@ -8,6 +8,24 @@ import { useInventory, type InventoryState } from "../lib/useInventory";
 import NodeInventoryPanel from "./NodeInventoryPanel";
 
 vi.mock("../lib/useInventory", () => ({ useInventory: vi.fn() }));
+vi.mock("./OperationPlanDialog", () => ({
+  default: (p: {
+    snapshotRequestId: string;
+    installationId: string | null;
+    initialAction?: string;
+    initialProviderId?: string;
+    initialPackageId?: string;
+    openerElement?: HTMLElement | null;
+    onClose: () => void;
+  }) => (
+    <div role="dialog" aria-label="测试 Node 计划">
+      {p.snapshotRequestId} · {p.installationId ?? "install"} · {p.initialAction ?? "default"} ·{" "}
+      {p.initialProviderId ?? "mise"} · {p.initialPackageId ?? "node"}
+      <span data-testid="opener">{p.openerElement?.id}</span>
+      <button onClick={p.onClose}>关闭测试计划</button>
+    </div>
+  ),
+}));
 
 const refresh = vi.fn<(providerId?: ProviderId) => Promise<void>>();
 const cancel = vi.fn<() => Promise<void>>();
@@ -37,6 +55,7 @@ beforeEach(() => {
     waiting: false,
     cancelling: false,
     error: null,
+    ready: true,
     refresh,
     cancel,
   };
@@ -332,4 +351,144 @@ describe("Node.js 多来源只读清单", () => {
     rerender(<NodeInventoryPanel refreshRequest={1} />);
     expect(refresh).not.toHaveBeenCalled();
   });
+});
+
+function nodeRead(requestId: string) {
+  state = {
+    ...state,
+    snapshot: { ...snapshot(), requestId },
+    loading: false,
+    waiting: false,
+    cancelling: false,
+    error: null,
+    ready: true,
+  };
+}
+
+it("安装意图等候本轮成功读取，保留原生 formula 与触发焦点且只消费一次", async () => {
+  const handled = vi.fn();
+  const opener = document.createElement("button");
+  opener.id = "node-card-install";
+  const request = {
+    requestId: 101,
+    providerId: "brew" as const,
+    packageId: "homebrew/core/node@22",
+    opener,
+  };
+  const { rerender } = render(
+    <NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />,
+  );
+  expect(refresh).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  state = { ...state, loading: true, waiting: true, ready: false };
+  rerender(<NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />);
+  state = { ...state, loading: true, waiting: false, cancelling: true };
+  rerender(<NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  nodeRead("node-new-read");
+  rerender(<NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />);
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog.textContent).toContain(
+    "node-new-read · install · install · brew · homebrew/core/node@22",
+  );
+  expect(screen.getByTestId("opener").textContent).toBe(opener.id);
+  expect(handled).toHaveBeenCalledExactlyOnceWith(101);
+  fireEvent.click(screen.getByRole("button", { name: "关闭测试计划" }));
+  nodeRead("node-next-read");
+  rerender(<NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(refresh).toHaveBeenCalledOnce();
+});
+
+it("失败或取消不丢安装意图，显式重试成功后才打开计划", async () => {
+  state = { ...state, snapshot: null, loading: true, ready: false };
+  const request = { requestId: 102, providerId: "mise" as const, packageId: "node" };
+  const { rerender } = render(<NodeInventoryPanel installRequest={request} />);
+  state = { ...state, loading: false, error: "工具清单刷新已取消" };
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect(refresh).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "取消安装计划请求" })).toBeTruthy();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "刷新全部 Node.js 来源" }));
+  expect(refresh).toHaveBeenCalledOnce();
+  state = { ...state, loading: true, error: null };
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  nodeRead("node-retried");
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect((await screen.findByRole("dialog")).textContent).toContain("node-retried · install");
+  expect(refresh).toHaveBeenCalledOnce();
+});
+
+it("新安装意图排队至现有计划关闭，隐藏与刷新不替换现有弹窗", async () => {
+  const { rerender } = render(<NodeInventoryPanel />);
+  fireEvent.click(screen.getByRole("button", { name: "预览 Node 计划" }));
+  await screen.findByRole("dialog");
+  const request = { requestId: 103, providerId: "brew" as const, packageId: "node@24" };
+  rerender(<NodeInventoryPanel active={false} installRequest={request} />);
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(screen.getByRole("dialog").textContent).not.toContain("node@24");
+  nodeRead("node-read-during-dialog");
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect(refresh).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "关闭测试计划" }));
+  expect(refresh).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  nodeRead("node-after-dialog");
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect((await screen.findByRole("dialog")).textContent).toContain("brew · node@24");
+});
+
+it("父级撤销与用户取消只丢弃未消费导航意图，不取消清单扫描", () => {
+  state = { ...state, loading: true, ready: false };
+  const handled = vi.fn();
+  const request = { requestId: 104, providerId: "mise" as const, packageId: "node" };
+  const { rerender } = render(
+    <NodeInventoryPanel installRequest={request} onInstallRequestHandled={handled} />,
+  );
+  rerender(<NodeInventoryPanel onInstallRequestHandled={handled} />);
+  nodeRead("node-after-revocation");
+  rerender(<NodeInventoryPanel onInstallRequestHandled={handled} />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  const newer = { ...request, requestId: 105 };
+  rerender(<NodeInventoryPanel installRequest={newer} onInstallRequestHandled={handled} />);
+  fireEvent.click(screen.getByRole("button", { name: "取消安装计划请求" }));
+  expect(handled).toHaveBeenCalledExactlyOnceWith(105);
+  expect(cancel).not.toHaveBeenCalled();
+  nodeRead("node-after-request-cancel");
+  rerender(<NodeInventoryPanel installRequest={newer} onInstallRequestHandled={handled} />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it.each(["预览 Node 计划", "管理 Node 绑定", "预览此实例的操作"])(
+  "Node %s 入口必须先取得共享弹窗占用",
+  async (label) => {
+    const claim = vi.fn(() => null);
+    render(<NodeInventoryPanel claimPlanDialog={claim} />);
+    if (label === "预览此实例的操作") fireEvent.click(instance("Homebrew", "arm64"));
+    const button =
+      label === "预览此实例的操作"
+        ? within(instance("Homebrew", "arm64").parentElement!).getByRole("button", { name: label })
+        : screen.getByRole("button", { name: label });
+    fireEvent.click(button);
+    expect(claim).toHaveBeenCalledExactlyOnceWith("node");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  },
+);
+
+it("Node 已请求读取后遇到外部弹窗，关闭后重新读取，不沿用旧刷新标志卡住", async () => {
+  const request = { requestId: 106, providerId: "brew" as const, packageId: "node@22" };
+  const { rerender } = render(<NodeInventoryPanel installRequest={request} />);
+  expect(refresh).toHaveBeenCalledOnce();
+  state = { ...state, loading: true, ready: false };
+  rerender(<NodeInventoryPanel installRequest={request} planDialogOwner="python" />);
+  nodeRead("node-completed-while-python-dialog");
+  rerender(<NodeInventoryPanel installRequest={request} planDialogOwner="python" />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect(refresh).toHaveBeenCalledTimes(2);
+  nodeRead("node-completed-after-python-dialog");
+  rerender(<NodeInventoryPanel installRequest={request} />);
+  expect((await screen.findByRole("dialog")).textContent).toContain(
+    "node-completed-after-python-dialog",
+  );
 });
