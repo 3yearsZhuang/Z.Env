@@ -1,7 +1,7 @@
 # 统一操作计划 v2：工具目标与步骤身份
 
 日期：2026-10-20（Asia/Shanghai），工作包 02 的后续切片。
-状态：Node/Python v2 传输入口接入；七工具、配方与运维目标仍按活计划继续。
+状态：Node/Python v2 传输入口接入；Recipe 严格契约已加入但执行保持禁用，七工具与运维目标仍按活计划继续。
 
 ## 动因
 
@@ -12,8 +12,8 @@
 ## 落地
 
 - `operation_plan_v2` 接收 `{schemaVersion:2, subject:{kind:"tool",toolId}, request}`，
-  `request` 仍为原始 snapshotRequestId 与意图。仅 Node/Python 开放；其他工具及 subject
-  返回不支持，版本、未知字段和前端拼接 program/argv/steps 在签发前拒绝。
+  Tool 的 `request` 仍为原始 snapshotRequestId 与意图。仅 Node/Python 工具开放；其他工具与未知 subject
+  返回不支持，版本、未知字段和前端拼接 program/argv/steps 在签发前拒绝。Recipe 的专有请求纯校验后返回 `Disabled`。
 - 返回 `{schemaVersion:2, subject, plan, stepGraph}`；`plan` 保留原 v1 字段与能力，
   Node 的旧省略字段与 Python 的显式字段兼容。图中每项含 stepId、stepIndex 和 dependsOn。
   既有步骤按顺序链接，stepId 为本次 planId 加步骤序号；同一签发计划的转换稳定。
@@ -29,6 +29,10 @@
   原 v1、Python 及 Python mise 样本继续保留为兼容回归。
 
 ## 验证边界
+
+2026-11-07 的 [配方契约切片](./recipe-contract-foundation-2026-11-07.md) 保留上述 Tool wire 和 Rust API，
+在实际 IPC 边界新增按 subject 分派的 envelope。Recipe 使用专有请求/计划/记录模型，纯校验后返回 `Disabled`，
+不签发计划；原 Tool helper 与执行入口继续复用。共享样本同时检查严格新格式和旧样本兼容。
 
 - 前端：`src/api/operationPlanV2.test.ts` 41 项通过，覆盖版本/工具/步骤图、错快照、
   未知字段与跨工具回复拒绝；v1 计划样本继续作为兼容回归。

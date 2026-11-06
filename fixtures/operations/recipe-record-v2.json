@@ -1,0 +1,1444 @@
+{
+  "records": {
+    "partial": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "id": "recipe-fixture-partial",
+      "status": "partial",
+      "createdAt": 100,
+      "updatedAt": 120,
+      "items": [
+        {
+          "toolId": "node",
+          "status": "completed",
+          "outcome": "configured"
+        },
+        {
+          "toolId": "python",
+          "status": "failed",
+          "outcome": "stepFailed",
+          "compensation": "completed"
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "itemIndex": null,
+          "phase": "preflight",
+          "status": "completed"
+        },
+        {
+          "index": 1,
+          "itemIndex": 0,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 2,
+          "itemIndex": 0,
+          "phase": "installPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 3,
+          "itemIndex": 0,
+          "phase": "installCommand",
+          "status": "completed"
+        },
+        {
+          "index": 4,
+          "itemIndex": 0,
+          "phase": "installRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 5,
+          "itemIndex": 0,
+          "phase": "installVerify",
+          "status": "completed"
+        },
+        {
+          "index": 6,
+          "itemIndex": 0,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 7,
+          "itemIndex": 0,
+          "phase": "bindCommand",
+          "status": "completed"
+        },
+        {
+          "index": 8,
+          "itemIndex": 0,
+          "phase": "bindRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 9,
+          "itemIndex": 0,
+          "phase": "bindVerify",
+          "status": "completed"
+        },
+        {
+          "index": 10,
+          "itemIndex": 0,
+          "phase": "compensate",
+          "status": "skipped"
+        },
+        {
+          "index": 11,
+          "itemIndex": 0,
+          "phase": "reconcile",
+          "status": "completed"
+        },
+        {
+          "index": 12,
+          "itemIndex": 1,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 13,
+          "itemIndex": 1,
+          "phase": "installPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 14,
+          "itemIndex": 1,
+          "phase": "installCommand",
+          "status": "completed"
+        },
+        {
+          "index": 15,
+          "itemIndex": 1,
+          "phase": "installRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 16,
+          "itemIndex": 1,
+          "phase": "installVerify",
+          "status": "completed"
+        },
+        {
+          "index": 17,
+          "itemIndex": 1,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 18,
+          "itemIndex": 1,
+          "phase": "bindCommand",
+          "status": "completed"
+        },
+        {
+          "index": 19,
+          "itemIndex": 1,
+          "phase": "bindRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 20,
+          "itemIndex": 1,
+          "phase": "bindVerify",
+          "status": "failed"
+        },
+        {
+          "index": 21,
+          "itemIndex": 1,
+          "phase": "compensate",
+          "status": "completed"
+        },
+        {
+          "index": 22,
+          "itemIndex": 1,
+          "phase": "reconcile",
+          "status": "completed"
+        },
+        {
+          "index": 23,
+          "itemIndex": null,
+          "phase": "finalize",
+          "status": "completed"
+        }
+      ],
+      "outcome": "stepFailed"
+    },
+    "interrupted": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "id": "recipe-fixture-interrupted",
+      "status": "interrupted",
+      "createdAt": 100,
+      "updatedAt": 130,
+      "items": [
+        {
+          "toolId": "node",
+          "status": "completed",
+          "outcome": "configured"
+        },
+        {
+          "toolId": "python",
+          "status": "interrupted",
+          "outcome": "interrupted"
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "itemIndex": null,
+          "phase": "preflight",
+          "status": "completed"
+        },
+        {
+          "index": 1,
+          "itemIndex": 0,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 2,
+          "itemIndex": 0,
+          "phase": "installPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 3,
+          "itemIndex": 0,
+          "phase": "installCommand",
+          "status": "completed"
+        },
+        {
+          "index": 4,
+          "itemIndex": 0,
+          "phase": "installRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 5,
+          "itemIndex": 0,
+          "phase": "installVerify",
+          "status": "completed"
+        },
+        {
+          "index": 6,
+          "itemIndex": 0,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 7,
+          "itemIndex": 0,
+          "phase": "bindCommand",
+          "status": "completed"
+        },
+        {
+          "index": 8,
+          "itemIndex": 0,
+          "phase": "bindRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 9,
+          "itemIndex": 0,
+          "phase": "bindVerify",
+          "status": "completed"
+        },
+        {
+          "index": 10,
+          "itemIndex": 0,
+          "phase": "compensate",
+          "status": "skipped"
+        },
+        {
+          "index": 11,
+          "itemIndex": 0,
+          "phase": "reconcile",
+          "status": "completed"
+        },
+        {
+          "index": 12,
+          "itemIndex": 1,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 13,
+          "itemIndex": 1,
+          "phase": "installPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 14,
+          "itemIndex": 1,
+          "phase": "installCommand",
+          "status": "completed"
+        },
+        {
+          "index": 15,
+          "itemIndex": 1,
+          "phase": "installRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 16,
+          "itemIndex": 1,
+          "phase": "installVerify",
+          "status": "completed"
+        },
+        {
+          "index": 17,
+          "itemIndex": 1,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 18,
+          "itemIndex": 1,
+          "phase": "bindCommand",
+          "status": "interrupted"
+        },
+        {
+          "index": 19,
+          "itemIndex": 1,
+          "phase": "bindRefresh",
+          "status": "skipped"
+        },
+        {
+          "index": 20,
+          "itemIndex": 1,
+          "phase": "bindVerify",
+          "status": "skipped"
+        },
+        {
+          "index": 21,
+          "itemIndex": 1,
+          "phase": "compensate",
+          "status": "skipped"
+        },
+        {
+          "index": 22,
+          "itemIndex": 1,
+          "phase": "reconcile",
+          "status": "skipped"
+        },
+        {
+          "index": 23,
+          "itemIndex": null,
+          "phase": "finalize",
+          "status": "skipped"
+        }
+      ],
+      "outcome": "interrupted"
+    },
+    "singleSatisfied": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "id": "recipe-fixture-satisfied",
+      "status": "completed",
+      "createdAt": 100,
+      "updatedAt": 120,
+      "items": [
+        {
+          "toolId": "node",
+          "status": "completed",
+          "outcome": "satisfied"
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "itemIndex": null,
+          "phase": "preflight",
+          "status": "completed"
+        },
+        {
+          "index": 1,
+          "itemIndex": 0,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 2,
+          "itemIndex": 0,
+          "phase": "installPreflight",
+          "status": "skipped"
+        },
+        {
+          "index": 3,
+          "itemIndex": 0,
+          "phase": "installCommand",
+          "status": "skipped"
+        },
+        {
+          "index": 4,
+          "itemIndex": 0,
+          "phase": "installRefresh",
+          "status": "skipped"
+        },
+        {
+          "index": 5,
+          "itemIndex": 0,
+          "phase": "installVerify",
+          "status": "skipped"
+        },
+        {
+          "index": 6,
+          "itemIndex": 0,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 7,
+          "itemIndex": 0,
+          "phase": "bindCommand",
+          "status": "skipped"
+        },
+        {
+          "index": 8,
+          "itemIndex": 0,
+          "phase": "bindRefresh",
+          "status": "skipped"
+        },
+        {
+          "index": 9,
+          "itemIndex": 0,
+          "phase": "bindVerify",
+          "status": "completed"
+        },
+        {
+          "index": 10,
+          "itemIndex": 0,
+          "phase": "compensate",
+          "status": "skipped"
+        },
+        {
+          "index": 11,
+          "itemIndex": 0,
+          "phase": "reconcile",
+          "status": "completed"
+        },
+        {
+          "index": 12,
+          "itemIndex": null,
+          "phase": "finalize",
+          "status": "completed"
+        }
+      ],
+      "outcome": "recipeCompleted"
+    },
+    "completedConfigured": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "id": "recipe-fixture-configured",
+      "status": "completed",
+      "createdAt": 100,
+      "updatedAt": 120,
+      "items": [
+        {
+          "toolId": "python",
+          "status": "completed",
+          "outcome": "configured"
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "itemIndex": null,
+          "phase": "preflight",
+          "status": "completed"
+        },
+        {
+          "index": 1,
+          "itemIndex": 0,
+          "phase": "select",
+          "status": "completed"
+        },
+        {
+          "index": 2,
+          "itemIndex": 0,
+          "phase": "installPreflight",
+          "status": "skipped"
+        },
+        {
+          "index": 3,
+          "itemIndex": 0,
+          "phase": "installCommand",
+          "status": "skipped"
+        },
+        {
+          "index": 4,
+          "itemIndex": 0,
+          "phase": "installRefresh",
+          "status": "skipped"
+        },
+        {
+          "index": 5,
+          "itemIndex": 0,
+          "phase": "installVerify",
+          "status": "skipped"
+        },
+        {
+          "index": 6,
+          "itemIndex": 0,
+          "phase": "bindPreflight",
+          "status": "completed"
+        },
+        {
+          "index": 7,
+          "itemIndex": 0,
+          "phase": "bindCommand",
+          "status": "completed"
+        },
+        {
+          "index": 8,
+          "itemIndex": 0,
+          "phase": "bindRefresh",
+          "status": "completed"
+        },
+        {
+          "index": 9,
+          "itemIndex": 0,
+          "phase": "bindVerify",
+          "status": "completed"
+        },
+        {
+          "index": 10,
+          "itemIndex": 0,
+          "phase": "compensate",
+          "status": "skipped"
+        },
+        {
+          "index": 11,
+          "itemIndex": 0,
+          "phase": "reconcile",
+          "status": "completed"
+        },
+        {
+          "index": 12,
+          "itemIndex": null,
+          "phase": "finalize",
+          "status": "completed"
+        }
+      ],
+      "outcome": "recipeCompleted"
+    }
+  },
+  "invalidRecords": [
+    {
+      "name": "missing-version",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/schemaVersion"
+        }
+      ]
+    },
+    {
+      "name": "legacy-version-on-recipe",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "future-version",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "string-version",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "name": "missing-subject",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/subject"
+        }
+      ]
+    },
+    {
+      "name": "tool-subject",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/toolId",
+          "value": "node"
+        },
+        {
+          "op": "set",
+          "pointer": "/subject/kind",
+          "value": "tool"
+        }
+      ]
+    },
+    {
+      "name": "recipe-subject-with-tool",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/toolId",
+          "value": "node"
+        }
+      ]
+    },
+    {
+      "name": "legacy-tool-default",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/toolId",
+          "value": "node"
+        }
+      ]
+    },
+    {
+      "name": "legacy-action",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/action",
+          "value": "install"
+        }
+      ]
+    },
+    {
+      "name": "forbidden-path",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/path",
+          "value": "must-not-persist"
+        }
+      ]
+    },
+    {
+      "name": "forbidden-version",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/version",
+          "value": "must-not-persist"
+        }
+      ]
+    },
+    {
+      "name": "forbidden-output",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/output",
+          "value": "must-not-persist"
+        }
+      ]
+    },
+    {
+      "name": "empty-items",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "third-item",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items",
+          "value": [
+            {
+              "toolId": "node",
+              "status": "completed",
+              "outcome": "configured"
+            },
+            {
+              "toolId": "python",
+              "status": "failed",
+              "outcome": "stepFailed",
+              "compensation": "completed"
+            },
+            {
+              "toolId": "node",
+              "status": "planned",
+              "outcome": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-tools",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items/1/toolId",
+          "value": "node"
+        }
+      ]
+    },
+    {
+      "name": "unknown-tool",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items/0/toolId",
+          "value": "rust"
+        }
+      ]
+    },
+    {
+      "name": "missing-tool",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/items/0/toolId"
+        }
+      ]
+    },
+    {
+      "name": "item-command",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items/0/argv",
+          "value": [
+            "install"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-item-outcome",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/items/0/outcome"
+        }
+      ]
+    },
+    {
+      "name": "extra-step",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps",
+          "value": [
+            {
+              "index": 0,
+              "itemIndex": null,
+              "phase": "preflight",
+              "status": "completed"
+            },
+            {
+              "index": 1,
+              "itemIndex": 0,
+              "phase": "select",
+              "status": "completed"
+            },
+            {
+              "index": 2,
+              "itemIndex": 0,
+              "phase": "installPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 3,
+              "itemIndex": 0,
+              "phase": "installCommand",
+              "status": "completed"
+            },
+            {
+              "index": 4,
+              "itemIndex": 0,
+              "phase": "installRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 5,
+              "itemIndex": 0,
+              "phase": "installVerify",
+              "status": "completed"
+            },
+            {
+              "index": 6,
+              "itemIndex": 0,
+              "phase": "bindPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 7,
+              "itemIndex": 0,
+              "phase": "bindCommand",
+              "status": "completed"
+            },
+            {
+              "index": 8,
+              "itemIndex": 0,
+              "phase": "bindRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 9,
+              "itemIndex": 0,
+              "phase": "bindVerify",
+              "status": "completed"
+            },
+            {
+              "index": 10,
+              "itemIndex": 0,
+              "phase": "compensate",
+              "status": "skipped"
+            },
+            {
+              "index": 11,
+              "itemIndex": 0,
+              "phase": "reconcile",
+              "status": "completed"
+            },
+            {
+              "index": 12,
+              "itemIndex": 1,
+              "phase": "select",
+              "status": "completed"
+            },
+            {
+              "index": 13,
+              "itemIndex": 1,
+              "phase": "installPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 14,
+              "itemIndex": 1,
+              "phase": "installCommand",
+              "status": "completed"
+            },
+            {
+              "index": 15,
+              "itemIndex": 1,
+              "phase": "installRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 16,
+              "itemIndex": 1,
+              "phase": "installVerify",
+              "status": "completed"
+            },
+            {
+              "index": 17,
+              "itemIndex": 1,
+              "phase": "bindPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 18,
+              "itemIndex": 1,
+              "phase": "bindCommand",
+              "status": "completed"
+            },
+            {
+              "index": 19,
+              "itemIndex": 1,
+              "phase": "bindRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 20,
+              "itemIndex": 1,
+              "phase": "bindVerify",
+              "status": "failed"
+            },
+            {
+              "index": 21,
+              "itemIndex": 1,
+              "phase": "compensate",
+              "status": "completed"
+            },
+            {
+              "index": 22,
+              "itemIndex": 1,
+              "phase": "reconcile",
+              "status": "completed"
+            },
+            {
+              "index": 23,
+              "itemIndex": null,
+              "phase": "finalize",
+              "status": "completed"
+            },
+            {
+              "index": 23,
+              "itemIndex": null,
+              "phase": "finalize",
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-step",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps",
+          "value": [
+            {
+              "index": 0,
+              "itemIndex": null,
+              "phase": "preflight",
+              "status": "completed"
+            },
+            {
+              "index": 1,
+              "itemIndex": 0,
+              "phase": "select",
+              "status": "completed"
+            },
+            {
+              "index": 2,
+              "itemIndex": 0,
+              "phase": "installPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 3,
+              "itemIndex": 0,
+              "phase": "installCommand",
+              "status": "completed"
+            },
+            {
+              "index": 4,
+              "itemIndex": 0,
+              "phase": "installRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 5,
+              "itemIndex": 0,
+              "phase": "installVerify",
+              "status": "completed"
+            },
+            {
+              "index": 6,
+              "itemIndex": 0,
+              "phase": "bindPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 7,
+              "itemIndex": 0,
+              "phase": "bindCommand",
+              "status": "completed"
+            },
+            {
+              "index": 8,
+              "itemIndex": 0,
+              "phase": "bindRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 9,
+              "itemIndex": 0,
+              "phase": "bindVerify",
+              "status": "completed"
+            },
+            {
+              "index": 10,
+              "itemIndex": 0,
+              "phase": "compensate",
+              "status": "skipped"
+            },
+            {
+              "index": 11,
+              "itemIndex": 0,
+              "phase": "reconcile",
+              "status": "completed"
+            },
+            {
+              "index": 12,
+              "itemIndex": 1,
+              "phase": "select",
+              "status": "completed"
+            },
+            {
+              "index": 13,
+              "itemIndex": 1,
+              "phase": "installPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 14,
+              "itemIndex": 1,
+              "phase": "installCommand",
+              "status": "completed"
+            },
+            {
+              "index": 15,
+              "itemIndex": 1,
+              "phase": "installRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 16,
+              "itemIndex": 1,
+              "phase": "installVerify",
+              "status": "completed"
+            },
+            {
+              "index": 17,
+              "itemIndex": 1,
+              "phase": "bindPreflight",
+              "status": "completed"
+            },
+            {
+              "index": 18,
+              "itemIndex": 1,
+              "phase": "bindCommand",
+              "status": "completed"
+            },
+            {
+              "index": 19,
+              "itemIndex": 1,
+              "phase": "bindRefresh",
+              "status": "completed"
+            },
+            {
+              "index": 20,
+              "itemIndex": 1,
+              "phase": "bindVerify",
+              "status": "failed"
+            },
+            {
+              "index": 21,
+              "itemIndex": 1,
+              "phase": "compensate",
+              "status": "completed"
+            },
+            {
+              "index": 22,
+              "itemIndex": 1,
+              "phase": "reconcile",
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-index",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/index",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "wrong-index",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/index",
+          "value": 24
+        }
+      ]
+    },
+    {
+      "name": "missing-item-index",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/steps/1/itemIndex"
+        }
+      ]
+    },
+    {
+      "name": "parent-owned-by-item",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/0/itemIndex",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "item-owned-by-parent",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/itemIndex",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "out-of-range-item",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/itemIndex",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "unknown-phase",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/phase",
+          "value": "shell"
+        }
+      ]
+    },
+    {
+      "name": "wrong-template-phase",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/phase",
+          "value": "installCommand"
+        }
+      ]
+    },
+    {
+      "name": "step-command",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/1/kind",
+          "value": "command"
+        }
+      ]
+    },
+    {
+      "name": "terminal-running-step",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/18/status",
+          "value": "running"
+        }
+      ]
+    },
+    {
+      "name": "terminal-running-item",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items/1/outcome",
+          "value": null
+        },
+        {
+          "op": "set",
+          "pointer": "/items/1/status",
+          "value": "running"
+        }
+      ]
+    },
+    {
+      "name": "completed-parent-with-failed-item",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/outcome",
+          "value": "recipeCompleted"
+        },
+        {
+          "op": "set",
+          "pointer": "/status",
+          "value": "completed"
+        }
+      ]
+    },
+    {
+      "name": "running-parent-with-outcome",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/status",
+          "value": "running"
+        }
+      ]
+    },
+    {
+      "name": "partial-parent-cancelled-outcome",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/outcome",
+          "value": "cancelled"
+        }
+      ]
+    },
+    {
+      "name": "completed-item-without-reconcile",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/11/status",
+          "value": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "compensation-result-mismatch",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/items/1/compensation",
+          "value": "conflict"
+        }
+      ]
+    },
+    {
+      "name": "timestamp-regression",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/updatedAt",
+          "value": 99
+        }
+      ]
+    },
+    {
+      "name": "missing-parent-outcome",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/outcome"
+        }
+      ]
+    },
+    {
+      "name": "unsafe-created-at",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/createdAt",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "unsafe-updated-at",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/updatedAt",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "cancelled-parent-failure-outcome",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/status",
+          "value": "cancelled"
+        }
+      ]
+    },
+    {
+      "name": "configured-bind-preflight-skipped",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/6/status",
+          "value": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "configured-bind-command-skipped",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/7/status",
+          "value": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "configured-bind-refresh-skipped",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/8/status",
+          "value": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "configured-bind-verify-skipped",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/9/status",
+          "value": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "successful-item-was-compensated",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/10/status",
+          "value": "completed"
+        }
+      ]
+    },
+    {
+      "name": "completed-compensation-without-summary",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/items/1/compensation"
+        }
+      ]
+    },
+    {
+      "name": "failed-compensation-without-summary",
+      "base": "partial",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/items/1/compensation"
+        },
+        {
+          "op": "set",
+          "pointer": "/steps/21/status",
+          "value": "failed"
+        }
+      ]
+    },
+    {
+      "name": "satisfied-with-binding-write",
+      "base": "singleSatisfied",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/7/status",
+          "value": "completed"
+        }
+      ]
+    },
+    {
+      "name": "satisfied-without-binding-verification",
+      "base": "singleSatisfied",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/steps/9/status",
+          "value": "skipped"
+        }
+      ]
+    }
+  ],
+  "legacyRecords": {
+    "clockRollback": {
+      "schemaVersion": 1,
+      "id": "legacy-clock-rollback",
+      "action": "verify",
+      "status": "completed",
+      "createdAt": 200,
+      "updatedAt": 100,
+      "steps": [],
+      "outcome": "verified"
+    },
+    "missingOutcome": {
+      "schemaVersion": 1,
+      "id": "legacy-missing-outcome",
+      "action": "verify",
+      "status": "completed",
+      "createdAt": 100,
+      "updatedAt": 100,
+      "steps": []
+    }
+  }
+}

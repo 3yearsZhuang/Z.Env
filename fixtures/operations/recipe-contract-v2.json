@@ -1,0 +1,3203 @@
+{
+  "requests": {
+    "nodeInstall": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "request": {
+        "projectPath": "/fixture/project",
+        "binding": {
+          "scope": "project",
+          "strategy": "direct"
+        },
+        "items": [
+          {
+            "toolId": "node",
+            "version": "22.1.0",
+            "snapshotRequestId": "recipe-node-snapshot",
+            "selection": {
+              "kind": "install"
+            }
+          }
+        ]
+      }
+    },
+    "pythonReuse": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "request": {
+        "projectPath": "/fixture/project",
+        "binding": {
+          "scope": "project",
+          "strategy": "direct"
+        },
+        "items": [
+          {
+            "toolId": "python",
+            "version": "3.13.15",
+            "snapshotRequestId": "recipe-python-snapshot",
+            "selection": {
+              "kind": "reuse",
+              "installationId": "recipe-python-instance"
+            }
+          }
+        ]
+      }
+    },
+    "mixed": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "request": {
+        "projectPath": "/fixture/project",
+        "binding": {
+          "scope": "project",
+          "strategy": "direct"
+        },
+        "items": [
+          {
+            "toolId": "node",
+            "version": "22.1.0",
+            "snapshotRequestId": "recipe-node-snapshot",
+            "selection": {
+              "kind": "install"
+            }
+          },
+          {
+            "toolId": "python",
+            "version": "3.13.15",
+            "snapshotRequestId": "recipe-python-snapshot",
+            "selection": {
+              "kind": "reuse",
+              "installationId": "recipe-python-instance"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "plans": {
+    "mixed": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "plan": {
+        "planId": "recipe-contract-plan",
+        "createdAt": 1792339200000,
+        "expiresAt": 1792339320000,
+        "projectDirectory": "/fixture/project",
+        "configuration": {
+          "path": "/fixture/project/mise.toml",
+          "canonicalPath": null,
+          "exists": false,
+          "sha256": null
+        },
+        "configurationDiff": [
+          {
+            "path": "/fixture/project/mise.toml",
+            "field": "tools.node",
+            "before": null,
+            "after": "22.1.0"
+          },
+          {
+            "path": "/fixture/project/mise.toml",
+            "field": "tools.python",
+            "before": null,
+            "after": "3.13.15"
+          }
+        ],
+        "capability": {
+          "canPreview": true,
+          "canExecute": false,
+          "reason": "Recipe execution is disabled; this is a synthetic contract sample."
+        },
+        "items": [
+          {
+            "toolId": "node",
+            "version": "22.1.0",
+            "snapshotRequestId": "recipe-node-snapshot",
+            "snapshotGeneration": "1",
+            "providerPackage": {
+              "providerId": "mise",
+              "packageId": "node",
+              "kind": "runtime",
+              "platform": "macos"
+            },
+            "target": {
+              "kind": "install"
+            },
+            "allowedConfigurationField": "tools.node",
+            "declarations": {
+              "state": "unconstrained",
+              "files": [
+                {
+                  "path": "/fixture/project/.node-version",
+                  "canonicalPath": null,
+                  "exists": false,
+                  "sha256": null
+                }
+              ]
+            }
+          },
+          {
+            "toolId": "python",
+            "version": "3.13.15",
+            "snapshotRequestId": "recipe-python-snapshot",
+            "snapshotGeneration": "1",
+            "providerPackage": {
+              "providerId": "mise",
+              "packageId": "python",
+              "kind": "runtime",
+              "platform": "macos"
+            },
+            "target": {
+              "kind": "reuse",
+              "installationId": "recipe-python-instance",
+              "locator": "/fixture/mise/installs/python/3.13.15"
+            },
+            "allowedConfigurationField": "tools.python",
+            "declarations": {
+              "state": "unconstrained",
+              "files": [
+                {
+                  "path": "/fixture/project/.python-version",
+                  "canonicalPath": null,
+                  "exists": false,
+                  "sha256": null
+                }
+              ]
+            }
+          }
+        ],
+        "steps": [
+          {
+            "index": 0,
+            "itemIndex": null,
+            "phase": "preflight"
+          },
+          {
+            "index": 1,
+            "itemIndex": 0,
+            "phase": "select"
+          },
+          {
+            "index": 2,
+            "itemIndex": 0,
+            "phase": "installPreflight"
+          },
+          {
+            "index": 3,
+            "itemIndex": 0,
+            "phase": "installCommand"
+          },
+          {
+            "index": 4,
+            "itemIndex": 0,
+            "phase": "installRefresh"
+          },
+          {
+            "index": 5,
+            "itemIndex": 0,
+            "phase": "installVerify"
+          },
+          {
+            "index": 6,
+            "itemIndex": 0,
+            "phase": "bindPreflight"
+          },
+          {
+            "index": 7,
+            "itemIndex": 0,
+            "phase": "bindCommand"
+          },
+          {
+            "index": 8,
+            "itemIndex": 0,
+            "phase": "bindRefresh"
+          },
+          {
+            "index": 9,
+            "itemIndex": 0,
+            "phase": "bindVerify"
+          },
+          {
+            "index": 10,
+            "itemIndex": 0,
+            "phase": "compensate"
+          },
+          {
+            "index": 11,
+            "itemIndex": 0,
+            "phase": "reconcile"
+          },
+          {
+            "index": 12,
+            "itemIndex": 1,
+            "phase": "select"
+          },
+          {
+            "index": 13,
+            "itemIndex": 1,
+            "phase": "installPreflight"
+          },
+          {
+            "index": 14,
+            "itemIndex": 1,
+            "phase": "installCommand"
+          },
+          {
+            "index": 15,
+            "itemIndex": 1,
+            "phase": "installRefresh"
+          },
+          {
+            "index": 16,
+            "itemIndex": 1,
+            "phase": "installVerify"
+          },
+          {
+            "index": 17,
+            "itemIndex": 1,
+            "phase": "bindPreflight"
+          },
+          {
+            "index": 18,
+            "itemIndex": 1,
+            "phase": "bindCommand"
+          },
+          {
+            "index": 19,
+            "itemIndex": 1,
+            "phase": "bindRefresh"
+          },
+          {
+            "index": 20,
+            "itemIndex": 1,
+            "phase": "bindVerify"
+          },
+          {
+            "index": 21,
+            "itemIndex": 1,
+            "phase": "compensate"
+          },
+          {
+            "index": 22,
+            "itemIndex": 1,
+            "phase": "reconcile"
+          },
+          {
+            "index": 23,
+            "itemIndex": null,
+            "phase": "finalize"
+          }
+        ]
+      },
+      "stepGraph": [
+        {
+          "stepId": "recipe-contract-plan-step-0",
+          "stepIndex": 0,
+          "dependsOn": []
+        },
+        {
+          "stepId": "recipe-contract-plan-step-1",
+          "stepIndex": 1,
+          "dependsOn": [
+            "recipe-contract-plan-step-0"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-2",
+          "stepIndex": 2,
+          "dependsOn": [
+            "recipe-contract-plan-step-1"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-3",
+          "stepIndex": 3,
+          "dependsOn": [
+            "recipe-contract-plan-step-2"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-4",
+          "stepIndex": 4,
+          "dependsOn": [
+            "recipe-contract-plan-step-3"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-5",
+          "stepIndex": 5,
+          "dependsOn": [
+            "recipe-contract-plan-step-4"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-6",
+          "stepIndex": 6,
+          "dependsOn": [
+            "recipe-contract-plan-step-5"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-7",
+          "stepIndex": 7,
+          "dependsOn": [
+            "recipe-contract-plan-step-6"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-8",
+          "stepIndex": 8,
+          "dependsOn": [
+            "recipe-contract-plan-step-7"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-9",
+          "stepIndex": 9,
+          "dependsOn": [
+            "recipe-contract-plan-step-8"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-10",
+          "stepIndex": 10,
+          "dependsOn": [
+            "recipe-contract-plan-step-9"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-11",
+          "stepIndex": 11,
+          "dependsOn": [
+            "recipe-contract-plan-step-10"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-12",
+          "stepIndex": 12,
+          "dependsOn": [
+            "recipe-contract-plan-step-11"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-13",
+          "stepIndex": 13,
+          "dependsOn": [
+            "recipe-contract-plan-step-12"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-14",
+          "stepIndex": 14,
+          "dependsOn": [
+            "recipe-contract-plan-step-13"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-15",
+          "stepIndex": 15,
+          "dependsOn": [
+            "recipe-contract-plan-step-14"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-16",
+          "stepIndex": 16,
+          "dependsOn": [
+            "recipe-contract-plan-step-15"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-17",
+          "stepIndex": 17,
+          "dependsOn": [
+            "recipe-contract-plan-step-16"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-18",
+          "stepIndex": 18,
+          "dependsOn": [
+            "recipe-contract-plan-step-17"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-19",
+          "stepIndex": 19,
+          "dependsOn": [
+            "recipe-contract-plan-step-18"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-20",
+          "stepIndex": 20,
+          "dependsOn": [
+            "recipe-contract-plan-step-19"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-21",
+          "stepIndex": 21,
+          "dependsOn": [
+            "recipe-contract-plan-step-20"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-22",
+          "stepIndex": 22,
+          "dependsOn": [
+            "recipe-contract-plan-step-21"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-23",
+          "stepIndex": 23,
+          "dependsOn": [
+            "recipe-contract-plan-step-22"
+          ]
+        }
+      ]
+    },
+    "visibleReasonBom": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "plan": {
+        "planId": "recipe-contract-plan",
+        "createdAt": 1792339200000,
+        "expiresAt": 1792339320000,
+        "projectDirectory": "/fixture/project",
+        "configuration": {
+          "path": "/fixture/project/mise.toml",
+          "canonicalPath": null,
+          "exists": false,
+          "sha256": null
+        },
+        "configurationDiff": [
+          {
+            "path": "/fixture/project/mise.toml",
+            "field": "tools.node",
+            "before": null,
+            "after": "22.1.0"
+          },
+          {
+            "path": "/fixture/project/mise.toml",
+            "field": "tools.python",
+            "before": null,
+            "after": "3.13.15"
+          }
+        ],
+        "capability": {
+          "canPreview": true,
+          "canExecute": false,
+          "reason": "Recipe execution disabled.﻿"
+        },
+        "items": [
+          {
+            "toolId": "node",
+            "version": "22.1.0",
+            "snapshotRequestId": "recipe-node-snapshot",
+            "snapshotGeneration": "1",
+            "providerPackage": {
+              "providerId": "mise",
+              "packageId": "node",
+              "kind": "runtime",
+              "platform": "macos"
+            },
+            "target": {
+              "kind": "install"
+            },
+            "allowedConfigurationField": "tools.node",
+            "declarations": {
+              "state": "unconstrained",
+              "files": [
+                {
+                  "path": "/fixture/project/.node-version",
+                  "canonicalPath": null,
+                  "exists": false,
+                  "sha256": null
+                }
+              ]
+            }
+          },
+          {
+            "toolId": "python",
+            "version": "3.13.15",
+            "snapshotRequestId": "recipe-python-snapshot",
+            "snapshotGeneration": "1",
+            "providerPackage": {
+              "providerId": "mise",
+              "packageId": "python",
+              "kind": "runtime",
+              "platform": "macos"
+            },
+            "target": {
+              "kind": "reuse",
+              "installationId": "recipe-python-instance",
+              "locator": "/fixture/mise/installs/python/3.13.15"
+            },
+            "allowedConfigurationField": "tools.python",
+            "declarations": {
+              "state": "unconstrained",
+              "files": [
+                {
+                  "path": "/fixture/project/.python-version",
+                  "canonicalPath": null,
+                  "exists": false,
+                  "sha256": null
+                }
+              ]
+            }
+          }
+        ],
+        "steps": [
+          {
+            "index": 0,
+            "itemIndex": null,
+            "phase": "preflight"
+          },
+          {
+            "index": 1,
+            "itemIndex": 0,
+            "phase": "select"
+          },
+          {
+            "index": 2,
+            "itemIndex": 0,
+            "phase": "installPreflight"
+          },
+          {
+            "index": 3,
+            "itemIndex": 0,
+            "phase": "installCommand"
+          },
+          {
+            "index": 4,
+            "itemIndex": 0,
+            "phase": "installRefresh"
+          },
+          {
+            "index": 5,
+            "itemIndex": 0,
+            "phase": "installVerify"
+          },
+          {
+            "index": 6,
+            "itemIndex": 0,
+            "phase": "bindPreflight"
+          },
+          {
+            "index": 7,
+            "itemIndex": 0,
+            "phase": "bindCommand"
+          },
+          {
+            "index": 8,
+            "itemIndex": 0,
+            "phase": "bindRefresh"
+          },
+          {
+            "index": 9,
+            "itemIndex": 0,
+            "phase": "bindVerify"
+          },
+          {
+            "index": 10,
+            "itemIndex": 0,
+            "phase": "compensate"
+          },
+          {
+            "index": 11,
+            "itemIndex": 0,
+            "phase": "reconcile"
+          },
+          {
+            "index": 12,
+            "itemIndex": 1,
+            "phase": "select"
+          },
+          {
+            "index": 13,
+            "itemIndex": 1,
+            "phase": "installPreflight"
+          },
+          {
+            "index": 14,
+            "itemIndex": 1,
+            "phase": "installCommand"
+          },
+          {
+            "index": 15,
+            "itemIndex": 1,
+            "phase": "installRefresh"
+          },
+          {
+            "index": 16,
+            "itemIndex": 1,
+            "phase": "installVerify"
+          },
+          {
+            "index": 17,
+            "itemIndex": 1,
+            "phase": "bindPreflight"
+          },
+          {
+            "index": 18,
+            "itemIndex": 1,
+            "phase": "bindCommand"
+          },
+          {
+            "index": 19,
+            "itemIndex": 1,
+            "phase": "bindRefresh"
+          },
+          {
+            "index": 20,
+            "itemIndex": 1,
+            "phase": "bindVerify"
+          },
+          {
+            "index": 21,
+            "itemIndex": 1,
+            "phase": "compensate"
+          },
+          {
+            "index": 22,
+            "itemIndex": 1,
+            "phase": "reconcile"
+          },
+          {
+            "index": 23,
+            "itemIndex": null,
+            "phase": "finalize"
+          }
+        ]
+      },
+      "stepGraph": [
+        {
+          "stepId": "recipe-contract-plan-step-0",
+          "stepIndex": 0,
+          "dependsOn": []
+        },
+        {
+          "stepId": "recipe-contract-plan-step-1",
+          "stepIndex": 1,
+          "dependsOn": [
+            "recipe-contract-plan-step-0"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-2",
+          "stepIndex": 2,
+          "dependsOn": [
+            "recipe-contract-plan-step-1"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-3",
+          "stepIndex": 3,
+          "dependsOn": [
+            "recipe-contract-plan-step-2"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-4",
+          "stepIndex": 4,
+          "dependsOn": [
+            "recipe-contract-plan-step-3"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-5",
+          "stepIndex": 5,
+          "dependsOn": [
+            "recipe-contract-plan-step-4"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-6",
+          "stepIndex": 6,
+          "dependsOn": [
+            "recipe-contract-plan-step-5"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-7",
+          "stepIndex": 7,
+          "dependsOn": [
+            "recipe-contract-plan-step-6"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-8",
+          "stepIndex": 8,
+          "dependsOn": [
+            "recipe-contract-plan-step-7"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-9",
+          "stepIndex": 9,
+          "dependsOn": [
+            "recipe-contract-plan-step-8"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-10",
+          "stepIndex": 10,
+          "dependsOn": [
+            "recipe-contract-plan-step-9"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-11",
+          "stepIndex": 11,
+          "dependsOn": [
+            "recipe-contract-plan-step-10"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-12",
+          "stepIndex": 12,
+          "dependsOn": [
+            "recipe-contract-plan-step-11"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-13",
+          "stepIndex": 13,
+          "dependsOn": [
+            "recipe-contract-plan-step-12"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-14",
+          "stepIndex": 14,
+          "dependsOn": [
+            "recipe-contract-plan-step-13"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-15",
+          "stepIndex": 15,
+          "dependsOn": [
+            "recipe-contract-plan-step-14"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-16",
+          "stepIndex": 16,
+          "dependsOn": [
+            "recipe-contract-plan-step-15"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-17",
+          "stepIndex": 17,
+          "dependsOn": [
+            "recipe-contract-plan-step-16"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-18",
+          "stepIndex": 18,
+          "dependsOn": [
+            "recipe-contract-plan-step-17"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-19",
+          "stepIndex": 19,
+          "dependsOn": [
+            "recipe-contract-plan-step-18"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-20",
+          "stepIndex": 20,
+          "dependsOn": [
+            "recipe-contract-plan-step-19"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-21",
+          "stepIndex": 21,
+          "dependsOn": [
+            "recipe-contract-plan-step-20"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-22",
+          "stepIndex": 22,
+          "dependsOn": [
+            "recipe-contract-plan-step-21"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-plan-step-23",
+          "stepIndex": 23,
+          "dependsOn": [
+            "recipe-contract-plan-step-22"
+          ]
+        }
+      ]
+    },
+    "singleNode": {
+      "schemaVersion": 2,
+      "subject": {
+        "kind": "recipe"
+      },
+      "plan": {
+        "planId": "recipe-contract-single-node-plan",
+        "createdAt": 1792339200000,
+        "expiresAt": 1792339320000,
+        "projectDirectory": "/fixture/project",
+        "configuration": {
+          "path": "/fixture/project/mise.toml",
+          "canonicalPath": null,
+          "exists": false,
+          "sha256": null
+        },
+        "configurationDiff": [
+          {
+            "path": "/fixture/project/mise.toml",
+            "field": "tools.node",
+            "before": null,
+            "after": "22.1.0"
+          }
+        ],
+        "capability": {
+          "canPreview": true,
+          "canExecute": false,
+          "reason": "Recipe execution is disabled; this is a synthetic contract sample."
+        },
+        "items": [
+          {
+            "toolId": "node",
+            "version": "22.1.0",
+            "snapshotRequestId": "recipe-node-snapshot",
+            "snapshotGeneration": "1",
+            "providerPackage": {
+              "providerId": "mise",
+              "packageId": "node",
+              "kind": "runtime",
+              "platform": "macos"
+            },
+            "target": {
+              "kind": "install"
+            },
+            "allowedConfigurationField": "tools.node",
+            "declarations": {
+              "state": "unconstrained",
+              "files": [
+                {
+                  "path": "/fixture/project/.node-version",
+                  "canonicalPath": null,
+                  "exists": false,
+                  "sha256": null
+                }
+              ]
+            }
+          }
+        ],
+        "steps": [
+          {
+            "index": 0,
+            "itemIndex": null,
+            "phase": "preflight"
+          },
+          {
+            "index": 1,
+            "itemIndex": 0,
+            "phase": "select"
+          },
+          {
+            "index": 2,
+            "itemIndex": 0,
+            "phase": "installPreflight"
+          },
+          {
+            "index": 3,
+            "itemIndex": 0,
+            "phase": "installCommand"
+          },
+          {
+            "index": 4,
+            "itemIndex": 0,
+            "phase": "installRefresh"
+          },
+          {
+            "index": 5,
+            "itemIndex": 0,
+            "phase": "installVerify"
+          },
+          {
+            "index": 6,
+            "itemIndex": 0,
+            "phase": "bindPreflight"
+          },
+          {
+            "index": 7,
+            "itemIndex": 0,
+            "phase": "bindCommand"
+          },
+          {
+            "index": 8,
+            "itemIndex": 0,
+            "phase": "bindRefresh"
+          },
+          {
+            "index": 9,
+            "itemIndex": 0,
+            "phase": "bindVerify"
+          },
+          {
+            "index": 10,
+            "itemIndex": 0,
+            "phase": "compensate"
+          },
+          {
+            "index": 11,
+            "itemIndex": 0,
+            "phase": "reconcile"
+          },
+          {
+            "index": 12,
+            "itemIndex": null,
+            "phase": "finalize"
+          }
+        ]
+      },
+      "stepGraph": [
+        {
+          "stepId": "recipe-contract-single-node-plan-step-0",
+          "stepIndex": 0,
+          "dependsOn": []
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-1",
+          "stepIndex": 1,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-0"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-2",
+          "stepIndex": 2,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-1"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-3",
+          "stepIndex": 3,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-2"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-4",
+          "stepIndex": 4,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-3"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-5",
+          "stepIndex": 5,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-4"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-6",
+          "stepIndex": 6,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-5"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-7",
+          "stepIndex": 7,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-6"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-8",
+          "stepIndex": 8,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-7"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-9",
+          "stepIndex": 9,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-8"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-10",
+          "stepIndex": 10,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-9"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-11",
+          "stepIndex": 11,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-10"
+          ]
+        },
+        {
+          "stepId": "recipe-contract-single-node-plan-step-12",
+          "stepIndex": 12,
+          "dependsOn": [
+            "recipe-contract-single-node-plan-step-11"
+          ]
+        }
+      ]
+    }
+  },
+  "invalidRequests": [
+    {
+      "name": "schema-1",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "schema-3",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "schema-2",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "name": "schema-None",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "subject-4",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/kind",
+          "value": "shell"
+        }
+      ]
+    },
+    {
+      "name": "subject-5",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/toolId",
+          "value": "node"
+        }
+      ]
+    },
+    {
+      "name": "subject-6",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/subject/kind"
+        }
+      ]
+    },
+    {
+      "name": "subject-7",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "missing-subject",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/subject"
+        }
+      ]
+    },
+    {
+      "name": "item-count-or-duplicate-9",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "item-count-or-duplicate-10",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items",
+          "value": [
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            },
+            {
+              "toolId": "python",
+              "version": "3.13.15",
+              "snapshotRequestId": "recipe-python-snapshot",
+              "selection": {
+                "kind": "reuse",
+                "installationId": "recipe-python-instance"
+              }
+            },
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "item-count-or-duplicate-11",
+      "base": "nodeInstall",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items",
+          "value": [
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            },
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "item-count-or-duplicate-12",
+      "base": "nodeInstall",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items",
+          "value": [
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            },
+            {
+              "toolId": "node",
+              "version": "24.0.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "selection": {
+                "kind": "install"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "injected-program",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/program",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "injected-argv",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/argv",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "injected-steps",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/steps",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "injected-environment",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/environment",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "injected-locator",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/locator",
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "tool-rust",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/toolId",
+          "value": "rust"
+        }
+      ]
+    },
+    {
+      "name": "tool-Node",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/toolId",
+          "value": "Node"
+        }
+      ]
+    },
+    {
+      "name": "node-version-",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "node-version-latest",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "latest"
+        }
+      ]
+    },
+    {
+      "name": "node-version-22",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "22"
+        }
+      ]
+    },
+    {
+      "name": "node-version-^22.1.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "^22.1.0"
+        }
+      ]
+    },
+    {
+      "name": "node-version-022.1.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "022.1.0"
+        }
+      ]
+    },
+    {
+      "name": "node-version-22.1.0-beta",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "22.1.0-beta"
+        }
+      ]
+    },
+    {
+      "name": "node-version-10000000000.1.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "10000000000.1.0"
+        }
+      ]
+    },
+    {
+      "name": "node-version-22.1.0;touch x",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/version",
+          "value": "22.1.0;touch x"
+        }
+      ]
+    },
+    {
+      "name": "python-version-3.7.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "3.7.0"
+        }
+      ]
+    },
+    {
+      "name": "python-version-3.100.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "3.100.0"
+        }
+      ]
+    },
+    {
+      "name": "python-version-4.0.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "4.0.0"
+        }
+      ]
+    },
+    {
+      "name": "python-version-3.13.10000",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "3.13.10000"
+        }
+      ]
+    },
+    {
+      "name": "python-version-3.013.15",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "3.013.15"
+        }
+      ]
+    },
+    {
+      "name": "python-version-3.13",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": "3.13"
+        }
+      ]
+    },
+    {
+      "name": "python-version->=3.13",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/version",
+          "value": ">=3.13"
+        }
+      ]
+    },
+    {
+      "name": "scope-global",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/binding/scope",
+          "value": "global"
+        }
+      ]
+    },
+    {
+      "name": "scope-registration",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/binding/scope",
+          "value": "registration"
+        }
+      ]
+    },
+    {
+      "name": "strategy-managed",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/binding/strategy",
+          "value": "managed"
+        }
+      ]
+    },
+    {
+      "name": "strategy-projectPath",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/binding/strategy",
+          "value": "projectPath"
+        }
+      ]
+    },
+    {
+      "name": "project-path-39",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "project-path-40",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "fixture/project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-41",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "name": "project-path-42",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "~/project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-43",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "file:///fixture/project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-44",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture/./project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-45",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture/../project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-46",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture//project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-47",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture/project/"
+        }
+      ]
+    },
+    {
+      "name": "project-path-48",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture\\project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-49",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture/\u0000project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-50",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/fixture/project"
+        }
+      ]
+    },
+    {
+      "name": "project-path-51",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "project-path-52",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/projectPath",
+          "value": "/中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中"
+        }
+      ]
+    },
+    {
+      "name": "snapshot-id-53",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/snapshotRequestId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "installation-id-54",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/selection/installationId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "snapshot-id-55",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/snapshotRequestId",
+          "value": "with space"
+        }
+      ]
+    },
+    {
+      "name": "installation-id-56",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/selection/installationId",
+          "value": "with space"
+        }
+      ]
+    },
+    {
+      "name": "snapshot-id-57",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/snapshotRequestId",
+          "value": "身份"
+        }
+      ]
+    },
+    {
+      "name": "installation-id-58",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/selection/installationId",
+          "value": "身份"
+        }
+      ]
+    },
+    {
+      "name": "snapshot-id-59",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/snapshotRequestId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "installation-id-60",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/1/selection/installationId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "selection-61",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/installationId",
+          "value": "extra"
+        }
+      ]
+    },
+    {
+      "name": "selection-62",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/kind",
+          "value": "reuse"
+        }
+      ]
+    },
+    {
+      "name": "selection-63",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/installationId",
+          "value": null
+        },
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/kind",
+          "value": "reuse"
+        }
+      ]
+    },
+    {
+      "name": "selection-64",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection/kind",
+          "value": "select"
+        }
+      ]
+    },
+    {
+      "name": "selection-65",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/selection",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "shape-66",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "shape-67",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "shape-68",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "shape-69",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/binding",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "shape-70",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/configurationPath",
+          "value": "/fixture/global.toml"
+        }
+      ]
+    },
+    {
+      "name": "shape-71",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/request/items/0/providerId",
+          "value": "mise"
+        }
+      ]
+    },
+    {
+      "name": "missing-snapshot-id",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/request/items/0/snapshotRequestId"
+        }
+      ]
+    }
+  ],
+  "invalidPlans": [
+    {
+      "name": "schema-1",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "schema-3",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "schema-2",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "name": "schema-None",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/schemaVersion",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "tool-subject",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/subject/toolId",
+          "value": "node"
+        },
+        {
+          "op": "set",
+          "pointer": "/subject/kind",
+          "value": "tool"
+        }
+      ]
+    },
+    {
+      "name": "executable",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/canExecute",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "not-previewable",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/canPreview",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "empty-disabled-reason",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/reason",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "over-budget-disabled-reason",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/reason",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-9",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/planId",
+          "value": "../recipe"
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-10",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/createdAt",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-11",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/expiresAt",
+          "value": 1792339200000
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-12",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/expiresAt",
+          "value": 1792339320001
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-13",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/projectDirectory",
+          "value": "/fixture/other"
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-14",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configuration/path",
+          "value": "/fixture/global.toml"
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-15",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configuration/canonicalPath",
+          "value": "/fixture/global.toml"
+        }
+      ]
+    },
+    {
+      "name": "plan-boundary-16",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configuration/sha256",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "provider-providerId",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/providerPackage/providerId",
+          "value": "brew"
+        }
+      ]
+    },
+    {
+      "name": "provider-packageId",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/providerPackage/packageId",
+          "value": "python"
+        }
+      ]
+    },
+    {
+      "name": "provider-kind",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/providerPackage/kind",
+          "value": "formula"
+        }
+      ]
+    },
+    {
+      "name": "provider-platform",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/providerPackage/platform",
+          "value": "linux"
+        }
+      ]
+    },
+    {
+      "name": "provider-unknown-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/providerPackage/program",
+          "value": "sh"
+        }
+      ]
+    },
+    {
+      "name": "install-target-invented-id",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/target/installationId",
+          "value": "invented"
+        }
+      ]
+    },
+    {
+      "name": "reuse-target-missing-locator",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/plan/items/1/target/locator"
+        }
+      ]
+    },
+    {
+      "name": "reuse-relative-locator",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/target/locator",
+          "value": "fixture/python"
+        }
+      ]
+    },
+    {
+      "name": "wrong-allowed-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/allowedConfigurationField",
+          "value": "tools.python"
+        }
+      ]
+    },
+    {
+      "name": "generation-",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/snapshotGeneration",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "generation-01",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/snapshotGeneration",
+          "value": "01"
+        }
+      ]
+    },
+    {
+      "name": "generation--1",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/snapshotGeneration",
+          "value": "-1"
+        }
+      ]
+    },
+    {
+      "name": "generation-18446744073709551616",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/snapshotGeneration",
+          "value": "18446744073709551616"
+        }
+      ]
+    },
+    {
+      "name": "generation-1.0",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/snapshotGeneration",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "name": "unknown-declaration-state",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/declarations/state",
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "outside-declaration",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/declarations/files/0/path",
+          "value": "/fixture/else/.node-version"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-declaration-files",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/declarations/files",
+          "value": [
+            {
+              "path": "/fixture/project/.node-version",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/.node-version",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "too-many-declaration-files",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/0/declarations/files",
+          "value": [
+            {
+              "path": "/fixture/project/file-0",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-1",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-2",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-3",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-4",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-5",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-6",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-7",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            },
+            {
+              "path": "/fixture/project/file-8",
+              "canonicalPath": null,
+              "exists": false,
+              "sha256": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uppercase-fingerprint",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configuration/sha256",
+          "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        }
+      ]
+    },
+    {
+      "name": "false-existence-with-hash",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configuration/sha256",
+          "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ]
+    },
+    {
+      "name": "diff-global-path",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/0/path",
+          "value": "/fixture/global.toml"
+        }
+      ]
+    },
+    {
+      "name": "diff-unapproved-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/0/field",
+          "value": "tools.go"
+        }
+      ]
+    },
+    {
+      "name": "diff-wrong-version",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/0/after",
+          "value": "24.0.0"
+        }
+      ]
+    },
+    {
+      "name": "diff-duplicate-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/1/after",
+          "value": "22.1.0"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/1/field",
+          "value": "tools.node"
+        }
+      ]
+    },
+    {
+      "name": "diff-over-budget",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/configurationDiff/0/before",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-items",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/allowedConfigurationField",
+          "value": "tools.node"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/declarations/files/0/path",
+          "value": "/fixture/project/.node-version"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/providerPackage/packageId",
+          "value": "node"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/snapshotRequestId",
+          "value": "recipe-node-snapshot"
+        },
+        {
+          "op": "remove",
+          "pointer": "/plan/items/1/target/installationId"
+        },
+        {
+          "op": "remove",
+          "pointer": "/plan/items/1/target/locator"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/target/kind",
+          "value": "install"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/toolId",
+          "value": "node"
+        },
+        {
+          "op": "set",
+          "pointer": "/plan/items/1/version",
+          "value": "22.1.0"
+        }
+      ]
+    },
+    {
+      "name": "too-many-items",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/items",
+          "value": [
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "snapshotGeneration": "1",
+              "providerPackage": {
+                "providerId": "mise",
+                "packageId": "node",
+                "kind": "runtime",
+                "platform": "macos"
+              },
+              "target": {
+                "kind": "install"
+              },
+              "allowedConfigurationField": "tools.node",
+              "declarations": {
+                "state": "unconstrained",
+                "files": [
+                  {
+                    "path": "/fixture/project/.node-version",
+                    "canonicalPath": null,
+                    "exists": false,
+                    "sha256": null
+                  }
+                ]
+              }
+            },
+            {
+              "toolId": "python",
+              "version": "3.13.15",
+              "snapshotRequestId": "recipe-python-snapshot",
+              "snapshotGeneration": "1",
+              "providerPackage": {
+                "providerId": "mise",
+                "packageId": "python",
+                "kind": "runtime",
+                "platform": "macos"
+              },
+              "target": {
+                "kind": "reuse",
+                "installationId": "recipe-python-instance",
+                "locator": "/fixture/mise/installs/python/3.13.15"
+              },
+              "allowedConfigurationField": "tools.python",
+              "declarations": {
+                "state": "unconstrained",
+                "files": [
+                  {
+                    "path": "/fixture/project/.python-version",
+                    "canonicalPath": null,
+                    "exists": false,
+                    "sha256": null
+                  }
+                ]
+              }
+            },
+            {
+              "toolId": "node",
+              "version": "22.1.0",
+              "snapshotRequestId": "recipe-node-snapshot",
+              "snapshotGeneration": "1",
+              "providerPackage": {
+                "providerId": "mise",
+                "packageId": "node",
+                "kind": "runtime",
+                "platform": "macos"
+              },
+              "target": {
+                "kind": "install"
+              },
+              "allowedConfigurationField": "tools.node",
+              "declarations": {
+                "state": "unconstrained",
+                "files": [
+                  {
+                    "path": "/fixture/project/.node-version",
+                    "canonicalPath": null,
+                    "exists": false,
+                    "sha256": null
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-steps",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps",
+          "value": [
+            {
+              "index": 0,
+              "itemIndex": null,
+              "phase": "preflight"
+            },
+            {
+              "index": 1,
+              "itemIndex": 0,
+              "phase": "select"
+            },
+            {
+              "index": 2,
+              "itemIndex": 0,
+              "phase": "installPreflight"
+            },
+            {
+              "index": 3,
+              "itemIndex": 0,
+              "phase": "installCommand"
+            },
+            {
+              "index": 4,
+              "itemIndex": 0,
+              "phase": "installRefresh"
+            },
+            {
+              "index": 5,
+              "itemIndex": 0,
+              "phase": "installVerify"
+            },
+            {
+              "index": 6,
+              "itemIndex": 0,
+              "phase": "bindPreflight"
+            },
+            {
+              "index": 7,
+              "itemIndex": 0,
+              "phase": "bindCommand"
+            },
+            {
+              "index": 8,
+              "itemIndex": 0,
+              "phase": "bindRefresh"
+            },
+            {
+              "index": 9,
+              "itemIndex": 0,
+              "phase": "bindVerify"
+            },
+            {
+              "index": 10,
+              "itemIndex": 0,
+              "phase": "compensate"
+            },
+            {
+              "index": 11,
+              "itemIndex": 0,
+              "phase": "reconcile"
+            },
+            {
+              "index": 12,
+              "itemIndex": 1,
+              "phase": "select"
+            },
+            {
+              "index": 13,
+              "itemIndex": 1,
+              "phase": "installPreflight"
+            },
+            {
+              "index": 14,
+              "itemIndex": 1,
+              "phase": "installCommand"
+            },
+            {
+              "index": 15,
+              "itemIndex": 1,
+              "phase": "installRefresh"
+            },
+            {
+              "index": 16,
+              "itemIndex": 1,
+              "phase": "installVerify"
+            },
+            {
+              "index": 17,
+              "itemIndex": 1,
+              "phase": "bindPreflight"
+            },
+            {
+              "index": 18,
+              "itemIndex": 1,
+              "phase": "bindCommand"
+            },
+            {
+              "index": 19,
+              "itemIndex": 1,
+              "phase": "bindRefresh"
+            },
+            {
+              "index": 20,
+              "itemIndex": 1,
+              "phase": "bindVerify"
+            },
+            {
+              "index": 21,
+              "itemIndex": 1,
+              "phase": "compensate"
+            },
+            {
+              "index": 22,
+              "itemIndex": 1,
+              "phase": "reconcile"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "too-many-steps",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps",
+          "value": [
+            {
+              "index": 0,
+              "itemIndex": null,
+              "phase": "preflight"
+            },
+            {
+              "index": 1,
+              "itemIndex": 0,
+              "phase": "select"
+            },
+            {
+              "index": 2,
+              "itemIndex": 0,
+              "phase": "installPreflight"
+            },
+            {
+              "index": 3,
+              "itemIndex": 0,
+              "phase": "installCommand"
+            },
+            {
+              "index": 4,
+              "itemIndex": 0,
+              "phase": "installRefresh"
+            },
+            {
+              "index": 5,
+              "itemIndex": 0,
+              "phase": "installVerify"
+            },
+            {
+              "index": 6,
+              "itemIndex": 0,
+              "phase": "bindPreflight"
+            },
+            {
+              "index": 7,
+              "itemIndex": 0,
+              "phase": "bindCommand"
+            },
+            {
+              "index": 8,
+              "itemIndex": 0,
+              "phase": "bindRefresh"
+            },
+            {
+              "index": 9,
+              "itemIndex": 0,
+              "phase": "bindVerify"
+            },
+            {
+              "index": 10,
+              "itemIndex": 0,
+              "phase": "compensate"
+            },
+            {
+              "index": 11,
+              "itemIndex": 0,
+              "phase": "reconcile"
+            },
+            {
+              "index": 12,
+              "itemIndex": 1,
+              "phase": "select"
+            },
+            {
+              "index": 13,
+              "itemIndex": 1,
+              "phase": "installPreflight"
+            },
+            {
+              "index": 14,
+              "itemIndex": 1,
+              "phase": "installCommand"
+            },
+            {
+              "index": 15,
+              "itemIndex": 1,
+              "phase": "installRefresh"
+            },
+            {
+              "index": 16,
+              "itemIndex": 1,
+              "phase": "installVerify"
+            },
+            {
+              "index": 17,
+              "itemIndex": 1,
+              "phase": "bindPreflight"
+            },
+            {
+              "index": 18,
+              "itemIndex": 1,
+              "phase": "bindCommand"
+            },
+            {
+              "index": 19,
+              "itemIndex": 1,
+              "phase": "bindRefresh"
+            },
+            {
+              "index": 20,
+              "itemIndex": 1,
+              "phase": "bindVerify"
+            },
+            {
+              "index": 21,
+              "itemIndex": 1,
+              "phase": "compensate"
+            },
+            {
+              "index": 22,
+              "itemIndex": 1,
+              "phase": "reconcile"
+            },
+            {
+              "index": 23,
+              "itemIndex": null,
+              "phase": "finalize"
+            },
+            {
+              "index": 23,
+              "itemIndex": null,
+              "phase": "finalize"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wrong-phase",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps/1/phase",
+          "value": "installCommand"
+        }
+      ]
+    },
+    {
+      "name": "wrong-item-index",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps/1/itemIndex",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "duplicate-step-index",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps/1/index",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "missing-null-item-index",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/plan/steps/0/itemIndex"
+        }
+      ]
+    },
+    {
+      "name": "unknown-step-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/steps/1/program",
+          "value": "sh"
+        }
+      ]
+    },
+    {
+      "name": "missing-graph-node",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph",
+          "value": [
+            {
+              "stepId": "recipe-contract-plan-step-0",
+              "stepIndex": 0,
+              "dependsOn": []
+            },
+            {
+              "stepId": "recipe-contract-plan-step-1",
+              "stepIndex": 1,
+              "dependsOn": [
+                "recipe-contract-plan-step-0"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-2",
+              "stepIndex": 2,
+              "dependsOn": [
+                "recipe-contract-plan-step-1"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-3",
+              "stepIndex": 3,
+              "dependsOn": [
+                "recipe-contract-plan-step-2"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-4",
+              "stepIndex": 4,
+              "dependsOn": [
+                "recipe-contract-plan-step-3"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-5",
+              "stepIndex": 5,
+              "dependsOn": [
+                "recipe-contract-plan-step-4"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-6",
+              "stepIndex": 6,
+              "dependsOn": [
+                "recipe-contract-plan-step-5"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-7",
+              "stepIndex": 7,
+              "dependsOn": [
+                "recipe-contract-plan-step-6"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-8",
+              "stepIndex": 8,
+              "dependsOn": [
+                "recipe-contract-plan-step-7"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-9",
+              "stepIndex": 9,
+              "dependsOn": [
+                "recipe-contract-plan-step-8"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-10",
+              "stepIndex": 10,
+              "dependsOn": [
+                "recipe-contract-plan-step-9"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-11",
+              "stepIndex": 11,
+              "dependsOn": [
+                "recipe-contract-plan-step-10"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-12",
+              "stepIndex": 12,
+              "dependsOn": [
+                "recipe-contract-plan-step-11"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-13",
+              "stepIndex": 13,
+              "dependsOn": [
+                "recipe-contract-plan-step-12"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-14",
+              "stepIndex": 14,
+              "dependsOn": [
+                "recipe-contract-plan-step-13"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-15",
+              "stepIndex": 15,
+              "dependsOn": [
+                "recipe-contract-plan-step-14"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-16",
+              "stepIndex": 16,
+              "dependsOn": [
+                "recipe-contract-plan-step-15"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-17",
+              "stepIndex": 17,
+              "dependsOn": [
+                "recipe-contract-plan-step-16"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-18",
+              "stepIndex": 18,
+              "dependsOn": [
+                "recipe-contract-plan-step-17"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-19",
+              "stepIndex": 19,
+              "dependsOn": [
+                "recipe-contract-plan-step-18"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-20",
+              "stepIndex": 20,
+              "dependsOn": [
+                "recipe-contract-plan-step-19"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-21",
+              "stepIndex": 21,
+              "dependsOn": [
+                "recipe-contract-plan-step-20"
+              ]
+            },
+            {
+              "stepId": "recipe-contract-plan-step-22",
+              "stepIndex": 22,
+              "dependsOn": [
+                "recipe-contract-plan-step-21"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-graph-id",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph/1/stepId",
+          "value": "recipe-contract-plan-step-0"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-graph-index",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph/1/stepIndex",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "graph-cycle",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph/0/dependsOn",
+          "value": [
+            "recipe-contract-plan-step-23"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "graph-wrong-dependency",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph/2/dependsOn/0",
+          "value": "recipe-contract-plan-step-0"
+        }
+      ]
+    },
+    {
+      "name": "unknown-graph-field",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/stepGraph/1/command",
+          "value": "sh"
+        }
+      ]
+    },
+    {
+      "name": "missing-null-fingerprint",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "remove",
+          "pointer": "/plan/configuration/sha256"
+        }
+      ]
+    },
+    {
+      "name": "bom-only-disabled-reason",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/reason",
+          "value": "﻿"
+        }
+      ]
+    },
+    {
+      "name": "spaces-and-bom-disabled-reason",
+      "base": "mixed",
+      "changes": [
+        {
+          "op": "set",
+          "pointer": "/plan/capability/reason",
+          "value": " ﻿ "
+        }
+      ]
+    }
+  ]
+}

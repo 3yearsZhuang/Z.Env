@@ -606,15 +606,15 @@ fn operation_plan(
     result.map_err(|e| e.to_string())
 }
 
-/// v2 明确工具目标和步骤依赖；后端仍在同一服务签发可单次执行的计划。
+/// v2 按主体严格分派；工具复用既有签发，配方在纯校验后保持禁用。
 #[tauri::command(async)]
 fn operation_plan_v2(
     state: tauri::State<'_, operation_plan::OperationPlanService>,
     inventory: tauri::State<'_, inventory::query::InventoryQueryService>,
-    request: operation_plan::PlanRequestV2,
+    request: operation_plan::AnyPlanRequestV2,
 ) -> Result<operation_plan::OperationPlanV2, String> {
     state
-        .preview_v2_current(&inventory, request)
+        .preview_any_v2_current(&inventory, request)
         .map_err(|e| e.to_string())
 }
 

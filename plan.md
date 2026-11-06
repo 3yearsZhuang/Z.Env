@@ -7,9 +7,9 @@
 
 ## 当前状态（2026-11-07）
 
-- 当前主线基线 `35688bdcd9c57286d4b69d7a06cf50041656e679`：第 48–50 项已合并，
+- 当前主线基线 `7122fd6d8f3a1a10c818894719d4052bd5514f18`：第 48–50 项及 [Python 补偿安全 PR #11](https://github.com/3yearsZhuang/Z.Env/pull/11) 已合并，[当前主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42264993263) 全部通过。
   [第 50 项主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42255298931) 全部通过；[PR #10](https://github.com/3yearsZhuang/Z.Env/pull/10) 的本地前端 44 文件 / 370 项、18 项浏览器模拟交互和 12 组布局检查通过。真实 WebView 交互仍未完成；确认桌面解锁并重建捕获会话后，macOS ScreenCaptureKit 仍返回内部错误 `-3811`。
-- 第 51 项已形成 [最小执行设计](./docs/recipe-execution-design-2026-11-07.md)，先修 [Python 补偿安全](./docs/python-compensation-safety-2026-11-07.md)：保护其他字段的外部修改、核对收据清理，以及取消后的独立终态扫描。配方执行仍未开放。
+- 第 51 项按 [最小执行设计](./docs/recipe-execution-design-2026-11-07.md) 推进，[Python 补偿安全](./docs/python-compensation-safety-2026-11-07.md) 已完成；当前 [契约与记录模型切片](./docs/recipe-contract-foundation-2026-11-07.md) 保留旧 Tool 调用，Recipe 纯校验后禁用；父任务和配方执行仍未接入。
 - 本轮审查主线基线：`fe9130fd55b23ca6b7ad4e6afe69c7bcb294f049`。[PR #7](https://github.com/3yearsZhuang/Z.Env/pull/7)
   初审版本为 `28d1783ae5097c917ec73bc2ba89b8667fc715ed`；两项 P2 回退及相关 Python 账本已修正并通过独立复核。
   最终提交、三平台 CI 与合并记录以 PR 为准。
@@ -54,7 +54,7 @@ Python 能力账本已校准至现有实现；第 49 项已修正配方默认 No
 
 | 顺序 / 条目 | 交付 | 退出条件 |
 | --- | --- | --- |
-| 51，设计评审 / 底座修正中 | macOS Node/Python 配方最小执行；先限定显式单项目、原生 mise、各一个精确版本与 project/direct；见 [执行设计](./docs/recipe-execution-design-2026-11-07.md) | 依赖 49 与真实 WebView 验收；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
+| 51，契约与记录模型验证中 | macOS Node/Python 配方最小执行；限定显式单项目、原生 mise、各一个精确版本与 project/direct；首切片见 [契约底座](./docs/recipe-contract-foundation-2026-11-07.md) | 依赖 49 与真实 WebView 验收；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
 | 52，与 49–51 的只读工作可并行 | Python 已有虚拟环境与现有渠道验收 | `.venv` 基础解释器引用、全局作用域与终端/IDE分别核对；Node Homebrew 写入/托管、更多 formula 和真实失败取消证据补齐 |
 | 53，可独立推进底座 | launcher shim 与 Windows provider 环境 | 自有收据/文件指纹/安装删除闭环；Windows 原生 argv/cwd/env/退出码及回收验证通过；新增入口纳入统一任务 |
 | 54 | Node Windows/Linux 纵向推广 | 依赖 53 相关底座；逐平台安装、绑定、解除、卸载、实际路径、失败/取消与桌面 IPC 通过 |

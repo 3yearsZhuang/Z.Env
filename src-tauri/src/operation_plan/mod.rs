@@ -1,5 +1,7 @@
 //! 后端签发计划、单次执行与最小持久记录；Node 写渠道按原生证据逐项开放。
 mod bindings;
+#[cfg(test)]
+mod fixture_cases;
 mod guards;
 mod journal;
 pub mod model;
@@ -9,6 +11,8 @@ mod python_brew;
 mod python_mise;
 mod python_pyenv;
 mod python_uv;
+mod recipe_contract;
+mod recipe_record;
 mod v2;
 mod writes;
 use crate::{
@@ -23,6 +27,8 @@ use crate::{
 use guards::{configuration, file_stamp, FileStamp};
 use journal::Journal;
 pub use model::*;
+pub use recipe_contract::*;
+pub use recipe_record::*;
 use std::{
     collections::VecDeque,
     path::{Path, PathBuf},
@@ -700,7 +706,7 @@ impl OperationPlanService {
             .find(|r| r.id == id)
             .ok_or(PlanError::Journal)?;
         edit(record);
-        record.updated_at = now();
+        record.updated_at = now().max(record.updated_at);
         let result = record.clone();
         if state.journal.persist().is_err() {
             state.journal_failed = true;
@@ -987,14 +993,15 @@ impl OperationPlanService {
                 }
                 let (options, config, python) = context()?;
                 Self::validate(&stored, query, &options, &config, python.as_ref())?;
+                let created_at = now();
                 let record = ExecutionRecord {
                     schema_version: 1,
                     tool_id: stored.view.tool_id,
                     id: id.into(),
                     action: stored.view.action,
                     status: ExecutionStatus::Running,
-                    created_at: now(),
-                    updated_at: now(),
+                    created_at,
+                    updated_at: created_at,
                     steps: stored
                         .view
                         .steps
