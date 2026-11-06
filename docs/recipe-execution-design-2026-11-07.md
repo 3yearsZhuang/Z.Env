@@ -4,8 +4,8 @@
 状态：**实施设计；执行尚未接入，现有配方 `executable` 仍为 false。**
 
 严格请求/计划/记录底座已随 [PR #12](https://github.com/3yearsZhuang/Z.Env/pull/12) 合并；
-当前 [父作用域与阶段核心切片](./recipe-parent-stage-core-2026-11-07.md) 为旧 Tool 抽出内部驱动，
-未签发准备、提交扫描凭证、混合 journal 和 Recipe 执行仍在后续范围。
+[父作用域与阶段核心](./recipe-parent-stage-core-2026-11-07.md) 已合并；当前 [未签发准备切片](./recipe-unissued-preparation-2026-11-07.md)
+分离准备与批准，冻结实际项目目标并核对 Node 请求。父批准与提交扫描凭证、混合 journal 和 Recipe 执行仍在后续范围。
 
 ## 首个执行范围
 

@@ -185,11 +185,13 @@ impl OperationPlanService {
         query: &InventoryQueryService,
         request: PlanRequest,
     ) -> Result<OperationPlan, PlanError> {
-        let options =
-            PythonScanOptions::from_environment().map_err(|_| PlanError::EvidenceUnavailable)?;
-        let config =
-            crate::env_center::global_config_path().ok_or(PlanError::EvidenceUnavailable)?;
-        self.preview_python(query, request, options, config)
+        self.preview_python_using(query, request, || {
+            let options = PythonScanOptions::from_environment()
+                .map_err(|_| PlanError::EvidenceUnavailable)?;
+            let config =
+                crate::env_center::global_config_path().ok_or(PlanError::EvidenceUnavailable)?;
+            Ok((options, config))
+        })
     }
     pub fn preview_python(
         &self,
@@ -198,6 +200,28 @@ impl OperationPlanService {
         options: PythonScanOptions,
         config_path: PathBuf,
     ) -> Result<OperationPlan, PlanError> {
+        self.preview_python_using(query, request, || {
+            Ok((options.clone(), config_path.clone()))
+        })
+    }
+    pub(super) fn preview_python_using(
+        &self,
+        query: &InventoryQueryService,
+        request: PlanRequest,
+        mut context: impl FnMut() -> Result<(PythonScanOptions, PathBuf), PlanError>,
+    ) -> Result<OperationPlan, PlanError> {
+        let (options, config) = context()?;
+        let prepared = Self::prepare_python(query, request, options, config)?;
+        let (options, config) = context()?;
+        self.store(prepared, query, &options.common, &config, Some(&options))
+    }
+    pub(super) fn prepare_python(
+        query: &InventoryQueryService,
+        request: PlanRequest,
+        options: PythonScanOptions,
+        config_path: PathBuf,
+    ) -> Result<PreparedTool, PlanError> {
+        let project_path = preparation::project_request(&request).map(str::to_owned);
         let (generation, snapshot) = query
             .current_snapshot_for(InventoryTool::Python)
             .map_err(|_| PlanError::Inventory)?;
@@ -623,7 +647,9 @@ impl OperationPlanService {
             steps.clear();
         }
         let mut files = vec![];
-        if capability.can_execute && matches!(action, Action::Verify | Action::Uninstall) {
+        if capability.can_execute
+            && matches!(action, Action::Verify | Action::Uninstall | Action::Bind)
+        {
             let item = target.as_ref().ok_or(PlanError::Unsupported)?;
             let mut stamps = 0;
             for path in [&item.executable_path, &item.canonical_executable_path]
@@ -648,13 +674,9 @@ impl OperationPlanService {
             files.push((path.clone(), file_stamp(&path)?));
         }
         let stored_context = context(&options, &config_path);
-        self.store(StoredPlan {
-            view: OperationPlan {
-                schema_version: 1,
+        PreparedTool {
+            draft: PlanDraft {
                 tool_id: InventoryTool::Python,
-                plan_id: String::new(),
-                created_at: 0,
-                expires_at: 0,
                 snapshot_generation: generation.to_string(),
                 snapshot_request_id: snapshot.request_id,
                 action,
@@ -698,9 +720,6 @@ impl OperationPlanService {
                     .map(|spec| vec![spec.diff.clone()])
                     .unwrap_or_default(),
             },
-            started: Instant::now(),
-            consumed: false,
-            cancel_requested: false,
             generation,
             target,
             context: stored_context,
@@ -712,7 +731,8 @@ impl OperationPlanService {
             python: Some(options),
             python_write,
             python_binding,
-        })
+            project_target: None,
+        }.freeze_project(project_path.as_deref())
     }
     pub(super) fn execute_python_with_context(
         &self,

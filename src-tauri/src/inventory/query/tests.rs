@@ -6,6 +6,63 @@ use crate::domain::{
     Health, InstallationObservation, Ownership, PackageKind, Platform, ProviderPackage,
 };
 
+#[test]
+fn signing_identity_guard_holds_query_lock_and_uses_the_target_commit() {
+    let service = InventoryQueryService::default();
+    execute(&service, "signing-node", None, complete_scans());
+    let (generation, snapshot) = service.current_snapshot().unwrap();
+    let commit = || {
+        assert!(matches!(
+            service.state.try_lock(),
+            Err(std::sync::TryLockError::WouldBlock)
+        ));
+        42
+    };
+    assert_eq!(
+        service.with_current_identity(
+            InventoryTool::Node,
+            generation,
+            &snapshot.request_id,
+            commit
+        ),
+        Ok(42)
+    );
+    // 另一工具完成查询后，全局 generation 增长，但 Node 的已提交身份仍合法。
+    execute_python(&service, "signing-python");
+    assert_eq!(
+        service.with_current_identity(
+            InventoryTool::Node,
+            generation,
+            &snapshot.request_id,
+            commit
+        ),
+        Ok(42)
+    );
+    let active = service
+        .begin_tool("signing-active-python".into(), None, InventoryTool::Python)
+        .unwrap();
+    assert_eq!(
+        service.with_current_identity::<()>(
+            InventoryTool::Node,
+            generation,
+            &snapshot.request_id,
+            || panic!("active scan must block signing")
+        ),
+        Err(QueryError::Busy)
+    );
+    drop(active);
+    execute(&service, "signing-node-updated", None, complete_scans());
+    assert_eq!(
+        service.with_current_identity::<()>(
+            InventoryTool::Node,
+            generation,
+            &snapshot.request_id,
+            || panic!("stale evidence must block signing")
+        ),
+        Err(QueryError::Superseded)
+    );
+}
+
 fn observation(provider: ProviderId, locator: &str, version: &str) -> InstallationObservation {
     InstallationObservation {
         provider_package: ProviderPackage {

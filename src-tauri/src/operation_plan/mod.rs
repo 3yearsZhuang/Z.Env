@@ -5,6 +5,8 @@ mod fixture_cases;
 mod guards;
 mod journal;
 pub mod model;
+mod preparation;
+mod project_target;
 mod python;
 mod python_binding;
 mod python_brew;
@@ -28,6 +30,7 @@ use crate::{
 use guards::{configuration, file_stamp, FileStamp};
 use journal::Journal;
 pub use model::*;
+use preparation::{PlanDraft, PreparedTool};
 pub use recipe_contract::*;
 pub use recipe_record::*;
 use std::{
@@ -100,6 +103,7 @@ struct StoredPlan {
     python: Option<crate::providers::python::PythonScanOptions>,
     python_write: Option<python::WriteSpec>,
     python_binding: Option<python_binding::BindingSpec>,
+    project_target: Option<project_target::FrozenProjectTarget>,
 }
 struct State {
     plans: VecDeque<StoredPlan>,
@@ -172,14 +176,6 @@ impl OperationPlanService {
             })),
         }
     }
-    /// 配方摘要共用既有能力门禁，但临时计划不得淘汰用户已打开的计划。
-    /// 不恢复或持久化 journal；返回的会话仅供只读预览，随后整体丢弃。
-    pub(crate) fn readonly_preview_session(&self) -> Self {
-        let state = lock(&self.state);
-        let session = Self::new(state.journal.path.clone());
-        lock(&session.state).journal_failed = state.journal_failed;
-        session
-    }
     pub(crate) fn journal_failed(&self) -> bool {
         lock(&self.state).journal_failed
     }
@@ -209,11 +205,13 @@ impl OperationPlanService {
         query: &InventoryQueryService,
         request: PlanRequest,
     ) -> Result<OperationPlan, PlanError> {
-        let options =
-            NodeScanOptions::from_environment().map_err(|_| PlanError::EvidenceUnavailable)?;
-        let config =
-            crate::env_center::global_config_path().ok_or(PlanError::EvidenceUnavailable)?;
-        self.preview(query, request, options, config)
+        self.preview_node_using(query, request, || {
+            let options =
+                NodeScanOptions::from_environment().map_err(|_| PlanError::EvidenceUnavailable)?;
+            let config =
+                crate::env_center::global_config_path().ok_or(PlanError::EvidenceUnavailable)?;
+            Ok((options, config))
+        })
     }
     pub fn preview(
         &self,
@@ -222,6 +220,28 @@ impl OperationPlanService {
         options: NodeScanOptions,
         config_path: PathBuf,
     ) -> Result<OperationPlan, PlanError> {
+        self.preview_node_using(query, request, || {
+            Ok((options.clone(), config_path.clone()))
+        })
+    }
+    fn preview_node_using(
+        &self,
+        query: &InventoryQueryService,
+        request: PlanRequest,
+        mut context: impl FnMut() -> Result<(NodeScanOptions, PathBuf), PlanError>,
+    ) -> Result<OperationPlan, PlanError> {
+        let (options, config) = context()?;
+        let prepared = Self::prepare_node(query, request, options, config)?;
+        let (options, config) = context()?;
+        self.store(prepared, query, &options, &config, None)
+    }
+    fn prepare_node(
+        query: &InventoryQueryService,
+        request: PlanRequest,
+        options: NodeScanOptions,
+        config_path: PathBuf,
+    ) -> Result<PreparedTool, PlanError> {
+        let project_path = preparation::project_request(&request).map(str::to_owned);
         let (generation, snapshot) = query.current_snapshot().map_err(|_| PlanError::Inventory)?;
         if snapshot.request_id != request.snapshot_request_id {
             return Err(PlanError::Stale);
@@ -616,12 +636,8 @@ impl OperationPlanService {
             let path = PathBuf::from(program);
             files.push((path.clone(), file_stamp(&path)?));
         }
-        let view = OperationPlan {
-            schema_version: 1,
+        let draft = PlanDraft {
             tool_id: InventoryTool::Node,
-            plan_id: String::new(),
-            created_at: 0,
-            expires_at: 0,
             snapshot_generation: generation.to_string(),
             snapshot_request_id: snapshot.request_id,
             action,
@@ -655,11 +671,8 @@ impl OperationPlanService {
             impact,
             configuration_diff,
         };
-        self.store(StoredPlan {
-            view,
-            started: Instant::now(),
-            consumed: false,
-            cancel_requested: false,
+        PreparedTool {
+            draft,
             generation,
             target,
             context: guards::context(&options, &config_path),
@@ -671,28 +684,86 @@ impl OperationPlanService {
             python: None,
             python_write: None,
             python_binding: None,
-        })
+            project_target: None,
+        }
+        .freeze_project(project_path.as_deref())
     }
-    fn store(&self, mut stored: StoredPlan) -> Result<OperationPlan, PlanError> {
-        let mut state = lock(&self.state);
-        if state.journal_failed {
-            stored.view.capability.can_execute = false;
-            stored.view.capability.reason = Some(PlanError::Journal.to_string());
+    fn store(
+        &self,
+        mut prepared: PreparedTool,
+        query: &InventoryQueryService,
+        options: &NodeScanOptions,
+        config_path: &Path,
+        python: Option<&crate::providers::python::PythonScanOptions>,
+    ) -> Result<OperationPlan, PlanError> {
+        prepared.revalidate(query, options, config_path, python)?;
+        let tool = prepared.draft.tool_id;
+        let generation = prepared.generation;
+        let request_id = prepared.draft.snapshot_request_id.clone();
+        query
+            .with_current_identity(tool, generation, &request_id, || {
+                let mut state = lock(&self.state);
+                if state.journal_failed {
+                    prepared.draft.capability.can_execute = false;
+                    prepared.draft.capability.reason = Some(PlanError::Journal.to_string());
+                }
+                state.sequence = state.sequence.checked_add(1).ok_or(PlanError::Consumed)?;
+                let nonce = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos();
+                let plan_id = format!("plan-{nonce:x}-{:x}", state.sequence);
+                let created_at = now();
+                let stored = prepared.into_stored(plan_id, created_at, Instant::now());
+                let view = stored.view.clone();
+                state.plans.push_back(stored);
+                while state.plans.len() > MAX_PLANS {
+                    state.plans.pop_front();
+                }
+                Ok(view)
+            })
+            .map_err(|error| match error {
+                crate::inventory::query::QueryError::Superseded => PlanError::Stale,
+                _ => PlanError::Inventory,
+            })?
+    }
+    pub(crate) fn prepare_install_summary(
+        &self,
+        query: &InventoryQueryService,
+        tool: InventoryTool,
+        request: PlanRequest,
+        options: &crate::providers::python::PythonScanOptions,
+        config_path: &Path,
+    ) -> Result<preparation::PreparationSummary, PlanError> {
+        if !matches!(request.intent, PlanIntent::Install { .. }) {
+            return Err(PlanError::Unsupported);
         }
-        state.sequence = state.sequence.checked_add(1).ok_or(PlanError::Consumed)?;
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
-        stored.view.plan_id = format!("plan-{nonce:x}-{:x}", state.sequence);
-        stored.view.created_at = now();
-        stored.view.expires_at = stored.view.created_at.saturating_add(TTL_MS);
-        let view = stored.view.clone();
-        state.plans.push_back(stored);
-        while state.plans.len() > MAX_PLANS {
-            state.plans.pop_front();
+        let mut prepared = match tool {
+            InventoryTool::Node => Self::prepare_node(
+                query,
+                request,
+                options.common.clone(),
+                config_path.to_owned(),
+            )?,
+            InventoryTool::Python => {
+                Self::prepare_python(query, request, options.clone(), config_path.to_owned())?
+            }
+        };
+        prepared.revalidate(
+            query,
+            &options.common,
+            config_path,
+            (tool == InventoryTool::Python).then_some(options),
+        )?;
+        if self.journal_failed() {
+            prepared.draft.capability.can_execute = false;
+            prepared.draft.capability.reason = Some(PlanError::Journal.to_string());
         }
-        Ok(view)
+        Ok(preparation::PreparationSummary {
+            snapshot_generation: prepared.draft.snapshot_generation,
+            snapshot_request_id: prepared.draft.snapshot_request_id,
+            capability: prepared.draft.capability,
+        })
     }
     fn record(
         &self,
@@ -765,6 +836,9 @@ impl OperationPlanService {
             if file_stamp(path)? != *expected {
                 return Err(PlanError::Preconditions);
             }
+        }
+        if let Some(project) = &plan.project_target {
+            project.revalidate()?;
         }
         Ok(())
     }

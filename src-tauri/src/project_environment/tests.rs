@@ -151,6 +151,44 @@ fn declarations_conflict_without_treating_missing_installed_intersections_as_pro
     assert_eq!(report.controlled.status, "unknown");
     assert!(!f._root.path().join("started").exists());
 }
+
+#[test]
+fn node_request_matching_uses_read_declarations_when_the_inventory_has_no_candidates() {
+    let mut f = Fixture::new();
+    f.snapshot.installations.clear();
+    let report = f.inspect(false);
+    assert!(report.candidates.is_empty());
+    assert_eq!(match_node_request(&report, "22.1.0"), Match::Satisfied);
+    assert_eq!(match_node_request(&report, "20.1.0"), Match::Mismatch);
+    // Matching the captured report must not reread the file or launch a manager.
+    std::fs::write(
+        f.project.join("package.json"),
+        r#"{"engines":{"node":"<20"}}"#,
+    )
+    .unwrap();
+    assert_eq!(match_node_request(&report, "22.1.0"), Match::Satisfied);
+    assert!(!f._root.path().join("started").exists());
+    assert!(!f._root.path().join("unexpected-command").exists());
+}
+
+#[test]
+fn no_node_declarations_remain_unspecified_without_changing_old_candidate_match_semantics() {
+    let f = Fixture::new();
+    std::fs::remove_file(f.project.join("mise.toml")).unwrap();
+    std::fs::remove_file(f.project.join("package.json")).unwrap();
+    let report = f.inspect(false);
+    assert!(report.declarations.is_empty());
+    assert_eq!(report.requirement_state, RequirementState::Unspecified);
+    assert!(report
+        .candidates
+        .iter()
+        .all(|candidate| candidate.requirement_match == Match::Unknown));
+    assert_eq!(match_node_request(&report, "22.1.0"), Match::Satisfied);
+    assert_eq!(
+        match_node_request(&report, "4294967296.0.0"),
+        Match::Unknown
+    );
+}
 #[test]
 fn aliases_complex_node_configuration_and_variant_inheritance_stay_unknown() {
     for mode in ["alias", "complex", "variant", "parent"] {
@@ -288,6 +326,7 @@ fn oversized_and_special_declarations_are_bounded_and_cannot_be_treated_as_absen
         let start = Instant::now();
         let report = f.inspect(false);
         assert_eq!(report.requirement_state, RequirementState::Unknown);
+        assert_eq!(match_node_request(&report, "22.1.0"), Match::Unknown);
         assert!(start.elapsed() < Duration::from_secs(2));
     }
     let f = Fixture::new();
@@ -296,6 +335,7 @@ fn oversized_and_special_declarations_are_bounded_and_cannot_be_treated_as_absen
     assert_eq!(report.requirement_state, RequirementState::Unknown);
     assert_eq!(report.declarations.len(), 64);
     assert!(report.issues.iter().any(|i| i.code == "declarationBudget"));
+    assert_eq!(match_node_request(&report, "22.1.0"), Match::Unknown);
     assert!(report
         .candidates
         .iter()

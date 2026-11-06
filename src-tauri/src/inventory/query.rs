@@ -207,6 +207,30 @@ impl InventoryQueryService {
             .ok_or(QueryError::NotReady)
     }
 
+    /// 最终签发的短临界区：目标 committed 身份核对与计划插入之间不得开始新扫描。
+    /// closure 只修改内存计划状态，按 query → plan 锁序；不得做 I/O 或重入 query。
+    pub(crate) fn with_current_identity<R>(
+        &self,
+        tool: InventoryTool,
+        generation: u64,
+        request_id: &str,
+        commit: impl FnOnce() -> R,
+    ) -> Result<R, QueryError> {
+        let state = lock_state(&self.state);
+        if state.active.is_some() {
+            return Err(QueryError::Busy);
+        }
+        let (current_generation, snapshot) = state
+            .caches
+            .get(&tool)
+            .and_then(|cache| cache.committed.as_ref())
+            .ok_or(QueryError::NotReady)?;
+        if *current_generation != generation || snapshot.request_id != request_id {
+            return Err(QueryError::Superseded);
+        }
+        Ok(commit())
+    }
+
     /// 在分派工作线程之前注册租约，避免取消请求早于扫描注册时丢失。
     pub fn begin(
         &self,

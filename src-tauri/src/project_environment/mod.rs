@@ -4,6 +4,8 @@ mod context;
 mod files;
 pub mod model;
 mod python;
+#[cfg(test)]
+mod request_tests;
 #[cfg(all(test, unix))]
 mod tests;
 use crate::{
@@ -106,6 +108,55 @@ impl Loaded {
         }
     }
 }
+
+/// 只匹配已读取的 Node 声明与精确请求；不读取文件，也不依赖已有候选或解析结果。
+pub(crate) fn match_node_request(report: &ProjectEnvironment, version: &str) -> Match {
+    if version.len() > 32
+        || !version
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || byte == b'.')
+    {
+        return Match::Unknown;
+    }
+    let Some(version) = Version::parse(version) else {
+        return Match::Unknown;
+    };
+    match report.requirement_state {
+        RequirementState::Conflict => return Match::Mismatch,
+        RequirementState::Unknown => return Match::Unknown,
+        RequirementState::Unspecified => {
+            return if report.declarations.is_empty() {
+                Match::Satisfied
+            } else {
+                Match::Unknown
+            };
+        }
+        RequirementState::Supported => {}
+    }
+    if report.declarations.is_empty() || report.declarations.len() > 64 {
+        return Match::Unknown;
+    }
+    let mut ranges = Vec::with_capacity(report.declarations.len());
+    for declaration in &report.declarations {
+        if !declaration.supported || declaration.reason.is_some() {
+            return Match::Unknown;
+        }
+        let Some(range) = declaration
+            .requirement
+            .as_deref()
+            .and_then(Constraint::parse)
+        else {
+            return Match::Unknown;
+        };
+        ranges.push(range);
+    }
+    if ranges.iter().all(|range| range.matches(version)) {
+        Match::Satisfied
+    } else {
+        Match::Mismatch
+    }
+}
+
 fn read(reader: &mut Reader, path: &Path, loaded: &mut Loaded) -> Option<String> {
     match reader.read(path) {
         Ok(s) => s,

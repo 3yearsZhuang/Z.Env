@@ -8,7 +8,8 @@ use crate::{
     operation_plan::{OperationPlanService, PlanIntent, PlanRequest},
     preset::PresetTool,
     project_environment::{
-        inspect_python, match_python_request, Match, PythonProjectEnvironment, PythonProjectRequest,
+        inspect, inspect_python, match_node_request, match_python_request, EnvironmentRequest,
+        Match, ProjectEnvironment, PythonProjectEnvironment, PythonProjectRequest,
     },
     providers::python::PythonScanOptions,
 };
@@ -62,6 +63,11 @@ pub struct RecipeReport {
     pub issues: Vec<String>,
 }
 
+struct ProjectReports<'a> {
+    node: Option<&'a ProjectEnvironment>,
+    python: Option<&'a PythonProjectEnvironment>,
+}
+
 fn inventory_tool(name: &str) -> Option<InventoryTool> {
     match name {
         "node" => Some(InventoryTool::Node),
@@ -112,6 +118,7 @@ pub fn preview_recipe(
     if tools.len() > 64 {
         return Err("配方工具数量超出预算".into());
     }
+    let journal_failed_before = service.journal_failed();
     let mut related: Vec<_> = tools
         .iter()
         .filter_map(|tool| inventory_tool(&tool.name))
@@ -139,13 +146,30 @@ pub fn preview_recipe(
     } else {
         None
     };
-    let session = service.readonly_preview_session();
+    let node = match (
+        project,
+        captured.get(&InventoryTool::Node).and_then(Option::as_ref),
+    ) {
+        (Some(project), Some((_, snapshot))) if tools.iter().any(|tool| tool.name == "node") => {
+            Some(inspect(
+                &node_project_request(project, snapshot),
+                snapshot,
+                &options.common,
+                config_path,
+                &Default::default(),
+            )?)
+        }
+        _ => None,
+    };
     let report = evaluate(
         tools,
         &captured,
-        python.as_ref(),
+        ProjectReports {
+            node: node.as_ref(),
+            python: python.as_ref(),
+        },
         options,
-        &session,
+        service,
         query,
         config_path,
     );
@@ -157,14 +181,67 @@ pub fn preview_recipe(
             return Err("项目声明已变化，请重新预览配方".into());
         }
     }
+    if let (Some(project), Some(before)) = (project, node.as_ref()) {
+        let (_, snapshot) = captured[&InventoryTool::Node].as_ref().unwrap();
+        let after = inspect(
+            &node_project_request(project, snapshot),
+            snapshot,
+            &options.common,
+            config_path,
+            &Default::default(),
+        )?;
+        if !same_node_project_evidence(before, &after) {
+            return Err("Node 项目声明或配置目标已变化，请重新预览配方".into());
+        }
+    }
     query
         .validate_snapshots(&captured)
         .map_err(|error| error.to_string())?;
-    if report.steps.iter().any(|step| step.plan_ready) && service.journal_failed() {
+    if service.journal_failed()
+        && (!journal_failed_before || report.steps.iter().any(|step| step.plan_ready))
+    {
         return Err("操作记录状态已变化，请重新预览安装能力".into());
     }
     Ok(report)
 }
+
+fn node_project_request(
+    project: &PythonProjectRequest,
+    snapshot: &InventorySnapshot,
+) -> EnvironmentRequest {
+    EnvironmentRequest {
+        request_id: project.request_id.clone(),
+        snapshot_request_id: snapshot.request_id.clone(),
+        path: project.path.clone(),
+        probe: false,
+    }
+}
+
+fn same_node_project_evidence(before: &ProjectEnvironment, after: &ProjectEnvironment) -> bool {
+    before.project_directory == after.project_directory
+        && before.configuration_path == after.configuration_path
+        && before.requirement_state == after.requirement_state
+        && before.files.len() == after.files.len()
+        && before.files.iter().zip(&after.files).all(|(a, b)| {
+            a.path == b.path
+                && a.canonical_path == b.canonical_path
+                && a.exists == b.exists
+                && a.sha256 == b.sha256
+        })
+        && before.selection.kind == after.selection.kind
+        && before.selection.scope == after.selection.scope
+        && before.selection.path == after.selection.path
+        && before.selection.request == after.selection.request
+        && before.selection.path_entries == after.selection.path_entries
+        && before.selection.reason == after.selection.reason
+        && before.issues.len() == after.issues.len()
+        && before
+            .issues
+            .iter()
+            .zip(&after.issues)
+            .all(|(a, b)| a.code == b.code && a.message == b.message)
+}
+
 fn same_project_evidence(
     before: &PythonProjectEnvironment,
     after: &PythonProjectEnvironment,
@@ -182,9 +259,9 @@ fn same_project_evidence(
 fn evaluate(
     tools: &[PresetTool],
     captured: &CapturedInventories,
-    python: Option<&PythonProjectEnvironment>,
+    projects: ProjectReports<'_>,
     options: &PythonScanOptions,
-    session: &OperationPlanService,
+    service: &OperationPlanService,
     query: &InventoryQueryService,
     config_path: &Path,
 ) -> RecipeReport {
@@ -221,21 +298,27 @@ fn evaluate(
             steps.push(step);
             continue;
         }
-        if kind == InventoryTool::Python {
-            if let Some(project) = python {
-                match match_python_request(project, &tool.version) {
-                    Match::Satisfied => {}
-                    Match::Mismatch => {
-                        step.disposition = RecipeDisposition::Conflict;
-                        step.reason = "项目声明互相冲突或请求版本不满足项目要求".into();
-                        steps.push(step);
-                        continue;
-                    }
-                    Match::Unknown => {
-                        step.reason = "项目包含未知声明，无法确认请求版本满足要求".into();
-                        steps.push(step);
-                        continue;
-                    }
+        let project_match = match kind {
+            InventoryTool::Node => projects
+                .node
+                .map(|project| match_node_request(project, &tool.version)),
+            InventoryTool::Python => projects
+                .python
+                .map(|project| match_python_request(project, &tool.version)),
+        };
+        if let Some(project_match) = project_match {
+            match project_match {
+                Match::Satisfied => {}
+                Match::Mismatch => {
+                    step.disposition = RecipeDisposition::Conflict;
+                    step.reason = "项目声明互相冲突或请求版本不满足项目要求".into();
+                    steps.push(step);
+                    continue;
+                }
+                Match::Unknown => {
+                    step.reason = "项目包含未知声明，无法确认请求版本满足要求".into();
+                    steps.push(step);
+                    continue;
                 }
             }
         }
@@ -262,17 +345,7 @@ fn evaluate(
                 version: Some(tool.version.clone()),
             },
         };
-        let result = match kind {
-            InventoryTool::Node => session.preview(
-                query,
-                request,
-                options.common.clone(),
-                config_path.to_owned(),
-            ),
-            InventoryTool::Python => {
-                session.preview_python(query, request, options.clone(), config_path.to_owned())
-            }
-        };
+        let result = service.prepare_install_summary(query, kind, request, options, config_path);
         match result {
             Ok(plan)
                 if plan.snapshot_request_id != snapshot.request_id

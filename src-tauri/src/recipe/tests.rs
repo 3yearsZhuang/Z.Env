@@ -126,6 +126,15 @@ fn synthetic(
     captured: &CapturedInventories,
     project: Option<&PythonProjectEnvironment>,
 ) -> RecipeReport {
+    synthetic_projects(tools, captured, None, project)
+}
+
+fn synthetic_projects(
+    tools: &[PresetTool],
+    captured: &CapturedInventories,
+    node: Option<&ProjectEnvironment>,
+    python: Option<&PythonProjectEnvironment>,
+) -> RecipeReport {
     let root = std::env::temp_dir().join(format!("zenv-recipe-unused-{}", std::process::id()));
     let existed = root.exists();
     let options = options(&root);
@@ -133,7 +142,7 @@ fn synthetic(
     let report = evaluate(
         tools,
         captured,
-        project,
+        ProjectReports { node, python },
         &options,
         &session,
         &InventoryQueryService::default(),
@@ -356,6 +365,8 @@ fn empty_and_unsupported_recipes_never_claim_execution() {
 
 #[cfg(unix)]
 mod install;
+
+mod node;
 
 #[cfg(unix)]
 mod unix {

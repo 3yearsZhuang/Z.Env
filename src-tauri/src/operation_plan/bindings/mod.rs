@@ -281,14 +281,7 @@ impl BindingSpec {
         snapshot: &InventorySnapshot,
         options: &NodeScanOptions,
     ) -> Result<(), PlanError> {
-        for resource in &self.changes {
-            resource.check(&resource.before)?;
-        }
-        for (path, state) in &self.guards {
-            if capture(path)? != *state {
-                return Err(PlanError::BindingConflict);
-            }
-        }
+        self.revalidate_resources()?;
         if self.action == Action::Bind {
             if !ready(snapshot, self.source.provider_package.provider_id)
                 || !snapshot.installations.iter().any(|s| {
@@ -307,6 +300,17 @@ impl BindingSpec {
                     options,
                     self.receipt.options.strategy == BindingStrategy::ProjectPath,
                 )?;
+            }
+        }
+        Ok(())
+    }
+    pub(super) fn revalidate_resources(&self) -> Result<(), PlanError> {
+        for resource in &self.changes {
+            resource.check(&resource.before)?;
+        }
+        for (path, state) in &self.guards {
+            if capture(path)? != *state {
+                return Err(PlanError::BindingConflict);
             }
         }
         Ok(())

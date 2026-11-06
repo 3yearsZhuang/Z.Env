@@ -625,6 +625,73 @@ fn python_bind_plan_writes_project_config_and_verifies_instance() {
 }
 
 #[test]
+fn python_project_binding_keeps_declarations_frozen_through_sign_and_execute() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    for after_sign in [false, true] {
+        let f = Fixture::new();
+        let project = tempfile::tempdir().unwrap();
+        let config = project.path().join("mise.toml");
+        let original = "[tools]\nnode = \"22\"\n";
+        fs::write(&config, original).unwrap();
+        let mut request = f.request(Action::Bind);
+        if let PlanIntent::Bind { binding, .. } = &mut request.intent {
+            *binding = Some(BindingOptions {
+                strategy: BindingStrategy::Direct,
+                scope: BindingScope::Project,
+                project_path: Some(project.path().to_string_lossy().into()),
+            });
+        }
+        let prepared = OperationPlanService::prepare_python(
+            &f.query,
+            request,
+            f.options.clone(),
+            f.config.clone(),
+        )
+        .unwrap();
+        assert!(prepared.draft.capability.can_execute);
+        assert!(prepared.project_target.is_some());
+        if after_sign {
+            let plan = f
+                .service
+                .store(
+                    prepared,
+                    &f.query,
+                    &f.options.common,
+                    &f.config,
+                    Some(&f.options),
+                )
+                .unwrap();
+            fs::write(project.path().join(".python-version"), "3.12.1\n").unwrap();
+            let calls_before = fs::read(f.dir.path().join("manager-calls")).ok();
+            assert!(matches!(f.execute(&plan), Err(PlanError::Preconditions)));
+            assert_eq!(
+                fs::read(f.dir.path().join("manager-calls")).ok(),
+                calls_before
+            );
+        } else {
+            fs::write(project.path().join(".python-version"), "3.12.1\n").unwrap();
+            assert!(matches!(
+                f.service.store(
+                    prepared,
+                    &f.query,
+                    &f.options.common,
+                    &f.config,
+                    Some(&f.options)
+                ),
+                Err(PlanError::Preconditions)
+            ));
+            assert_eq!(lock(&f.service.state).sequence, 0);
+            assert!(lock(&f.service.state).plans.is_empty());
+        }
+        assert_eq!(fs::read_to_string(config).unwrap(), original);
+        assert!(f.service.records().0.is_empty());
+        assert!(!f.dir.path().join("journal").exists());
+    }
+}
+
+#[test]
 fn python_bind_preview_rejects_stale_target_and_unknown_scope() {
     let _guard = operations::TEST_LOCK
         .lock()
