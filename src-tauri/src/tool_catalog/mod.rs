@@ -191,10 +191,17 @@ fn python(platform: Platform) -> CatalogTool {
         "https://www.python.org/",
     );
     result.definition = crate::domain::python_tool_definition();
-    result.project_check = support(
-        EntryState::NotIntegrated,
-        "Python 声明、项目虚拟环境与实际解析尚未接入",
-    );
+    result.project_check = if platform == Platform::Macos {
+        support(
+            EntryState::Integrated,
+            "已接入声明、候选与 mise 绑定后的受控解析核验；已有 .venv 与终端/IDE 继承仍待核对",
+        )
+    } else {
+        support(
+            EntryState::Unsupported,
+            "当前平台尚未接入统一 Python 项目核对",
+        )
+    };
     result.channels = crate::providers::python::PROVIDERS
         .into_iter()
         .map(|provider_id| Channel {
@@ -230,7 +237,12 @@ fn python(platform: Platform) -> CatalogTool {
             } else {
                 support(EntryState::Unsupported, "当前平台尚未接入统一 Python 来源")
             },
-            install_plan: if platform == Platform::Macos && provider_id != ProviderId::Path {
+            install_plan: if platform == Platform::Macos
+                && matches!(
+                    provider_id,
+                    ProviderId::Mise | ProviderId::Brew | ProviderId::Pyenv | ProviderId::Uv
+                )
+            {
                 support(
                     EntryState::Integrated,
                     match provider_id {
@@ -240,7 +252,13 @@ fn python(platform: Platform) -> CatalogTool {
                         ProviderId::Uv => {
                             "uv 托管 CPython 精确版本，--no-bin 与受控安装目录；执行前重验能力、别名与产物"
                         }
-                        _ => "已有安装计划预览；渠道执行与副作用验证未完成，安装执行未开放",
+                        ProviderId::Brew => {
+                            "Homebrew core python/python@3.N formula 安装已接入；不承诺精确补丁版，执行前重验来源与 formula 身份"
+                        }
+                        ProviderId::Pyenv => {
+                            "pyenv 精确 CPython 受控源码编译已接入；执行前重验根目录、python-build 插件和构建依赖，不自动安装系统依赖"
+                        }
+                        _ => "此来源未提供 Python 安装计划",
                     },
                 )
             } else {
@@ -249,27 +267,55 @@ fn python(platform: Platform) -> CatalogTool {
                     "此来源或平台尚未提供 Python 安装计划",
                 )
             },
-            uninstall_plan: if platform == Platform::Macos
-                && matches!(provider_id, ProviderId::Mise | ProviderId::Uv)
-            {
+            uninstall_plan: if platform != Platform::Macos {
+                support(
+                    EntryState::Unsupported,
+                    "当前平台尚未接入统一 Python 卸载计划",
+                )
+            } else if matches!(
+                provider_id,
+                ProviderId::Mise | ProviderId::Brew | ProviderId::Pyenv | ProviderId::Uv
+            ) {
                 support(
                     EntryState::Integrated,
-                    if provider_id == ProviderId::Mise {
-                        "原生管理器记录、收据与精确实例一致后才允许卸载；不删除外部链接"
-                    } else {
-                        "uv 精确实例、真实目录与探测结果一致后才允许卸载；0 退出不当作删除证明"
+                    match provider_id {
+                        ProviderId::Mise => {
+                            "原生管理器记录、收据与精确实例一致后才允许卸载；不删除外部链接"
+                        }
+                        ProviderId::Uv => {
+                            "uv 精确实例、真实目录与探测结果一致后才允许卸载；0 退出不当作删除证明"
+                        }
+                        ProviderId::Brew => {
+                            "Homebrew core formula 卸载已接入；仅限当前健康的唯一 keg，执行前重验归属、版本和反向依赖"
+                        }
+                        ProviderId::Pyenv => {
+                            "pyenv 精确版本卸载已接入；执行前重验原生记录和真实版本目录，不删除外部链接；虚拟环境引用与 rehash 影响需另行核对"
+                        }
+                        _ => "此来源未提供 Python 卸载计划",
                     },
                 )
             } else {
                 support(
-                    EntryState::NotIntegrated,
-                    "此来源 Python 卸载归属和影响门禁尚未接入",
+                    EntryState::Unsupported,
+                    "PATH 仅作文件观测，不从观测推导卸载权限",
                 )
             },
-            binding_plan: support(
-                EntryState::NotIntegrated,
-                "Python 绑定、项目虚拟环境与作用域验证尚未接入",
-            ),
+            binding_plan: if platform != Platform::Macos {
+                support(
+                    EntryState::Unsupported,
+                    "当前平台尚未接入统一 Python 绑定计划",
+                )
+            } else if provider_id == ProviderId::Mise {
+                support(
+                    EntryState::Integrated,
+                    "健康 mise 实例可直接选择项目/全局配置，支持收据解绑与失败补偿；执行前重验快照、配置及实际解析，终端继承另行核对",
+                )
+            } else {
+                support(
+                    EntryState::NotIntegrated,
+                    "Python 绑定仅接入 mise 实例；此来源尚未提供绑定计划，目录观测不授予配置写权限",
+                )
+            },
         })
         .collect();
     result
@@ -338,6 +384,8 @@ mod tests {
                         assert!(channel.packages.is_empty());
                         assert_eq!(channel.inventory.state, EntryState::Unsupported);
                         assert_ne!(channel.install_plan.state, EntryState::Integrated);
+                        assert_ne!(channel.uninstall_plan.state, EntryState::Integrated);
+                        assert_ne!(channel.binding_plan.state, EntryState::Integrated);
                     }
                     if matches!(channel.provider_id, ProviderId::Nvm | ProviderId::Path) {
                         assert_ne!(channel.install_plan.state, EntryState::Integrated);
@@ -347,6 +395,56 @@ mod tests {
                     assert!(!channel.install_plan.reason.is_empty());
                 }
             }
+        }
+    }
+    #[test]
+    fn python_ledger_records_existing_write_plans_and_project_limits() {
+        let c = catalog(Platform::Macos);
+        let python = tool(&c, "python").unwrap();
+        assert_eq!(python.project_check.state, EntryState::Integrated);
+        assert!(python.project_check.reason.contains("受控解析"));
+        assert!(python.project_check.reason.contains(".venv"));
+        assert!(python.project_check.reason.contains("终端/IDE"));
+        for provider in [
+            ProviderId::Mise,
+            ProviderId::Brew,
+            ProviderId::Pyenv,
+            ProviderId::Uv,
+        ] {
+            let channel = python
+                .channels
+                .iter()
+                .find(|channel| channel.provider_id == provider)
+                .unwrap();
+            assert_eq!(channel.install_plan.state, EntryState::Integrated);
+            assert_eq!(channel.uninstall_plan.state, EntryState::Integrated);
+            assert!(channel.install_plan.reason.contains("重验"));
+            assert!(!channel.install_plan.reason.contains("执行未开放"));
+            assert_eq!(
+                channel.binding_plan.state,
+                if provider == ProviderId::Mise {
+                    EntryState::Integrated
+                } else {
+                    EntryState::NotIntegrated
+                }
+            );
+        }
+        let path = python
+            .channels
+            .iter()
+            .find(|channel| channel.provider_id == ProviderId::Path)
+            .unwrap();
+        assert_eq!(path.install_plan.state, EntryState::Unsupported);
+        assert_eq!(path.uninstall_plan.state, EntryState::Unsupported);
+        assert_ne!(path.binding_plan.state, EntryState::Integrated);
+        for platform in [Platform::Windows, Platform::Linux] {
+            assert_eq!(
+                tool(&catalog(platform), "python")
+                    .unwrap()
+                    .project_check
+                    .state,
+                EntryState::Unsupported
+            );
         }
     }
     #[test]

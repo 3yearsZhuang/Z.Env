@@ -152,8 +152,8 @@
         "description": "CPython 3 来源样板，项目虚拟环境单独管理",
         "documentationUrl": "https://www.python.org/",
         "projectCheck": {
-          "state": "notIntegrated",
-          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+          "state": "integrated",
+          "reason": "已接入声明、候选与 mise 绑定后的受控解析核验；已有 .venv 与终端/IDE 继承仍待核对"
         },
         "channels": [
           {
@@ -179,8 +179,8 @@
               "reason": "原生管理器记录、收据与精确实例一致后才允许卸载；不删除外部链接"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "integrated",
+              "reason": "健康 mise 实例可直接选择项目/全局配置，支持收据解绑与失败补偿；执行前重验快照、配置及实际解析，终端继承另行核对"
             }
           },
           {
@@ -199,15 +199,15 @@
             },
             "installPlan": {
               "state": "integrated",
-              "reason": "已有安装计划预览；渠道执行与副作用验证未完成，安装执行未开放"
+              "reason": "Homebrew core python/python@3.N formula 安装已接入；不承诺精确补丁版，执行前重验来源与 formula 身份"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "integrated",
+              "reason": "Homebrew core formula 卸载已接入；仅限当前健康的唯一 keg，执行前重验归属、版本和反向依赖"
             },
             "bindingPlan": {
               "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "reason": "Python 绑定仅接入 mise 实例；此来源尚未提供绑定计划，目录观测不授予配置写权限"
             }
           },
           {
@@ -226,15 +226,15 @@
             },
             "installPlan": {
               "state": "integrated",
-              "reason": "已有安装计划预览；渠道执行与副作用验证未完成，安装执行未开放"
+              "reason": "pyenv 精确 CPython 受控源码编译已接入；执行前重验根目录、python-build 插件和构建依赖，不自动安装系统依赖"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "integrated",
+              "reason": "pyenv 精确版本卸载已接入；执行前重验原生记录和真实版本目录，不删除外部链接；虚拟环境引用与 rehash 影响需另行核对"
             },
             "bindingPlan": {
               "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "reason": "Python 绑定仅接入 mise 实例；此来源尚未提供绑定计划，目录观测不授予配置写权限"
             }
           },
           {
@@ -261,7 +261,7 @@
             },
             "bindingPlan": {
               "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "reason": "Python 绑定仅接入 mise 实例；此来源尚未提供绑定计划，目录观测不授予配置写权限"
             }
           },
           {
@@ -283,12 +283,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "PATH 仅作文件观测，不从观测推导卸载权限"
             },
             "bindingPlan": {
               "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "reason": "Python 绑定仅接入 mise 实例；此来源尚未提供绑定计划，目录观测不授予配置写权限"
             }
           }
         ]
@@ -818,8 +818,8 @@
         "description": "CPython 3 来源样板，项目虚拟环境单独管理",
         "documentationUrl": "https://www.python.org/",
         "projectCheck": {
-          "state": "notIntegrated",
-          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+          "state": "unsupported",
+          "reason": "当前平台尚未接入统一 Python 项目核对"
         },
         "channels": [
           {
@@ -834,12 +834,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -854,12 +854,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -874,12 +874,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -894,12 +894,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -914,12 +914,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           }
         ]
@@ -1449,8 +1449,8 @@
         "description": "CPython 3 来源样板，项目虚拟环境单独管理",
         "documentationUrl": "https://www.python.org/",
         "projectCheck": {
-          "state": "notIntegrated",
-          "reason": "Python 声明、项目虚拟环境与实际解析尚未接入"
+          "state": "unsupported",
+          "reason": "当前平台尚未接入统一 Python 项目核对"
         },
         "channels": [
           {
@@ -1465,12 +1465,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -1485,12 +1485,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -1505,12 +1505,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -1525,12 +1525,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           },
           {
@@ -1545,12 +1545,12 @@
               "reason": "此来源或平台尚未提供 Python 安装计划"
             },
             "uninstallPlan": {
-              "state": "notIntegrated",
-              "reason": "此来源 Python 卸载归属和影响门禁尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 卸载计划"
             },
             "bindingPlan": {
-              "state": "notIntegrated",
-              "reason": "Python 绑定、项目虚拟环境与作用域验证尚未接入"
+              "state": "unsupported",
+              "reason": "当前平台尚未接入统一 Python 绑定计划"
             }
           }
         ]
