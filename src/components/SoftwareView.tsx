@@ -34,7 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dial
 import "./SoftwareView.css";
 import { StateBlock } from "./ui/state-block";
 import { findCatalogTool, readToolCatalog } from "../lib/toolCatalogCache";
-import type { EntrySupport, ToolCatalog } from "../api/toolCatalog";
+import type { CatalogTool, EntrySupport, ToolCatalog } from "../api/toolCatalog";
 
 type LoadState = { status: "loading" | "ready" | "error"; error?: string };
 type CopyFeedback = { ok: boolean; message: string; command: string };
@@ -241,8 +241,52 @@ function SoftIcon({ name }: { name: string }) {
 function planLabel(support: EntrySupport | undefined): string {
   if (!support) return "未接入统一计划";
   if (support.state === "integrated") return "可计划安装";
-  if (support.state === "unsupported") return "此平台不支持";
+  if (support.state === "unsupported") return "不支持安装计划";
   return "只读，未接入计划";
+}
+
+function Capability({ label, support }: { label: string; support: EntrySupport }) {
+  const state =
+    support.state === "integrated"
+      ? "已接入"
+      : support.state === "unsupported"
+        ? "不支持"
+        : "未接入";
+  return (
+    <div className="support-capability-row">
+      <dt>{label}</dt>
+      <dd>
+        <span className={`support-capability-state ${support.state}`}>{state}</span>
+        <span>{support.reason}</span>
+      </dd>
+    </div>
+  );
+}
+
+/** 来源账本按需展开，包含没有系统包安装行的来源；登记能力不代替本次计划核验。 */
+function CatalogCapabilities({ tool }: { tool: CatalogTool }) {
+  return (
+    <details className="support-capabilities">
+      <summary aria-label={`查看 ${tool.definition.displayName} 的来源与能力`}>来源与能力</summary>
+      <div className="support-capabilities-body">
+        <p>已接入表示已有入口，具体目标和执行条件仍需在计划中核对。</p>
+        <dl>
+          <Capability label="项目核对" support={tool.projectCheck} />
+        </dl>
+        {tool.channels.map((channel) => (
+          <section key={channel.providerId} aria-label={`${channel.providerId} 来源能力`}>
+            <h3>{channel.providerId === "path" ? "PATH" : channel.providerId}</h3>
+            <dl>
+              <Capability label="清单" support={channel.inventory} />
+              <Capability label="安装" support={channel.installPlan} />
+              <Capability label="卸载" support={channel.uninstallPlan} />
+              <Capability label="绑定" support={channel.bindingPlan} />
+            </dl>
+          </section>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 /** 命令展示与实际执行使用同一份规范包标识。 */
@@ -279,6 +323,8 @@ export default function SoftwareView({
   const [sysInstalled, setSysInstalled] = useState<Record<string, Set<string>>>({});
   const [channel, setChannel] = useState<Item | null>(null);
   const [catalog, setCatalog] = useState<ToolCatalog | null>(null);
+  const [toolCatalogState, setToolCatalogState] = useState<LoadState>({ status: "loading" });
+  const [toolCatalogAttempt, setToolCatalogAttempt] = useState(0);
   const [sysJob, setSysJob] = useState<{
     manager: string;
     name: string;
@@ -317,21 +363,24 @@ export default function SoftwareView({
     };
   }, [catalogAttempt]);
 
-  // 统一目录只读一次：卡片据此标注「统一目录」与各渠道能否走计划
+  // 成功目录按会话复用；失败可独立重试，保留兼容渠道并显式说明能力暂不可用
   useEffect(() => {
     if (!active) return;
     let alive = true;
+    setToolCatalogState({ status: "loading" });
     readToolCatalog()
       .then((value) => {
-        if (alive) setCatalog(value);
+        if (!alive) return;
+        setCatalog(value);
+        setToolCatalogState({ status: "ready" });
       })
-      .catch(() => {
-        /* 目录读取失败不阻塞列表：卡片退回旧版渠道视图 */
+      .catch((error) => {
+        if (alive) setToolCatalogState({ status: "error", error: errorMessage(error) });
       });
     return () => {
       alive = false;
     };
-  }, [active]);
+  }, [active, toolCatalogAttempt]);
 
   useEffect(() => {
     if (!active) return;
@@ -478,6 +527,7 @@ export default function SoftwareView({
     setRuntimeAttempt((value) => value + 1);
     setSystemAttempt((value) => value + 1);
     if (catalogState.status === "error") setCatalogAttempt((value) => value + 1);
+    if (toolCatalogState.status === "error") setToolCatalogAttempt((value) => value + 1);
   };
   const channelState: LoadState =
     catalogState.status === "error"
@@ -511,6 +561,24 @@ export default function SoftwareView({
         </button>
       </div>
 
+      {toolCatalogState.status === "loading" && (
+        <p className="support-channel-hint" role="status">
+          正在读取工具能力…
+        </p>
+      )}
+      {toolCatalogState.status === "error" && (
+        <RetryNotice
+          title="工具能力读取失败"
+          error={toolCatalogState.error}
+          onRetry={() => setToolCatalogAttempt((value) => value + 1)}
+        />
+      )}
+      {catalog && toolCatalogState.status === "ready" && (
+        <p className="support-channel-hint">
+          {{ macos: "macOS", windows: "Windows", linux: "Linux" }[catalog.platform]} ·{" "}
+          {catalog.coverageNote}
+        </p>
+      )}
       {catalogState.status === "error" && (
         <RetryNotice
           title="安装渠道加载失败"
@@ -775,6 +843,7 @@ export default function SoftwareView({
                   {item.kind === "runtime" ? "使用 mise 选择版本安装" : "查看官方安装渠道"}
                 </div>
               )}
+              {catalogTool && <CatalogCapabilities tool={catalogTool} />}
             </article>
           );
         })}

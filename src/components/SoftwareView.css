@@ -210,11 +210,68 @@
   color: var(--muted-foreground);
 }
 .support-view button:focus-visible,
+.support-capabilities > summary:focus-visible,
 .support-channel-command:focus-visible,
 .support-icon-button:focus-visible,
 .support-text-button:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
+}
+
+.support-capabilities {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+}
+.support-capabilities > summary {
+  padding: 10px 0;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.support-capabilities-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+.support-capabilities-body > p {
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+.support-capabilities-body h3 {
+  margin-bottom: 6px;
+  color: var(--foreground);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.support-capabilities-body dl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.support-capability-row {
+  display: grid;
+  grid-template-columns: 4em minmax(0, 1fr);
+  gap: 8px;
+  line-height: 1.7;
+}
+.support-capability-row dt {
+  color: var(--foreground);
+}
+.support-capability-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted-foreground);
+}
+.support-capability-state {
+  flex: none;
+}
+.support-capability-state.integrated {
+  color: var(--primary);
 }
 .support-notice,
 .support-job {

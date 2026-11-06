@@ -33,7 +33,7 @@ vi.mock("../api", () => ({
 }));
 vi.mock("../data/catalog", () => ({
   CAT_KEYS_ALL: ["语言", "编辑器"],
-  KNOWN_RUNTIMES: ["node"],
+  KNOWN_RUNTIMES: ["node", "python"],
   SOFTWARE: [
     { name: "visual-studio-code", desc: "代码编辑器", url: "https://code.visualstudio.com" },
   ],
@@ -339,7 +339,7 @@ describe("支持列表的安装与状态反馈", () => {
     expect((screen.getByRole("combobox", { name: "工具类型" }) as HTMLSelectElement).value).toBe(
       "all",
     );
-    expect(screen.getAllByRole("article")).toHaveLength(2);
+    expect(screen.getAllByRole("article")).toHaveLength(3);
   });
 });
 
@@ -393,5 +393,116 @@ describe("统一目录能力标注", () => {
 
     const label = screen.getByText("只读，未接入计划");
     expect(label.getAttribute("title")).toContain("brew 渠道尚未接入安装计划");
+  });
+
+  it.each(["目录 IPC 不可用", "工具目录格式不受支持或能力记录不完整"])(
+    "%s 时明确提示，独立重试恢复能力且旧渠道仍可用",
+    async (message) => {
+      const user = userEvent.setup();
+      vi.mocked(toolCatalog).mockRejectedValueOnce(new Error(message));
+      const { unmount } = render(<SoftwareView />);
+      await ready();
+
+      const alert = await screen.findByRole("alert");
+      expect(within(alert).getByText("工具能力读取失败")).toBeTruthy();
+      expect(within(alert).getByText(message)).toBeTruthy();
+      expect(screen.queryByText("统一目录")).toBeNull();
+      expect(
+        (screen.getByRole("button", { name: "brew 安装 node" }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+
+      await user.click(within(alert).getByRole("button", { name: "重试" }));
+      expect(await screen.findByText("统一目录")).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(toolCatalog).toHaveBeenCalledTimes(2);
+      expect(packageCatalog).toHaveBeenCalledTimes(1);
+      expect(listTools).toHaveBeenCalledTimes(1);
+      expect(getEnvInfo).toHaveBeenCalledTimes(1);
+
+      // 成功目录在会话内复用：再次挂载不再读取 IPC。
+      unmount();
+      render(<SoftwareView />);
+      expect(await screen.findByText("统一目录")).toBeTruthy();
+      expect(toolCatalog).toHaveBeenCalledTimes(2);
+      expect(installSystemPackage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("目录首次失败后，刷新状态也会重新读取并恢复能力", async () => {
+    const user = userEvent.setup();
+    vi.mocked(toolCatalog).mockRejectedValueOnce(new Error("目录 IPC 不可用"));
+    render(<SoftwareView />);
+    await ready();
+    expect(await screen.findByRole("alert")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "刷新状态" }));
+    expect(await screen.findByText("统一目录")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(toolCatalog).toHaveBeenCalledTimes(2);
+    expect(installSystemPackage).not.toHaveBeenCalled();
+  });
+
+  it("来源与能力保留非系统包渠道、项目核对及清单安装卸载绑定状态和原因", async () => {
+    const user = userEvent.setup();
+    const python = {
+      ...catalog.tools[0],
+      definition: {
+        toolId: "python",
+        displayName: "Python",
+        aliases: [],
+        executableNames: ["python", "python3"],
+      },
+      projectCheck: { state: "integrated" as const, reason: "按 Python 项目声明核对候选" },
+      channels: (["mise", "brew", "pyenv", "uv", "path"] as const).map((providerId) => ({
+        providerId,
+        packages: [],
+        inventory: { state: "integrated" as const, reason: `${providerId} 清单读取保留文件证据` },
+        installPlan: {
+          state: providerId === "path" ? ("unsupported" as const) : ("integrated" as const),
+          reason: `${providerId} 安装范围须预览核对`,
+        },
+        uninstallPlan: {
+          state: providerId === "path" ? ("notIntegrated" as const) : ("integrated" as const),
+          reason: `${providerId} 卸载须核对精确归属`,
+        },
+        bindingPlan: {
+          state: providerId === "mise" ? ("integrated" as const) : ("notIntegrated" as const),
+          reason: `${providerId} 绑定范围按作用域判断`,
+        },
+      })),
+    };
+    vi.mocked(toolCatalog).mockResolvedValue({ ...catalog, tools: [...catalog.tools, python] });
+    render(<SoftwareView />);
+    await ready();
+
+    const card = screen.getByRole("article", { name: "python" });
+    await user.click(await within(card).findByText("来源与能力"));
+    expect(within(card).getByText("项目核对")).toBeTruthy();
+    expect(within(card).getByText(python.projectCheck.reason)).toBeTruthy();
+    for (const channel of python.channels) {
+      for (const support of [
+        channel.inventory,
+        channel.installPlan,
+        channel.uninstallPlan,
+        channel.bindingPlan,
+      ]) {
+        expect(within(card).getByText(support.reason)).toBeTruthy();
+      }
+    }
+    for (const label of ["清单", "安装", "卸载", "绑定"]) {
+      expect(within(card).getAllByText(label)).toHaveLength(5);
+    }
+    for (const label of ["已接入", "未接入", "不支持"]) {
+      expect(within(card).getAllByText(label).length).toBeGreaterThan(0);
+    }
+    expect(within(card).queryByRole("button", { name: "mise 安装 python" })).toBeNull();
+    expect(installSystemPackage).not.toHaveBeenCalled();
+
+    // Node 独有的 nvm 渠道也不依赖旧系统包映射才能显示。
+    const node = screen.getByRole("article", { name: "node" });
+    await user.click(within(node).getByText("来源与能力"));
+    expect(within(node).getByText("nvm 不提供安装计划，请用 nvm 自己安装")).toBeTruthy();
+    expect(within(node).getByText("nvm 不提供卸载计划")).toBeTruthy();
+    expect(within(node).getByText("nvm 只提供只读观测")).toBeTruthy();
   });
 });
