@@ -706,7 +706,7 @@ fn python_unbind_plan_restores_previous_configuration_and_receipt() {
         .unwrap();
     assert_eq!(unbind.action, Action::Unbind);
     assert!(unbind.capability.can_execute);
-    assert_eq!(unbind.steps.len(), 3);
+    assert_eq!(unbind.steps.len(), 4);
     assert_eq!(
         unbind.configuration_diff[0].before.as_deref(),
         Some("3.13.15")
@@ -776,6 +776,191 @@ fn python_bind_verification_failure_compensates_configuration_and_receipt() {
     let doc: serde_json::Value = serde_json::from_str(&text).unwrap();
     assert!(doc["records"].as_array().unwrap().is_empty());
 }
+
+#[test]
+fn python_bind_cancel_after_write_compensates_and_completes_independent_cleanup_scan() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    let original = "[tools]\nnode = \"22\"\n";
+    fs::write(&config, original).unwrap();
+    let armed = f.dir.path().join("hold-bound-probe");
+    let entered = f.dir.path().join("bound-probe-entered");
+    let cancelled = f.dir.path().join("parent-cancelled");
+    let cleaned = f.dir.path().join("cleanup-probed");
+    let output = serde_json::json!({"version":"3.13.15","implementation":"cpython","releaseLevel":"final","freeThreaded":false,"debug":false,"architecture":"arm64","execPath":f.executable});
+    script(
+        &f.executable,
+        &format!(
+            "#!/bin/sh\nif /usr/bin/grep -q 'python = \"3.13.15\"' '{config}'; then /usr/bin/touch '{entered}'; while [ -f '{armed}' ]; do /bin/sleep 0.01; done; elif [ -f '{cancelled}' ]; then /usr/bin/touch '{cleaned}'; fi\nprintf '%s' '{output}'\n",
+            config = config.display(),
+            entered = entered.display(),
+            armed = armed.display(),
+            cancelled = cancelled.display(),
+            cleaned = cleaned.display(),
+        ),
+    );
+    let snapshot = f
+        .query
+        .begin_tool("bind-cancel-baseline".into(), None, InventoryTool::Python)
+        .unwrap()
+        .execute_python(f.options.clone())
+        .unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap();
+    let bind = f
+        .preview(PlanRequest {
+            snapshot_request_id: snapshot.request_id,
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(BindingOptions {
+                    strategy: BindingStrategy::Direct,
+                    scope: BindingScope::Project,
+                    project_path: Some(project.path().to_string_lossy().into()),
+                }),
+            },
+        })
+        .unwrap();
+    fs::write(&armed, "").unwrap();
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| f.execute(&bind));
+        let start = Instant::now();
+        while !entered.exists() && start.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            entered.exists(),
+            "binding must be written before cancellation"
+        );
+        operations::cancel(&bind.plan_id).unwrap();
+        fs::write(&cancelled, "").unwrap();
+        fs::remove_file(&armed).unwrap();
+        let result = worker.join().unwrap();
+        assert!(matches!(result, Err(PlanError::Cancelled)), "{result:?}");
+    });
+    let (records, failed) = f.service.records();
+    assert!(!failed);
+    let record = records
+        .iter()
+        .find(|record| record.id == bind.plan_id)
+        .unwrap();
+    assert_eq!(record.status, ExecutionStatus::Cancelled);
+    assert_eq!(record.outcome, Some(Outcome::Cancelled));
+    assert_eq!(record.compensation, Some(CompensationOutcome::Completed));
+    assert!(record
+        .steps
+        .iter()
+        .any(|step| step.kind == StepKind::Refresh && step.status == StepStatus::Completed));
+    assert!(cleaned.exists(), "terminal cleanup must execute a fresh probe after compensation despite parent cancellation");
+    assert_eq!(fs::read_to_string(&config).unwrap(), original);
+    let ledger: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(python_binding::ledger(&f.options)).unwrap())
+            .unwrap();
+    assert!(ledger["records"].as_array().unwrap().is_empty());
+    let (_, current) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let mise = current
+        .providers
+        .iter()
+        .find(|report| report.provider_id == ProviderId::Mise)
+        .unwrap();
+    assert_eq!(mise.status, ProviderStatus::Ok);
+    assert!(mise.coverage.complete && !mise.stale);
+    assert!(current.installations.iter().any(|item| item.installation_id
+        == bind.target.installation_id.clone().unwrap()
+        && item.health == Health::Healthy
+        && !item.stale));
+    assert!(f
+        .query
+        .begin("binding-cleanup-slot-released".into(), None)
+        .is_ok());
+}
+
+#[test]
+fn python_bind_cancel_during_resolution_never_reports_completed() {
+    let _guard = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    let project = tempfile::tempdir().unwrap();
+    let config = project.path().join("mise.toml");
+    let original = "[tools]\nnode = \"22\"\n";
+    fs::write(&config, original).unwrap();
+    let armed = f.dir.path().join("hold-resolution");
+    let entered = f.dir.path().join("resolution-entered");
+    script(
+        &f.dir.path().join("bin/mise"),
+        &format!(
+            "#!/bin/sh\nif [ \"$1\" = which ] && [ \"$2\" = python ]; then /usr/bin/touch '{entered}'; while [ -f '{armed}' ]; do /bin/sleep 0.01; done; printf '%s' '{executable}'; exit 0; fi\nexit 91\n",
+            entered = entered.display(),
+            armed = armed.display(),
+            executable = f.executable.display(),
+        ),
+    );
+    let (_, snapshot) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    let target = snapshot
+        .installations
+        .iter()
+        .find(|item| {
+            item.provider_package.provider_id == ProviderId::Mise && item.health == Health::Healthy
+        })
+        .unwrap();
+    let bind = f
+        .preview(PlanRequest {
+            snapshot_request_id: snapshot.request_id,
+            intent: PlanIntent::Bind {
+                installation_id: target.installation_id.clone(),
+                binding: Some(BindingOptions {
+                    strategy: BindingStrategy::Direct,
+                    scope: BindingScope::Project,
+                    project_path: Some(project.path().to_string_lossy().into()),
+                }),
+            },
+        })
+        .unwrap();
+    fs::write(&armed, "").unwrap();
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| f.execute(&bind));
+        let start = Instant::now();
+        while !entered.exists() && start.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            entered.exists(),
+            "binding must enter its final resolver probe"
+        );
+        operations::cancel(&bind.plan_id).unwrap();
+        fs::remove_file(&armed).unwrap();
+        let result = worker.join().unwrap();
+        assert!(matches!(result, Err(PlanError::Cancelled)), "{result:?}");
+    });
+    let (records, failed) = f.service.records();
+    assert!(!failed);
+    let record = records
+        .iter()
+        .find(|record| record.id == bind.plan_id)
+        .unwrap();
+    assert_eq!(record.status, ExecutionStatus::Cancelled);
+    assert_eq!(record.outcome, Some(Outcome::Cancelled));
+    assert_eq!(record.compensation, Some(CompensationOutcome::Completed));
+    assert_eq!(fs::read_to_string(&config).unwrap(), original);
+    let (_, current) = f.query.current_snapshot_for(InventoryTool::Python).unwrap();
+    assert!(current
+        .providers
+        .iter()
+        .any(|report| report.provider_id == ProviderId::Mise
+            && report.status == ProviderStatus::Ok
+            && report.coverage.complete
+            && !report.stale));
+}
+
 #[test]
 fn python_unbind_compensation_conflict_is_reported_and_keeps_external_change() {
     let _guard = operations::TEST_LOCK

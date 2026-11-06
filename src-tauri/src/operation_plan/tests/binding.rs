@@ -104,6 +104,51 @@ fn unbind(f: &Fixture) -> OperationPlan {
         )
         .unwrap()
 }
+fn compensation_failure(cause: PlanError) -> (Result<ExecutionRecord, PlanError>, ExecutionRecord) {
+    let _lock = operations::TEST_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let f = Fixture::new();
+    setup(&f);
+    let plan = preview(&f, BindingStrategy::Direct, BindingScope::Global, None);
+    assert!(plan.capability.can_execute, "{:?}", plan.capability.reason);
+    let result = f.execute(&plan.plan_id, |kind, _, _, _| match kind {
+        StepKind::Verify => Err(PlanError::Verification),
+        StepKind::Compensate => Err(cause.clone()),
+        _ => Ok(()),
+    });
+    let record = f
+        .service
+        .records()
+        .0
+        .into_iter()
+        .find(|record| record.id == plan.plan_id)
+        .unwrap();
+    (result, record)
+}
+
+#[test]
+fn compensation_io_failure_is_failed_without_becoming_external_conflict() {
+    let (result, record) = compensation_failure(PlanError::Command);
+    assert!(matches!(result, Err(PlanError::Command)));
+    assert_eq!(record.compensation, Some(CompensationOutcome::Failed));
+    assert_eq!(record.outcome, Some(Outcome::StepFailed));
+    assert_eq!(record.status, ExecutionStatus::Partial);
+    assert!(record
+        .steps
+        .iter()
+        .any(|step| { step.kind == StepKind::Compensate && step.status == StepStatus::Failed }));
+}
+
+#[test]
+fn compensation_external_conflict_retains_its_distinct_outcome() {
+    let (result, record) = compensation_failure(PlanError::BindingConflict);
+    assert!(matches!(result, Err(PlanError::BindingConflict)));
+    assert_eq!(record.compensation, Some(CompensationOutcome::Conflict));
+    assert_eq!(record.outcome, Some(Outcome::CompensationConflict));
+    assert_eq!(record.status, ExecutionStatus::Partial);
+}
+
 #[test]
 fn direct_global_bind_and_unbind_preserve_original_source_and_configuration() {
     let _lock = operations::TEST_LOCK

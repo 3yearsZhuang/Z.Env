@@ -19,7 +19,7 @@ static CONFLICT_ON_VERIFY: std::sync::atomic::AtomicBool =
 static LEDGER_LOCK: Mutex<()> = Mutex::new(());
 static RECEIPT_SEQ: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Receipt {
     id: String,
@@ -49,6 +49,7 @@ struct Facts {
     before: Option<String>,
     after: Option<String>,
     original: Option<String>,
+    after_image: String,
 }
 
 #[derive(Clone)]
@@ -124,12 +125,34 @@ fn save(path: &Path, doc: &Document) -> Result<(), PlanError> {
     config::atomic_write(path, &bytes).map_err(|_| PlanError::Command)
 }
 
-fn remove_receipt(ledger: &Path, id: &str) -> Result<(), PlanError> {
-    let Some(text) = config::read_optional(ledger).map_err(|_| PlanError::Command)? else {
+fn owns_receipt(record: &Receipt, expected: &Receipt) -> bool {
+    let mut expected = expected.clone();
+    expected.state.clone_from(&record.state);
+    record == &expected
+}
+
+fn conflicting_receipt(doc: &Document, expected: &Receipt) -> bool {
+    doc.records.iter().any(|record| {
+        (record.id == expected.id && !owns_receipt(record, expected))
+            || (record.id != expected.id
+                && record.config_path == expected.config_path
+                && record.key == expected.key)
+    })
+}
+
+fn remove_receipt(ledger: &Path, expected: &Receipt) -> Result<(), PlanError> {
+    let mut doc = load(ledger)?;
+    if conflicting_receipt(&doc, expected) {
+        return Err(PlanError::BindingConflict);
+    }
+    let Some(index) = doc
+        .records
+        .iter()
+        .position(|record| record.id == expected.id)
+    else {
         return Ok(());
     };
-    let mut doc: Document = serde_json::from_str(&text).map_err(|_| PlanError::Command)?;
-    doc.records.retain(|record| record.id != id);
+    doc.records.remove(index);
     save(ledger, &doc)
 }
 
@@ -213,8 +236,19 @@ fn next_content(
 
 fn map_config_error(error: AppError) -> PlanError {
     match error {
-        AppError::Other(message) if message.contains("外部修改") => PlanError::Preconditions,
+        AppError::Other(message)
+            if message.contains("外部修改") || message.contains("已在别处修改") =>
+        {
+            PlanError::Preconditions
+        }
         _ => PlanError::Command,
+    }
+}
+
+fn map_rollback_error(error: AppError) -> PlanError {
+    match map_config_error(error) {
+        PlanError::Preconditions => PlanError::BindingConflict,
+        error => error,
     }
 }
 
@@ -327,6 +361,7 @@ pub(super) fn prepare_bind(
             before,
             after: Some(receipt.after.clone()),
             original,
+            after_image: next,
         },
         ledger: ledger_path.to_path_buf(),
         receipt,
@@ -389,6 +424,7 @@ pub(super) fn prepare_unbind(
             before: Some(receipt.after.clone()),
             after: receipt.before.clone(),
             original,
+            after_image: next,
         },
         ledger: ledger_path.to_path_buf(),
         receipt,
@@ -427,7 +463,7 @@ impl BindingSpec {
             if !doc
                 .records
                 .iter()
-                .any(|record| record.id == self.receipt.id && record.state == "bound")
+                .any(|record| owns_receipt(record, &self.receipt) && record.state == "bound")
             {
                 return Err(PlanError::Preconditions);
             }
@@ -441,14 +477,16 @@ impl BindingSpec {
         if current != self.facts.original {
             return Err(PlanError::Preconditions);
         }
-        let (next, _) = next_content(
-            current.as_deref(),
-            &self.facts.key,
-            self.facts.after.as_deref(),
-        )?;
+        let next = &self.facts.after_image;
         if self.action == Action::Bind {
             let mut doc = load(&self.ledger)?;
-            doc.records.retain(|record| record.id != self.receipt.id);
+            if doc.records.iter().any(|record| {
+                record.id == self.receipt.id
+                    || (record.config_path == self.receipt.config_path
+                        && record.key == self.receipt.key)
+            }) {
+                return Err(PlanError::BindingConflict);
+            }
             let mut receipt = self.receipt.clone();
             receipt.state = "pending".into();
             doc.records.push(receipt);
@@ -456,9 +494,9 @@ impl BindingSpec {
             if let Err(error) = config::replace_checked(
                 &self.facts.config_path,
                 self.facts.original.as_deref(),
-                Some(&next),
+                Some(next),
             ) {
-                let _ = remove_receipt(&self.ledger, &self.receipt.id);
+                remove_receipt(&self.ledger, &self.receipt)?;
                 return Err(map_config_error(error));
             }
             let mut doc = load(&self.ledger)?;
@@ -467,32 +505,46 @@ impl BindingSpec {
                 .iter_mut()
                 .find(|record| record.id == self.receipt.id)
             else {
-                let _ = config::replace_checked(
+                config::replace_checked(
                     &self.facts.config_path,
-                    Some(&next),
+                    Some(next),
                     self.facts.original.as_deref(),
-                );
+                )
+                .map_err(map_rollback_error)?;
                 return Err(PlanError::Command);
             };
+            if !owns_receipt(receipt, &self.receipt) {
+                return Err(PlanError::BindingConflict);
+            }
             receipt.state = "bound".into();
             if save(&self.ledger, &doc).is_err() {
-                let _ = config::replace_checked(
+                config::replace_checked(
                     &self.facts.config_path,
-                    Some(&next),
+                    Some(next),
                     self.facts.original.as_deref(),
-                );
-                let _ = remove_receipt(&self.ledger, &self.receipt.id);
+                )
+                .map_err(map_rollback_error)?;
+                remove_receipt(&self.ledger, &self.receipt)?;
                 return Err(PlanError::Command);
             }
             return Ok(());
         }
+        let doc = load(&self.ledger)?;
+        if conflicting_receipt(&doc, &self.receipt)
+            || !doc
+                .records
+                .iter()
+                .any(|record| owns_receipt(record, &self.receipt) && record.state == "bound")
+        {
+            return Err(PlanError::BindingConflict);
+        }
         config::replace_checked(
             &self.facts.config_path,
             self.facts.original.as_deref(),
-            Some(&next),
+            Some(next),
         )
         .map_err(map_config_error)?;
-        remove_receipt(&self.ledger, &self.receipt.id)
+        remove_receipt(&self.ledger, &self.receipt)
     }
     pub fn verify(&self, snapshot: &InventorySnapshot) -> Result<(), PlanError> {
         #[cfg(all(test, unix))]
@@ -517,7 +569,9 @@ impl BindingSpec {
             .find(|record| record.id == self.receipt.id);
         match self.action {
             Action::Bind => {
-                if receipt.is_none_or(|record| record.state != "bound") {
+                if receipt.is_none_or(|record| {
+                    record.state != "bound" || !owns_receipt(record, &self.receipt)
+                }) {
                     return Err(PlanError::Verification);
                 }
                 let target = self.target.as_ref().ok_or(PlanError::Verification)?;
@@ -576,53 +630,52 @@ impl BindingSpec {
         let _guard = LEDGER_LOCK.lock().map_err(|_| PlanError::Command)?;
         let current = config::read_optional(&self.facts.config_path)
             .map_err(|_| PlanError::EvidenceUnavailable)?;
-        let (key, value) = tools_value(current.as_deref().unwrap_or(""))?;
+        let restored = current == self.facts.original;
+        if !restored && current.as_deref() != Some(self.facts.after_image.as_str()) {
+            return Err(PlanError::BindingConflict);
+        }
         match self.action {
             Action::Bind => {
-                if key != self.facts.key {
+                if conflicting_receipt(&load(&self.ledger)?, &self.receipt) {
                     return Err(PlanError::BindingConflict);
                 }
-                if value == self.facts.after {
+                if !restored {
                     config::replace_checked(
                         &self.facts.config_path,
-                        current.as_deref(),
+                        Some(&self.facts.after_image),
                         self.facts.original.as_deref(),
                     )
-                    .map_err(map_config_error)?;
-                    let _ = remove_receipt(&self.ledger, &self.receipt.id);
-                    return Ok(());
+                    .map_err(map_rollback_error)?;
                 }
-                if current == self.facts.original {
-                    let _ = remove_receipt(&self.ledger, &self.receipt.id);
-                    return Ok(());
-                }
-                Err(PlanError::BindingConflict)
+                remove_receipt(&self.ledger, &self.receipt)
             }
             Action::Unbind => {
-                if value == self.facts.after {
-                    let (next, _) = next_content(
-                        current.as_deref(),
-                        &self.facts.key,
-                        self.facts.before.as_deref(),
-                    )?;
+                // Check receipt ownership before restoring either resource. An earlier
+                // attempt may already have restored the file but failed to save its receipt.
+                let mut doc = load(&self.ledger)?;
+                if conflicting_receipt(&doc, &self.receipt) {
+                    return Err(PlanError::BindingConflict);
+                }
+                let bound = doc
+                    .records
+                    .iter()
+                    .any(|record| record.id == self.receipt.id && record.state == "bound");
+                if !restored {
                     config::replace_checked(
                         &self.facts.config_path,
-                        current.as_deref(),
-                        Some(&next),
+                        Some(&self.facts.after_image),
+                        self.facts.original.as_deref(),
                     )
-                    .map_err(map_config_error)?;
-                    let mut doc = load(&self.ledger)?;
+                    .map_err(map_rollback_error)?;
+                }
+                if !bound {
                     doc.records.retain(|record| record.id != self.receipt.id);
                     let mut receipt = self.receipt.clone();
                     receipt.state = "bound".into();
                     doc.records.push(receipt);
                     save(&self.ledger, &doc)?;
-                    return Ok(());
                 }
-                if value == self.facts.before {
-                    return Ok(());
-                }
-                Err(PlanError::BindingConflict)
+                Ok(())
             }
             _ => Err(PlanError::Unsupported),
         }
@@ -724,6 +777,192 @@ mod tests {
             scope,
             project_path: project.map(|path| path.to_string_lossy().into()),
         }
+    }
+
+    fn applied_binding(original: &str) -> (tempfile::TempDir, BindingSpec) {
+        let directory = tempfile::tempdir().unwrap();
+        fs::write(directory.path().join("mise.toml"), original).unwrap();
+        let target = target();
+        let spec = prepare_bind(
+            &target,
+            &snapshot(&target),
+            &options(BindingScope::Project, Some(directory.path())),
+            &directory.path().join("global.toml"),
+            &directory.path().join("bindings.json"),
+            directory.path(),
+        )
+        .unwrap();
+        spec.apply().unwrap();
+        (directory, spec)
+    }
+
+    fn block_ledger_save(ledger: &Path) -> PathBuf {
+        let backup = config::backup_path(ledger);
+        if backup.exists() {
+            fs::remove_file(&backup).unwrap();
+        }
+        // A directory at the backup destination deterministically rejects the atomic save,
+        // while the valid receipt file remains readable for recovery.
+        fs::create_dir(&backup).unwrap();
+        backup
+    }
+
+    #[test]
+    fn bind_compensation_preserves_external_non_python_change() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let external = fs::read_to_string(&spec.config_path)
+            .unwrap()
+            .replace("node = \"22\"", "node = \"20\"");
+        fs::write(&spec.config_path, &external).unwrap();
+
+        assert!(matches!(spec.rollback(), Err(PlanError::BindingConflict)));
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), external);
+        assert_eq!(load(&spec.ledger).unwrap().records.len(), 1);
+    }
+
+    #[test]
+    fn bind_compensation_reports_receipt_cleanup_failure_and_retries() {
+        let original = "[tools]\nnode = \"22\"\n";
+        let (_directory, spec) = applied_binding(original);
+        let backup = block_ledger_save(&spec.ledger);
+
+        assert!(matches!(spec.rollback(), Err(PlanError::Command)));
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), original);
+        assert_eq!(load(&spec.ledger).unwrap().records.len(), 1);
+        fs::remove_dir(backup).unwrap();
+        spec.rollback().unwrap();
+        assert!(load(&spec.ledger).unwrap().records.is_empty());
+    }
+
+    #[test]
+    fn bind_compensation_idempotent_cleanup_reports_failure_and_retries() {
+        let original = "[tools]\nnode = \"22\"\n";
+        let (_directory, spec) = applied_binding(original);
+        fs::write(&spec.config_path, original).unwrap();
+        let backup = block_ledger_save(&spec.ledger);
+
+        assert!(matches!(spec.rollback(), Err(PlanError::Command)));
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), original);
+        assert_eq!(load(&spec.ledger).unwrap().records.len(), 1);
+        fs::remove_dir(backup).unwrap();
+        spec.rollback().unwrap();
+        assert!(load(&spec.ledger).unwrap().records.is_empty());
+    }
+
+    #[test]
+    fn unbind_compensation_preserves_external_non_python_change() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        let external = fs::read_to_string(&spec.config_path)
+            .unwrap()
+            .replace("node = \"22\"", "node = \"20\"");
+        fs::write(&spec.config_path, &external).unwrap();
+
+        assert!(matches!(unbind.rollback(), Err(PlanError::BindingConflict)));
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), external);
+        assert!(load(&spec.ledger).unwrap().records.is_empty());
+    }
+
+    #[test]
+    fn unbind_compensation_idempotently_restores_missing_receipt() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let bound = fs::read_to_string(&spec.config_path).unwrap();
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        fs::write(&spec.config_path, &bound).unwrap();
+
+        unbind.rollback().unwrap();
+        let doc = load(&spec.ledger).unwrap();
+        assert_eq!(doc.records.len(), 1);
+        assert_eq!(doc.records[0].id, spec.receipt.id);
+        assert_eq!(doc.records[0].state, "bound");
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), bound);
+    }
+
+    #[test]
+    fn unbind_compensation_retries_receipt_restore_after_config_is_restored() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let bound = fs::read_to_string(&spec.config_path).unwrap();
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        let backup = block_ledger_save(&spec.ledger);
+
+        assert!(matches!(unbind.rollback(), Err(PlanError::Command)));
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), bound);
+        assert!(load(&spec.ledger).unwrap().records.is_empty());
+        fs::remove_dir(backup).unwrap();
+        unbind.rollback().unwrap();
+        let doc = load(&spec.ledger).unwrap();
+        assert_eq!(doc.records.len(), 1);
+        assert_eq!(doc.records[0].state, "bound");
+    }
+
+    #[test]
+    fn bind_compensation_does_not_delete_replaced_receipt_identity() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\n");
+        let bound = fs::read_to_string(&spec.config_path).unwrap();
+        let mut doc = load(&spec.ledger).unwrap();
+        doc.records[0].locator = "/external/python/3.13.15".into();
+        save(&spec.ledger, &doc).unwrap();
+        let external = fs::read_to_string(&spec.ledger).unwrap();
+
+        assert!(matches!(spec.rollback(), Err(PlanError::BindingConflict)));
+        assert_eq!(fs::read_to_string(&spec.ledger).unwrap(), external);
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), bound);
+    }
+
+    #[test]
+    fn unbind_compensation_does_not_overwrite_replaced_receipt_identity() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let mut doc = load(&spec.ledger).unwrap();
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        let unbound = fs::read_to_string(&spec.config_path).unwrap();
+        doc.records[0].locator = "/external/python/3.13.15".into();
+        save(&spec.ledger, &doc).unwrap();
+        let external = fs::read_to_string(&spec.ledger).unwrap();
+
+        assert!(matches!(unbind.rollback(), Err(PlanError::BindingConflict)));
+        assert_eq!(fs::read_to_string(&spec.ledger).unwrap(), external);
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), unbound);
+    }
+
+    #[test]
+    fn compensation_preserves_other_configuration_receipts() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let (_other_directory, other) = applied_binding("[tools]\npython = \"3.11\"\n");
+        let other_receipt = load(&other.ledger).unwrap().records.remove(0);
+        let mut doc = load(&spec.ledger).unwrap();
+        doc.records.push(other_receipt.clone());
+        save(&spec.ledger, &doc).unwrap();
+
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        assert_eq!(
+            load(&spec.ledger).unwrap().records,
+            vec![other_receipt.clone()]
+        );
+        unbind.rollback().unwrap();
+        assert_eq!(load(&spec.ledger).unwrap().records.len(), 2);
+        spec.rollback().unwrap();
+        assert_eq!(load(&spec.ledger).unwrap().records, vec![other_receipt]);
+    }
+
+    #[test]
+    fn unbind_compensation_refuses_new_receipt_for_same_configuration() {
+        let (_directory, spec) = applied_binding("[tools]\nnode = \"22\"\npython = \"3.12\"\n");
+        let mut doc = load(&spec.ledger).unwrap();
+        let unbind = prepare_unbind(&spec.receipt.id, &spec.ledger).unwrap();
+        unbind.apply().unwrap();
+        let unbound = fs::read_to_string(&spec.config_path).unwrap();
+        doc.records[0].id = "external-binding".into();
+        save(&spec.ledger, &doc).unwrap();
+        let external = fs::read_to_string(&spec.ledger).unwrap();
+
+        assert!(matches!(unbind.rollback(), Err(PlanError::BindingConflict)));
+        assert_eq!(fs::read_to_string(&spec.ledger).unwrap(), external);
+        assert_eq!(fs::read_to_string(&spec.config_path).unwrap(), unbound);
     }
 
     #[test]

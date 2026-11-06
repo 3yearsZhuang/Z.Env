@@ -479,6 +479,11 @@ impl OperationPlanService {
                         &options.common.home,
                     ),
                     step(
+                        StepKind::Refresh,
+                        "恢复配置后重扫 Python 来源，确认实际残留",
+                        &options.common.home,
+                    ),
+                    step(
                         StepKind::Verify,
                         "核对配置恢复与收据移除",
                         &options.common.home,
@@ -781,6 +786,15 @@ impl OperationPlanService {
                                 .current_snapshot_for(InventoryTool::Python)
                                 .map_err(|_| PlanError::Inventory)?;
                             binding.revalidate(stored.target.as_ref(), &snapshot)?;
+                            let lease = query
+                                .begin_tool(
+                                    format!("python-mutation-{id}"),
+                                    Some(ProviderId::Mise),
+                                    InventoryTool::Python,
+                                )
+                                .map_err(|_| PlanError::Inventory)?;
+                            lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
+                            mutation = Some(lease);
                             return binding.apply();
                         }
                         let write = stored.python_write.as_ref().ok_or(PlanError::Disabled)?;
@@ -813,7 +827,9 @@ impl OperationPlanService {
                                 .begin_tool(request.clone(), Some(provider), InventoryTool::Python)
                                 .map_err(|_| PlanError::Inventory)?,
                         };
-                        let result = if stored.python_write.is_some() {
+                        let mutation_cleanup =
+                            stored.python_write.is_some() || stored.python_binding.is_some();
+                        let result = if mutation_cleanup {
                             if stored.view.target.provider_package.provider_id == ProviderId::Mise {
                                 crate::syscache::invalidate("mise");
                             }
@@ -829,7 +845,7 @@ impl OperationPlanService {
                             drop(watch);
                             result
                         };
-                        if stored.python_write.is_none() && operations::cancelled(id) {
+                        if !mutation_cleanup && operations::cancelled(id) {
                             return Err(PlanError::Cancelled);
                         }
                         result.map_err(|_| PlanError::ScanIncomplete)?;
@@ -841,7 +857,12 @@ impl OperationPlanService {
                             .map_err(|_| PlanError::Inventory)?;
                         if let Some(binding) = &stored.python_binding {
                             binding.verify(&snapshot)?;
-                            return binding.verify_resolution(options);
+                            binding.verify_resolution(options)?;
+                            return if operations::cancelled(id) {
+                                Err(PlanError::Cancelled)
+                            } else {
+                                Ok(())
+                            };
                         }
                         if let Some(write) = &stored.python_write {
                             write.verify(&snapshot, options)
@@ -854,6 +875,17 @@ impl OperationPlanService {
                     }
                     StepKind::Compensate => {
                         let binding = stored.python_binding.as_ref().ok_or(PlanError::Disabled)?;
+                        if mutation.is_none() {
+                            let lease = query
+                                .begin_tool(
+                                    format!("python-compensate-{id}"),
+                                    Some(ProviderId::Mise),
+                                    InventoryTool::Python,
+                                )
+                                .map_err(|_| PlanError::Inventory)?;
+                            lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
+                            mutation = Some(lease);
+                        }
                         binding.rollback()
                     }
                 }

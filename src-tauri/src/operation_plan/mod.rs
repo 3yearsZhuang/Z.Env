@@ -1104,8 +1104,9 @@ impl OperationPlanService {
                             };
                         }
                     });
-                    if result.is_err() {
-                        failure = Some(PlanError::BindingConflict);
+                    if let Err(error) = result {
+                        // 保留补偿的真实失败原因；收据/文件 I/O 失败不能伪装成外部修改冲突。
+                        failure = Some(error);
                     }
                     refreshed = false;
                 }
