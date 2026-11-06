@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProviderId } from "../api/inventory";
+import type { ProviderId, ProviderPackage } from "../api/inventory";
 import { errorMessage, operationCancel } from "../api";
 import {
   operationExecute,
-  operationPlan,
   operationBindings,
   type BindingSummary,
   type BindingStrategy,
@@ -13,6 +12,7 @@ import {
   type PlanIntent,
   type PlanAction,
 } from "../api/operationPlan";
+import { operationPlanV2 } from "../api/operationPlanV2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import "./OperationPlanDialog.css";
 import { Notice } from "./ui/notice";
@@ -26,6 +26,89 @@ interface Props {
   initialAction?: "install" | "unbind" | "bind";
   initialBinding?: BindingOptions;
   initialBindingId?: string;
+  initialProviderId?: ProviderId;
+  initialPackageId?: string;
+  openerElement?: HTMLElement | null;
+}
+
+function brewFormula(packageId: string, python: boolean): string | null {
+  const formula = packageId.replace(/^homebrew\/core\//, "");
+  return (python ? /^(?:python3?|python@3\.[1-9]\d?)$/ : /^(?:node|node@[1-9]\d*)$/).test(formula)
+    ? formula
+    : null;
+}
+
+function toolPackage(
+  packageIdentity: ProviderPackage | undefined,
+  python: boolean,
+): packageIdentity is ProviderPackage {
+  if (
+    !packageIdentity ||
+    !["macos", "windows", "linux"].includes(packageIdentity.platform) ||
+    typeof packageIdentity.packageId !== "string"
+  )
+    return false;
+  const { providerId, packageId, kind } = packageIdentity;
+  if (providerId === "brew") return kind === "formula" && brewFormula(packageId, python) !== null;
+  if (providerId === "path")
+    return (
+      kind === "executable" &&
+      (python ? /^python(?:3(?:\.\d+)?)?$/.test(packageId) : ["node", "nodejs"].includes(packageId))
+    );
+  return (
+    kind === "runtime" &&
+    (python
+      ? ["mise", "pyenv", "uv"].includes(providerId) && packageId === "python"
+      : ["mise", "nvm"].includes(providerId) && ["node", "nodejs"].includes(packageId))
+  );
+}
+
+function executablePackage(target: ProviderPackage, action: PlanAction, python: boolean): boolean {
+  if (target.platform !== "macos") return false;
+  if (python)
+    return action === "bind" || action === "unbind"
+      ? target.providerId === "mise"
+      : ["mise", "brew", "pyenv", "uv"].includes(target.providerId);
+  if (target.providerId === "brew") return true;
+  if (target.packageId !== "node") return false;
+  return (
+    target.providerId === "mise" ||
+    (target.providerId === "nvm" && ["verify", "bind", "unbind"].includes(action))
+  );
+}
+
+function samePackage(left: ProviderPackage, right: ProviderPackage, python: boolean): boolean {
+  return (
+    left.providerId === right.providerId &&
+    left.kind === right.kind &&
+    left.platform === right.platform &&
+    (left.providerId === "brew"
+      ? brewFormula(left.packageId, python) !== null &&
+        brewFormula(left.packageId, python) === brewFormula(right.packageId, python)
+      : left.packageId === right.packageId)
+  );
+}
+
+function visible(element: HTMLElement | null): element is HTMLElement {
+  if (!element?.isConnected || element.matches(":disabled")) return false;
+  for (let current: HTMLElement | null = element; current; current = current.parentElement) {
+    const style = getComputedStyle(current);
+    if (
+      current.hidden ||
+      current.hasAttribute("inert") ||
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.visibility === "collapse"
+    )
+      return false;
+    if (
+      current instanceof HTMLDetailsElement &&
+      !current.open &&
+      !current.querySelector(":scope > summary")?.contains(element)
+    )
+      return false;
+  }
+  return true;
 }
 const ACTIONS: { value: PlanAction; label: string }[] = [
   { value: "verify", label: "重新验证此实例" },
@@ -49,6 +132,9 @@ export default function OperationPlanDialog({
   initialAction,
   initialBinding,
   initialBindingId,
+  initialProviderId,
+  initialPackageId,
+  openerElement,
 }: Props) {
   const python = toolId === "python";
   const displayName = python ? "Python" : "Node.js";
@@ -62,8 +148,8 @@ export default function OperationPlanDialog({
   const [bindings, setBindings] = useState<BindingSummary[]>([]);
   const [bindingId, setBindingId] = useState(initialBindingId ?? "");
   const [bindingsLoading, setBindingsLoading] = useState(false);
-  const [provider, setProvider] = useState<ProviderId>("mise");
-  const [packageId, setPackageId] = useState(packageName);
+  const [provider, setProvider] = useState<ProviderId>(initialProviderId ?? "mise");
+  const [packageId, setPackageId] = useState(initialPackageId ?? packageName);
   const [version, setVersion] = useState("");
   const [plan, setPlan] = useState<OperationPlan | null>(null);
   const [error, setError] = useState("");
@@ -85,7 +171,8 @@ export default function OperationPlanDialog({
   const cancelPending = useRef(false);
   const executingPlan = useRef<string | null>(null);
   const opener = useRef(
-    document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    openerElement ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null),
   );
   useEffect(() => {
     alive.current = true;
@@ -102,7 +189,7 @@ export default function OperationPlanDialog({
     sequence.current += 1;
     previewing.current = false;
     setLoading(false);
-    setPlan(null);
+    if (!inFlight.current) setPlan(null);
     setError("");
     setMessage("");
   }, [action, provider, packageId, version, installationId, strategy, scope, projectPath, toolId]);
@@ -139,7 +226,7 @@ export default function OperationPlanDialog({
     sequence.current += 1;
     previewing.current = false;
     setLoading(false);
-    setPlan(null);
+    if (!inFlight.current) setPlan(null);
   }, [snapshotRequestId]);
 
   async function preview() {
@@ -173,27 +260,48 @@ export default function OperationPlanDialog({
     setMessage("");
     try {
       const request = { snapshotRequestId, intent };
-      const next = await (python ? operationPlan(request, "python") : operationPlan(request));
+      const response = await operationPlanV2({
+        schemaVersion: 2,
+        subject: { kind: "tool", toolId },
+        request,
+      });
+      const next = response.plan;
       if (alive.current && attempt === sequence.current) {
+        const target = next.target?.providerPackage;
+        const binding = bindings.find((item) => item.bindingId === bindingId);
+        const installPackage =
+          intent.action === "install"
+            ? {
+                providerId: intent.providerId,
+                packageId: intent.packageId,
+                kind: intent.providerId === "brew" ? ("formula" as const) : ("runtime" as const),
+                // 请求未指定平台；保留后端只读目标的平台，执行能力另按 macOS 边界核对。
+                platform: target?.platform ?? ("macos" as const),
+              }
+            : null;
         if (
+          response.schemaVersion !== 2 ||
+          response.subject.kind !== "tool" ||
+          response.subject.toolId !== toolId ||
           (next.toolId ?? "node") !== toolId ||
-          (python &&
-            next.capability.canExecute &&
-            intent.action !== "verify" &&
-            !(
-              (intent.action === "install" || intent.action === "uninstall") &&
-              next.target.providerPackage.providerId === "mise" &&
-              next.target.providerPackage.packageId === "python" &&
-              next.target.providerPackage.kind === "runtime" &&
-              next.target.providerPackage.platform === "macos"
-            )) ||
+          !toolPackage(target, python) ||
+          (next.capability.canExecute && !executablePackage(target, intent.action, python)) ||
           (intent.action === "install" &&
-            next.target.providerPackage.providerId !== intent.providerId) ||
+            (!installPackage ||
+              !samePackage(target, installPackage, python) ||
+              next.target.installationId !== null ||
+              next.target.locator !== null)) ||
           next.snapshotRequestId !== snapshotRequestId ||
           next.action !== intent.action ||
           (intent.action !== "install" &&
             intent.action !== "unbind" &&
-            next.target.installationId !== intent.installationId)
+            next.target.installationId !== intent.installationId) ||
+          (intent.action === "unbind" &&
+            (python
+              ? next.target.installationId !== installationId || target.providerId !== "mise"
+              : !binding ||
+                !samePackage(target, binding.providerPackage, python) ||
+                next.target.locator !== binding.locator))
         )
           throw new Error("计划与当前请求不匹配，请重新预览");
         setPlan(next);
@@ -209,7 +317,13 @@ export default function OperationPlanDialog({
     }
   }
   async function execute() {
-    if (inFlight.current || !plan?.capability.canExecute || Date.now() >= plan.expiresAt) return;
+    if (
+      inFlight.current ||
+      !plan?.capability.canExecute ||
+      plan.snapshotRequestId !== snapshotRequestId ||
+      Date.now() >= plan.expiresAt
+    )
+      return;
     inFlight.current = true;
     executingPlan.current = plan.planId;
     setExecuting(true);
@@ -254,13 +368,14 @@ export default function OperationPlanDialog({
     }
   }
   async function cancel() {
-    if (!plan || cancelPending.current) return;
+    const planId = executingPlan.current;
+    if (!planId || cancelPending.current) return;
     cancelPending.current = true;
     setCancelling(true);
     try {
-      await operationCancel(plan.planId);
+      await operationCancel(planId);
     } catch (error) {
-      if (alive.current && executingPlan.current === plan.planId) {
+      if (alive.current && executingPlan.current === planId) {
         cancelPending.current = false;
         setError(errorMessage(error));
         setCancelling(false);
@@ -279,18 +394,24 @@ export default function OperationPlanDialog({
         className="operation-plan-dialog"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
-          if (opener.current?.isConnected) opener.current.focus();
-          else
-            document
-              .querySelector<HTMLElement>(python ? ".python-inventory h2" : ".node-inventory h2")
-              ?.focus();
+          if (visible(opener.current)) {
+            opener.current.focus();
+            if (document.activeElement === opener.current) return;
+          }
+          for (const fallback of document.querySelectorAll<HTMLElement>(
+            `[data-runtime-switch="${toolId}"]`,
+          )) {
+            if (!visible(fallback)) continue;
+            fallback.focus();
+            if (document.activeElement === fallback) return;
+          }
         }}
       >
         <header>
           <DialogTitle>{displayName} 操作计划</DialogTitle>
           <DialogDescription>
             {python
-              ? "重新验证只确认所选实例。mise/uv 精确安装、mise 绑定与 Homebrew core formula 安装/卸载按计划核验；其他来源安装仅预览。"
+              ? "重新验证只确认所选实例。mise、uv、pyenv 精确安装与 Homebrew core formula 安装/卸载按计划核验；mise 绑定可写入项目或全局选择，实际生效需另行核对。"
               : "先核对目标、配置差异与来源影响，再执行计划。失败或取消后的补偿单独记录。"}
           </DialogDescription>
         </header>
@@ -430,7 +551,10 @@ export default function OperationPlanDialog({
                   aria-label="安装来源"
                   value={provider}
                   disabled={executing}
-                  onChange={(e) => setProvider(e.target.value as ProviderId)}
+                  onChange={(e) => {
+                    setProvider(e.target.value as ProviderId);
+                    setPackageId(packageName);
+                  }}
                 >
                   <option value="mise">mise</option>
                   <option value="brew">Homebrew</option>
@@ -595,18 +719,20 @@ export default function OperationPlanDialog({
                   </li>
                 ))}
               </ol>
-              {plan.capability.canExecute && !expired && (
-                <button className="btn" disabled={executing} onClick={() => void execute()}>
-                  {executing ? "执行中…" : EXECUTE_LABELS[plan.action]}
-                </button>
-              )}
+              {plan.capability.canExecute &&
+                !expired &&
+                (executing || plan.snapshotRequestId === snapshotRequestId) && (
+                  <button className="btn" disabled={executing} onClick={() => void execute()}>
+                    {executing ? "执行中…" : EXECUTE_LABELS[plan.action]}
+                  </button>
+                )}
               {!plan.capability.canExecute && <p>此计划当前不能执行；现有管理入口继续保留。</p>}
-              {executing && (
-                <button className="btn" disabled={cancelling} onClick={() => void cancel()}>
-                  {cancelling ? "等待取消完成…" : "请求取消"}
-                </button>
-              )}
             </section>
+          )}
+          {executing && (
+            <button className="btn" disabled={cancelling} onClick={() => void cancel()}>
+              {cancelling ? "等待取消完成…" : "请求取消"}
+            </button>
           )}
         </div>
         <footer>

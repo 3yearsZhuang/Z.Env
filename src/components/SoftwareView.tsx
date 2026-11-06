@@ -35,9 +35,23 @@ import "./SoftwareView.css";
 import { StateBlock } from "./ui/state-block";
 import { findCatalogTool, readToolCatalog } from "../lib/toolCatalogCache";
 import type { CatalogTool, EntrySupport, ToolCatalog } from "../api/toolCatalog";
+import type {
+  InstallProvider,
+  InventoryInstallTarget,
+  InventoryTool,
+} from "../lib/inventoryNavigation";
 
 type LoadState = { status: "loading" | "ready" | "error"; error?: string };
 type CopyFeedback = { ok: boolean; message: string; command: string };
+
+function inventoryTool(name: string): InventoryTool | undefined {
+  if (["node", "nodejs", "node.js"].includes(name.toLowerCase())) return "node";
+  if (name.toLowerCase() === "python") return "python";
+}
+
+function isInstallProvider(provider: string): provider is InstallProvider {
+  return ["mise", "brew", "pyenv", "uv"].includes(provider);
+}
 
 function useCopyFeedback() {
   const [feedback, setFeedback] = useState<CopyFeedback | null>(null);
@@ -264,7 +278,15 @@ function Capability({ label, support }: { label: string; support: EntrySupport }
 }
 
 /** 来源账本按需展开，包含没有系统包安装行的来源；登记能力不代替本次计划核验。 */
-function CatalogCapabilities({ tool }: { tool: CatalogTool }) {
+function CatalogCapabilities({
+  tool,
+  toolId,
+  onPreviewInstall,
+}: {
+  tool: CatalogTool;
+  toolId?: InventoryTool;
+  onPreviewInstall?: (target: InventoryInstallTarget, opener?: HTMLElement) => void;
+}) {
   return (
     <details className="support-capabilities">
       <summary aria-label={`查看 ${tool.definition.displayName} 的来源与能力`}>来源与能力</summary>
@@ -282,6 +304,35 @@ function CatalogCapabilities({ tool }: { tool: CatalogTool }) {
               <Capability label="卸载" support={channel.uninstallPlan} />
               <Capability label="绑定" support={channel.bindingPlan} />
             </dl>
+            {toolId &&
+              (channel.providerId === "pyenv" || channel.providerId === "uv") &&
+              channel.installPlan.state === "integrated" && (
+                <div className="support-catalog-actions">
+                  {channel.packages.map((pkg) => (
+                    <button
+                      type="button"
+                      key={pkg.packageId}
+                      className="support-text-button"
+                      disabled={!onPreviewInstall}
+                      onClick={(event) => {
+                        if (isInstallProvider(pkg.providerId))
+                          onPreviewInstall?.(
+                            {
+                              toolId,
+                              providerId: pkg.providerId,
+                              packageId: pkg.packageId,
+                            },
+                            event.currentTarget,
+                          );
+                      }}
+                      aria-label={`${channel.providerId} 预览计划 ${toolId} ${pkg.packageId}`}
+                    >
+                      <Download size={12} aria-hidden="true" />
+                      预览 {pkg.packageId} 安装计划
+                    </button>
+                  ))}
+                </div>
+              )}
           </section>
         ))}
       </div>
@@ -300,10 +351,14 @@ function pkgCommand(pkg: ProviderPackage): string {
 export default function SoftwareView({
   active = true,
   onShowNode,
+  onShowInventory,
+  onPreviewInstall,
   onInventoryChanged,
 }: {
   active?: boolean;
   onShowNode?: () => void;
+  onShowInventory?: (toolId: InventoryTool) => void;
+  onPreviewInstall?: (target: InventoryInstallTarget, opener?: HTMLElement) => void;
   onInventoryChanged?: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -443,6 +498,15 @@ export default function SoftwareView({
   }, [active, systemAttempt]);
 
   const doInstall = async (pkg: ProviderPackage) => {
+    const support = findCatalogTool(catalog, pkg.tool)?.channels.find(
+      (channel) => channel.providerId === pkg.manager,
+    )?.installPlan;
+    // Node/Python 只有明确未接入计划的来源可以走兼容写入，未知或已接入能力不得回退。
+    if (
+      inventoryTool(pkg.tool) &&
+      (toolCatalogState.status !== "ready" || !support || support.state === "integrated")
+    )
+      return;
     if (
       running.current ||
       catalogState.status !== "ready" ||
@@ -692,12 +756,18 @@ export default function SoftwareView({
 
       <div className="support-grid">
         {filtered.map((item) => {
-          const showNodeDetails =
-            item.kind === "runtime" && ["node", "nodejs"].includes(item.name) && onShowNode;
+          const toolId = item.kind === "runtime" ? inventoryTool(item.name) : undefined;
+          const showInventory = toolId
+            ? onShowInventory
+              ? () => onShowInventory(toolId)
+              : toolId === "node"
+                ? onShowNode
+                : undefined
+            : undefined;
           const tool = toolsByName.get(item.name);
           const isInstalled =
             runtimeState.status === "ready" && tool?.versions.some((version) => version.installed);
-          const runtimeLabel = showNodeDetails
+          const runtimeLabel = toolId
             ? "查看本机实例"
             : runtimeState.status === "loading"
               ? "检测中"
@@ -710,6 +780,12 @@ export default function SoftwareView({
             available.has(pkg.manager),
           );
           const catalogTool = findCatalogTool(catalog, item.name);
+          const defaultMisePreview =
+            toolId &&
+            catalogTool?.channels.some(
+              (channel) =>
+                channel.providerId === "mise" && channel.installPlan.state === "integrated",
+            );
           return (
             <article className="support-card" key={item.name} aria-label={item.name}>
               <button
@@ -718,20 +794,22 @@ export default function SoftwareView({
                 onClick={() =>
                   item.kind === "download"
                     ? setChannel(item)
-                    : showNodeDetails
-                      ? onShowNode?.()
+                    : toolId
+                      ? showInventory?.()
                       : setInstallFor(
                           tool || { name: item.name, versions: [], active_versions: [] },
                         )
                 }
                 disabled={
                   busy ||
-                  (item.kind === "runtime" && !showNodeDetails && runtimeState.status !== "ready")
+                  (toolId
+                    ? !showInventory
+                    : item.kind === "runtime" && runtimeState.status !== "ready")
                 }
                 aria-label={
                   item.kind === "download"
                     ? `查看 ${item.name} 的安装渠道`
-                    : showNodeDetails
+                    : toolId
                       ? `查看 ${item.name} 的本机实例`
                       : `查看 ${item.name} 的运行时版本`
                 }
@@ -740,7 +818,7 @@ export default function SoftwareView({
                 <span className="support-card-copy">
                   <span className="support-card-name">{item.name}</span>
                   <span className="support-card-description">
-                    {showNodeDetails
+                    {toolId
                       ? "查看所有来源的安装实例、路径与验证结果"
                       : item.desc || "通过 mise 管理运行时版本"}
                   </span>
@@ -758,6 +836,25 @@ export default function SoftwareView({
                 )}
                 {catalogTool && <span className="support-badge">统一目录</span>}
               </div>
+              {defaultMisePreview && toolId && (
+                <div className="support-card-actions">
+                  <button
+                    type="button"
+                    className="support-text-button"
+                    disabled={busy || !onPreviewInstall}
+                    onClick={(event) =>
+                      onPreviewInstall?.(
+                        { toolId, providerId: "mise", packageId: toolId },
+                        event.currentTarget,
+                      )
+                    }
+                    aria-label={`mise 预览计划 ${item.name}`}
+                  >
+                    <Download size={12} aria-hidden="true" />
+                    mise 安装预览
+                  </button>
+                </div>
+              )}
               {channelState.status !== "ready" ? (
                 <div className="support-card-state">
                   {channelState.status === "loading" ? "正在加载安装渠道…" : "安装渠道待重试"}
@@ -769,6 +866,22 @@ export default function SoftwareView({
                       (channel) => channel.providerId === pkg.manager,
                     )?.installPlan;
                     const plan = channelSupport?.state === "integrated" ? "ready" : "readonly";
+                    const capabilityUnknown =
+                      toolId && (toolCatalogState.status !== "ready" || !channelSupport);
+                    const capabilityLabel =
+                      toolCatalogState.status === "loading" ? "能力读取中" : "能力未知";
+                    const directInstallAllowed =
+                      !toolId ||
+                      (toolCatalogState.status === "ready" &&
+                        channelSupport &&
+                        channelSupport.state !== "integrated");
+                    const previewTarget: InventoryInstallTarget | undefined =
+                      toolId &&
+                      !capabilityUnknown &&
+                      plan === "ready" &&
+                      isInstallProvider(pkg.manager)
+                        ? { toolId, providerId: pkg.manager, packageId: pkg.id }
+                        : undefined;
                     const state =
                       envState.status !== "ready" ? envState : managerStates[pkg.manager];
                     const isHere =
@@ -776,15 +889,21 @@ export default function SoftwareView({
                       sysInstalled[pkg.manager]?.has(pkg.id.toLowerCase());
                     const installing =
                       busy && sysJob.manager === pkg.manager && sysJob.name === pkg.id;
-                    const label = installing
-                      ? "安装中"
-                      : state?.status === "error"
-                        ? "检测失败"
-                        : state?.status !== "ready"
-                          ? "检测中"
-                          : isHere
-                            ? "已安装"
-                            : "安装";
+                    const label = capabilityUnknown
+                      ? capabilityLabel
+                      : previewTarget
+                        ? "预览计划"
+                        : !directInstallAllowed
+                          ? "预览不可用"
+                          : installing
+                            ? "安装中"
+                            : state?.status === "error"
+                              ? "检测失败"
+                              : state?.status !== "ready"
+                                ? "检测中"
+                                : isHere
+                                  ? "已安装"
+                                  : "安装";
                     return (
                       <span
                         className="support-package-item"
@@ -793,19 +912,34 @@ export default function SoftwareView({
                         <span className="support-package">
                           <button
                             type="button"
-                            className={`support-package-install ${isHere ? "support-package-installed" : ""}`}
-                            disabled={busy || isHere || state?.status !== "ready"}
-                            onClick={() => void doInstall(pkg)}
+                            className={`support-package-install ${isHere && !previewTarget ? "support-package-installed" : ""}`}
+                            disabled={
+                              busy ||
+                              (previewTarget
+                                ? !onPreviewInstall
+                                : !directInstallAllowed || isHere || state?.status !== "ready")
+                            }
+                            onClick={(event) => {
+                              if (previewTarget)
+                                onPreviewInstall?.(previewTarget, event.currentTarget);
+                              else if (directInstallAllowed) void doInstall(pkg);
+                            }}
                             aria-label={`${pkg.manager} ${label} ${item.name}`}
-                            title={pkgCommand(pkg)}
+                            title={
+                              capabilityUnknown
+                                ? `${pkg.manager} 安装能力尚未确认，请等待目录读取或重试`
+                                : previewTarget
+                                  ? `预览 ${pkg.manager} 的 ${pkg.id} 安装计划`
+                                  : pkgCommand(pkg)
+                            }
                           >
-                            {installing ? (
+                            {installing && !previewTarget ? (
                               <LoaderCircle
                                 size={12}
                                 className="support-spinning"
                                 aria-hidden="true"
                               />
-                            ) : isHere ? (
+                            ) : isHere && !previewTarget ? (
                               <Check size={12} aria-hidden="true" />
                             ) : (
                               <Download size={12} aria-hidden="true" />
@@ -823,15 +957,17 @@ export default function SoftwareView({
                             <Copy size={13} aria-hidden="true" />
                           </button>
                         </span>
-                        {catalogTool && (
+                        {(catalogTool || toolId) && (
                           <span
                             className={`support-package-plan ${plan}`}
                             title={
-                              channelSupport?.reason ||
-                              `统一目录尚未收录 ${pkg.manager} 渠道，此处沿用旧版直接安装`
+                              capabilityUnknown
+                                ? `${pkg.manager} 安装能力尚未确认，请等待目录读取或重试`
+                                : channelSupport?.reason ||
+                                  `统一目录尚未收录 ${pkg.manager} 渠道，此处沿用旧版直接安装`
                             }
                           >
-                            {planLabel(channelSupport)}
+                            {capabilityUnknown ? capabilityLabel : planLabel(channelSupport)}
                           </span>
                         )}
                       </span>
@@ -840,10 +976,20 @@ export default function SoftwareView({
                 </div>
               ) : (
                 <div className="support-card-state">
-                  {item.kind === "runtime" ? "使用 mise 选择版本安装" : "查看官方安装渠道"}
+                  {toolId
+                    ? "查看本机实例，或通过已接入的渠道预览安装计划"
+                    : item.kind === "runtime"
+                      ? "使用 mise 选择版本安装"
+                      : "查看官方安装渠道"}
                 </div>
               )}
-              {catalogTool && <CatalogCapabilities tool={catalogTool} />}
+              {catalogTool && (
+                <CatalogCapabilities
+                  tool={catalogTool}
+                  toolId={toolId}
+                  onPreviewInstall={busy ? undefined : onPreviewInstall}
+                />
+              )}
             </article>
           );
         })}

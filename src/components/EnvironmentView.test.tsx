@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useEffect } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,6 +13,11 @@ import {
   managedReconcile,
 } from "../api";
 import EnvironmentView from "./EnvironmentView";
+import type {
+  InventoryInstallRequest,
+  InventoryInstallTarget,
+  InventoryTool,
+} from "../lib/inventoryNavigation";
 
 vi.mock("../api", () => ({
   detectSystemVersions: vi.fn(async () => []),
@@ -32,19 +37,37 @@ vi.mock("../api", () => ({
 vi.mock("../lib/useMachineInstall", () => ({
   useMachineInstall: () => ({ installBusy: false }),
 }));
-const probe = vi.hoisted(() => ({ nodeInstallations: 0 }));
+const probe = vi.hoisted(() => ({
+  nodeInstallations: 0,
+  nodeHandled: undefined as ((id: number) => void) | undefined,
+  dialogClaim: undefined as ((toolId: InventoryTool) => number | null) | undefined,
+  dialogRelease: undefined as ((toolId: InventoryTool, token: number) => void) | undefined,
+}));
 vi.mock("./NodeInventoryPanel", () => ({
   default: ({
     active,
     focusRequest,
     refreshRequest,
     onReadState,
+    installRequest,
+    onInstallRequestHandled,
+    planDialogOwner,
+    claimPlanDialog,
+    releasePlanDialog,
   }: {
     active: boolean;
     focusRequest: number;
     refreshRequest: number;
     onReadState?: (state: unknown) => void;
+    installRequest?: InventoryInstallRequest;
+    onInstallRequestHandled?: (id: number) => void;
+    planDialogOwner?: InventoryTool | null;
+    claimPlanDialog?: (toolId: InventoryTool) => number | null;
+    releasePlanDialog?: (toolId: InventoryTool, token: number) => void;
   }) => {
+    probe.nodeHandled = onInstallRequestHandled;
+    probe.dialogClaim = claimPlanDialog;
+    probe.dialogRelease = releasePlanDialog;
     useEffect(() => {
       onReadState?.({
         snapshot: { installations: Array.from({ length: probe.nodeInstallations }, () => ({})) },
@@ -58,6 +81,13 @@ vi.mock("./NodeInventoryPanel", () => ({
         data-active={String(active)}
         data-focus={focusRequest}
         data-refresh={refreshRequest}
+        data-plan={
+          installRequest
+            ? `${installRequest.requestId}:${installRequest.providerId}:${installRequest.packageId}`
+            : ""
+        }
+        data-opener={installRequest?.opener?.textContent ?? ""}
+        data-dialog-owner={planDialogOwner ?? ""}
       >
         外部 Node 实例
       </section>
@@ -65,16 +95,60 @@ vi.mock("./NodeInventoryPanel", () => ({
   },
 }));
 vi.mock("./PythonInventoryPanel", () => ({
-  default: ({ active }: { active: boolean }) => (
-    <section aria-label="Python 只读清单" data-active={String(active)}>
+  default: ({
+    active,
+    installRequest,
+  }: {
+    active: boolean;
+    installRequest?: InventoryInstallRequest;
+  }) => (
+    <section
+      aria-label="Python 只读清单"
+      data-active={String(active)}
+      data-plan={
+        installRequest
+          ? `${installRequest.requestId}:${installRequest.providerId}:${installRequest.packageId}`
+          : ""
+      }
+    >
       Python 来源记录
+      <input aria-label="Python 清单会话" defaultValue="已有会话" />
     </section>
   ),
 }));
 vi.mock("./SoftwareView", () => ({
-  default: ({ active }: { active: boolean }) => (
+  default: ({
+    active,
+    onShowInventory,
+    onPreviewInstall,
+  }: {
+    active: boolean;
+    onShowInventory: (tool: InventoryTool) => void;
+    onPreviewInstall: (target: InventoryInstallTarget, opener?: HTMLElement) => void;
+  }) => (
     <section aria-label="兼容软件列表" data-active={String(active)}>
       <input aria-label="兼容渠道会话" defaultValue="旧会话" />
+      <button onClick={() => onShowInventory("python")}>查看 Python 实例</button>
+      <button
+        onClick={(event) =>
+          onPreviewInstall(
+            { toolId: "node", providerId: "brew", packageId: "node@22" },
+            event.currentTarget,
+          )
+        }
+      >
+        预览 Node brew
+      </button>
+      <button
+        onClick={(event) =>
+          onPreviewInstall(
+            { toolId: "python", providerId: "brew", packageId: "python@3.13" },
+            event.currentTarget,
+          )
+        }
+      >
+        预览 Python brew
+      </button>
     </section>
   ),
 }));
@@ -90,6 +164,9 @@ vi.mock("./SnapshotPanel", () => ({
 beforeEach(() => {
   vi.resetAllMocks();
   probe.nodeInstallations = 0;
+  probe.nodeHandled = undefined;
+  probe.dialogClaim = undefined;
+  probe.dialogRelease = undefined;
   vi.mocked(listTools).mockResolvedValue([]);
   vi.mocked(detectToolSources).mockResolvedValue([]);
   vi.mocked(getEnvInfo).mockResolvedValue({
@@ -319,4 +396,86 @@ describe("本机工具页的简明性", () => {
     await user.click(screen.getByText(/其他工具与旧版渠道/));
     expect(screen.queryByText(/本机已装 0 个运行时/)).toBeNull();
   });
+});
+
+describe("卡片导航与单份安装意图", () => {
+  it("鼠标点击未改变焦点时也保存实际计划按钮", async () => {
+    const user = userEvent.setup();
+    render(<EnvironmentView />);
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
+    const opener = await screen.findByRole("button", { name: "预览 Node brew" });
+    const input = screen.getByRole("textbox", { name: "兼容渠道会话" });
+    input.focus();
+    fireEvent.click(opener);
+    expect(document.activeElement).toBe(input);
+    expect(screen.getByRole("region", { name: "Node 只读清单" }).getAttribute("data-opener")).toBe(
+      "预览 Node brew",
+    );
+  });
+  it("旧列表失败仍可进入 Python 实例，切回后保留已经访问的清单会话", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listTools).mockRejectedValue("旧 mise 读取失败");
+    render(<EnvironmentView />);
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
+    await user.click(await screen.findByRole("button", { name: "查看 Python 实例" }));
+    const python = await screen.findByRole("region", { name: "Python 只读清单" });
+    expect(python.getAttribute("data-active")).toBe("true");
+    const session = screen.getByRole("textbox", { name: "Python 清单会话" });
+    await user.clear(session);
+    await user.type(session, "待核对实例");
+    await user.click(screen.getByRole("button", { name: /Node\.js/ }));
+    expect(python.getAttribute("data-active")).toBe("false");
+    await user.click(screen.getByRole("button", { name: "查看 Python 实例" }));
+    expect(screen.getByRole("region", { name: "Python 只读清单" })).toBe(python);
+    expect((session as HTMLInputElement).value).toBe("待核对实例");
+  });
+
+  it("跨工具计划保留原生包身份，迟到的旧请求不能清空新请求", async () => {
+    const user = userEvent.setup();
+    render(<EnvironmentView />);
+    await user.click(screen.getByText(/其他工具与旧版渠道/));
+    const opener = await screen.findByRole("button", { name: "预览 Node brew" });
+    opener.focus();
+    await user.keyboard("{Enter}");
+    const node = screen.getByRole("region", { name: "Node 只读清单" });
+    expect(node.getAttribute("data-plan")).toBe("1:brew:node@22");
+    expect(node.getAttribute("data-opener")).toBe("预览 Node brew");
+    const oldHandled = probe.nodeHandled!;
+    await user.click(screen.getByRole("button", { name: "预览 Python brew" }));
+    const python = await screen.findByRole("region", { name: "Python 只读清单" });
+    expect(python.getAttribute("data-plan")).toBe("2:brew:python@3.13");
+    expect(node.getAttribute("data-plan")).toBe("");
+    act(() => oldHandled(1));
+    expect(python.getAttribute("data-plan")).toBe("2:brew:python@3.13");
+    await user.click(screen.getByRole("button", { name: /Node\.js/ }));
+    expect(python.getAttribute("data-plan")).toBe("");
+    expect(screen.getAllByRole("region", { name: "Node 只读清单" })).toHaveLength(1);
+  });
+});
+
+it("跨工具同步 claim 只能成功一次，迟到的旧 token 不能释放新弹窗", () => {
+  render(<EnvironmentView />);
+  let first!: number | null;
+  let rejected!: number | null;
+  act(() => {
+    first = probe.dialogClaim!("node");
+    rejected = probe.dialogClaim!("python");
+  });
+  expect(first).not.toBeNull();
+  expect(rejected).toBeNull();
+  const node = screen.getByRole("region", { name: "Node 只读清单" });
+  expect(node.getAttribute("data-dialog-owner")).toBe("node");
+  act(() => probe.dialogRelease!("python", first!));
+  expect(node.getAttribute("data-dialog-owner")).toBe("node");
+  act(() => probe.dialogRelease!("node", first!));
+  expect(node.getAttribute("data-dialog-owner")).toBe("");
+  let second!: number | null;
+  act(() => {
+    second = probe.dialogClaim!("node");
+  });
+  expect(second).not.toBe(first);
+  act(() => probe.dialogRelease!("node", first!));
+  expect(node.getAttribute("data-dialog-owner")).toBe("node");
+  act(() => probe.dialogRelease!("node", second!));
+  expect(node.getAttribute("data-dialog-owner")).toBe("");
 });

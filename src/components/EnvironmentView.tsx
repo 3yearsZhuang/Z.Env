@@ -21,6 +21,11 @@ import MachinePresetSection from "./MachinePresetSection";
 import SnapshotPanel from "./SnapshotPanel";
 import NodeInventoryPanel from "./NodeInventoryPanel";
 import type { CatalogReadState } from "../lib/catalogEvidence";
+import type {
+  InventoryInstallRequest,
+  InventoryInstallTarget,
+  InventoryTool,
+} from "../lib/inventoryNavigation";
 const PythonInventoryPanel = lazy(() => import("./PythonInventoryPanel"));
 const SoftwareView = lazy(() => import("./SoftwareView"));
 import type { Navigate } from "../lib/nav";
@@ -104,6 +109,13 @@ export default function EnvironmentView({
   const [healthOpen, setHealthOpen] = useState(false);
   const [compatibilityVisited, setCompatibilityVisited] = useState(false);
   const [catalogNodeFocus, setCatalogNodeFocus] = useState(0);
+  const installSequence = useRef(0);
+  const dialogSequence = useRef(0);
+  const dialogOwner = useRef<{ toolId: InventoryTool; token: number } | null>(null);
+  const [planDialogOwner, setPlanDialogOwner] = useState<InventoryTool | null>(null);
+  const [pendingInstall, setPendingInstall] = useState<
+    (InventoryInstallRequest & { toolId: InventoryTool }) | null
+  >(null);
   const consumedCompatibility = useRef(0);
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [sources, setSources] = useState<ToolSource[]>([]);
@@ -127,6 +139,7 @@ export default function EnvironmentView({
       consumedNodeIntent.current = nodeDetailsRequest;
       setPane("runtime");
       setDetailTool("node");
+      setPendingInstall(null);
     }
   }, [active, nodeDetailsRequest]);
   useEffect(() => {
@@ -137,6 +150,50 @@ export default function EnvironmentView({
       setCompatibilityVisited(true);
     }
   }, [active, compatibilityRequest]);
+  const showInventory = useCallback((toolId: InventoryTool) => {
+    setPendingInstall(null);
+    setPane("runtime");
+    setDetailTool(toolId);
+    if (toolId === "python") {
+      setPythonVisited(true);
+      setPythonFocus((value) => value + 1);
+    } else {
+      setCatalogNodeFocus((value) => value + 1);
+    }
+  }, []);
+  const previewInstall = useCallback(
+    (target: InventoryInstallTarget, openerElement?: HTMLElement) => {
+      const opener =
+        openerElement ??
+        (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+      setPendingInstall({ ...target, requestId: ++installSequence.current, opener });
+      setPane("runtime");
+      setDetailTool(target.toolId);
+      if (target.toolId === "python") {
+        setPythonVisited(true);
+        setPythonFocus((value) => value + 1);
+      } else {
+        setCatalogNodeFocus((value) => value + 1);
+      }
+    },
+    [],
+  );
+  const installRequestHandled = useCallback((requestId: number) => {
+    setPendingInstall((current) => (current?.requestId === requestId ? null : current));
+  }, []);
+  const claimPlanDialog = useCallback((toolId: InventoryTool) => {
+    // 同步占用，防止同一轮渲染内两个面板都看到空 owner 并打开 portal。
+    if (dialogOwner.current) return null;
+    const token = ++dialogSequence.current;
+    dialogOwner.current = { toolId, token };
+    setPlanDialogOwner(toolId);
+    return token;
+  }, []);
+  const releasePlanDialog = useCallback((toolId: InventoryTool, token: number) => {
+    if (dialogOwner.current?.toolId !== toolId || dialogOwner.current.token !== token) return;
+    dialogOwner.current = null;
+    setPlanDialogOwner(null);
+  }, []);
   // 安装通道唯一实例挂在页面级：「装到整机」与「快照重建」共用 busy 状态实现互斥，
   // 也保证切 tab 不会丢掉进行中的流式安装
   const machineInstall = useMachineInstall();
@@ -392,23 +449,18 @@ export default function EnvironmentView({
         <div className="runtime-switch" role="group" aria-label="选择运行时清单">
           <button
             className={`runtime-switch-btn ${detailTool === "node" ? "active" : ""}`}
+            data-runtime-switch="node"
             aria-pressed={detailTool === "node"}
-            onClick={() => {
-              setDetailTool("node");
-              setCatalogNodeFocus((n) => n + 1);
-            }}
+            onClick={() => showInventory("node")}
           >
             <span className="runtime-switch-name">Node.js</span>
             <span className="runtime-switch-meta">{runtimeSummary(catalogRead)}</span>
           </button>
           <button
             className={`runtime-switch-btn ${detailTool === "python" ? "active" : ""}`}
+            data-runtime-switch="python"
             aria-pressed={detailTool === "python"}
-            onClick={() => {
-              setDetailTool("python");
-              setPythonVisited(true);
-              setPythonFocus((n) => n + 1);
-            }}
+            onClick={() => showInventory("python")}
           >
             <span className="runtime-switch-name">Python</span>
             <span className="runtime-switch-meta">{runtimeSummary(pythonRead)}</span>
@@ -420,6 +472,11 @@ export default function EnvironmentView({
             focusRequest={nodeDetailsRequest + catalogNodeFocus}
             onReadState={setCatalogRead}
             refreshRequest={inventoryRevision + inventoryChange}
+            installRequest={pendingInstall?.toolId === "node" ? pendingInstall : undefined}
+            onInstallRequestHandled={installRequestHandled}
+            planDialogOwner={planDialogOwner}
+            claimPlanDialog={claimPlanDialog}
+            releasePlanDialog={releasePlanDialog}
           />
         </div>
         {pythonVisited && (
@@ -430,6 +487,11 @@ export default function EnvironmentView({
                 focusRequest={pythonFocus}
                 refreshRequest={inventoryRevision + inventoryChange}
                 onReadState={setPythonRead}
+                installRequest={pendingInstall?.toolId === "python" ? pendingInstall : undefined}
+                onInstallRequestHandled={installRequestHandled}
+                planDialogOwner={planDialogOwner}
+                claimPlanDialog={claimPlanDialog}
+                releasePlanDialog={releasePlanDialog}
               />
             </Suspense>
           </div>
@@ -696,10 +758,8 @@ export default function EnvironmentView({
               <SoftwareView
                 active={active && pane === "runtime" && managedExpanded}
                 onInventoryChanged={() => setInventoryRevision((n) => n + 1)}
-                onShowNode={() => {
-                  setDetailTool("node");
-                  setCatalogNodeFocus((n) => n + 1);
-                }}
+                onShowInventory={showInventory}
+                onPreviewInstall={previewInstall}
               />
             </Suspense>
           )}

@@ -129,6 +129,7 @@
 /* 一个渠道 = 胶囊（安装 + 复制）+ 能力标签；标签来自统一目录，缺目录时不显示 */
 .support-package-item {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   max-width: 100%;
@@ -170,6 +171,7 @@
   cursor: pointer;
 }
 .support-package-install {
+  overflow-wrap: anywhere;
   padding: 6px 8px;
   border-radius: var(--r-xs) 0 0 var(--r-xs);
 }
@@ -199,6 +201,16 @@
   color: var(--muted-foreground);
   font-size: var(--fs-xs);
   line-height: 1.6;
+}
+.support-card-actions,
+.support-catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.support-catalog-actions {
+  margin: 7px 0 0;
 }
 .support-view button:disabled {
   cursor: default;

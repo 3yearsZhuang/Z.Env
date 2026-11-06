@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { pythonBindings, type PythonBinding } from "../api/pythonProject";
 import { useInventory } from "../lib/useInventory";
 import type { CatalogReadState } from "../lib/catalogEvidence";
+import type { InventoryInstallRequest, InventoryTool } from "../lib/inventoryNavigation";
 import type { ProviderReport, ProviderId } from "../api/inventory";
 import "./PythonInventoryPanel.css";
 const OperationPlanDialog = lazy(() => import("./OperationPlanDialog"));
@@ -30,23 +31,134 @@ interface Props {
   focusRequest: number;
   refreshRequest: number;
   onReadState: (state: CatalogReadState) => void;
+  installRequest?: InventoryInstallRequest;
+  onInstallRequestHandled?: (requestId: number) => void;
+  planDialogOwner?: InventoryTool | null;
+  claimPlanDialog?: (toolId: InventoryTool) => number | null;
+  releasePlanDialog?: (toolId: InventoryTool, token: number) => void;
 }
 export default function PythonInventoryPanel({
   active,
   focusRequest,
   refreshRequest,
   onReadState,
+  installRequest,
+  onInstallRequestHandled,
+  planDialogOwner,
+  claimPlanDialog,
+  releasePlanDialog,
 }: Props) {
   const state = useInventory(active, "python");
   const [planning, setPlanning] = useState<{
     installationId: string | null;
-    action?: "verify" | "bind" | "unbind";
+    action?: "install" | "verify" | "bind" | "unbind";
     bindingId?: string;
+    initialProviderId?: InventoryInstallRequest["providerId"];
+    initialPackageId?: string;
+    openerElement?: HTMLElement | null;
+    ownershipToken?: number;
   } | null>(null);
+  const foreignPlanning = Boolean(planDialogOwner && planDialogOwner !== "python");
+  const openPlan = useCallback(
+    (next: Omit<NonNullable<typeof planning>, "ownershipToken">) => {
+      if (planning || foreignPlanning) return false;
+      const token = claimPlanDialog?.("python");
+      if (claimPlanDialog && token === null) return false;
+      setPlanning({ ...next, ownershipToken: token ?? undefined });
+      return true;
+    },
+    [planning, foreignPlanning, claimPlanDialog],
+  );
+  const closePlan = useCallback(() => {
+    if (!planning) return;
+    setPlanning((current) => (current === planning ? null : current));
+    if (planning.ownershipToken !== undefined)
+      releasePlanDialog?.("python", planning.ownershipToken);
+  }, [planning, releasePlanDialog]);
   const [bindings, setBindings] = useState<PythonBinding[]>([]);
+  const handledInstalls = useRef(new Set<number>());
+  const [pendingInstall, setPendingInstall] = useState<{
+    request: InventoryInstallRequest;
+    baselineSnapshotId: string | undefined;
+    refreshRequested: boolean;
+    waitingForDialog: boolean;
+  } | null>(null);
   useEffect(() => {
-    if (!active) setPlanning(null);
-  }, [active]);
+    if (!installRequest || handledInstalls.current.has(installRequest.requestId)) {
+      setPendingInstall(null);
+      return;
+    }
+    setPendingInstall((pending) =>
+      pending?.request.requestId === installRequest.requestId
+        ? (planning || foreignPlanning) && !pending.waitingForDialog
+          ? { ...pending, waitingForDialog: true }
+          : pending
+        : {
+            request: installRequest,
+            baselineSnapshotId: state.snapshot?.requestId,
+            refreshRequested: false,
+            waitingForDialog: Boolean(planning || foreignPlanning),
+          },
+    );
+  }, [installRequest, state.snapshot?.requestId, planning, foreignPlanning]);
+  useEffect(() => {
+    if (
+      !pendingInstall ||
+      installRequest?.requestId !== pendingInstall.request.requestId ||
+      !active ||
+      planning ||
+      foreignPlanning
+    )
+      return;
+    if (pendingInstall.waitingForDialog) {
+      setPendingInstall({
+        ...pendingInstall,
+        baselineSnapshotId: state.snapshot?.requestId,
+        waitingForDialog: false,
+        refreshRequested: false,
+      });
+      return;
+    }
+    if (state.loading || state.waiting || state.cancelling || state.error) return;
+    if (
+      state.ready &&
+      state.snapshot &&
+      state.snapshot.requestId !== pendingInstall.baselineSnapshotId
+    ) {
+      const request = pendingInstall.request;
+      if (
+        !openPlan({
+          installationId: null,
+          action: "install",
+          initialProviderId: request.providerId,
+          initialPackageId: request.packageId,
+          openerElement: request.opener,
+        })
+      )
+        return;
+      handledInstalls.current.add(request.requestId);
+      setPendingInstall(null);
+      onInstallRequestHandled?.(request.requestId);
+    } else if (!pendingInstall.refreshRequested) {
+      setPendingInstall({ ...pendingInstall, refreshRequested: true });
+      void state.refresh();
+    }
+  }, [
+    pendingInstall,
+    installRequest,
+    active,
+    planning,
+    foreignPlanning,
+    openPlan,
+    state.loading,
+    state.waiting,
+    state.cancelling,
+    state.error,
+    state.ready,
+    state.snapshot,
+    state.refresh,
+    onInstallRequestHandled,
+  ]);
   const heading = useRef<HTMLHeadingElement>(null);
   const focused = useRef(0),
     refreshed = useRef(refreshRequest);
@@ -115,8 +227,8 @@ export default function PythonInventoryPanel({
           </button>
           <button
             className="btn"
-            disabled={!active || state.loading || Boolean(state.error) || !state.snapshot}
-            onClick={() => setPlanning({ installationId: null })}
+            disabled={!active || !state.ready || Boolean(planning) || foreignPlanning}
+            onClick={() => openPlan({ installationId: null })}
           >
             预览 Python 安装计划
           </button>
@@ -127,6 +239,22 @@ export default function PythonInventoryPanel({
           )}
         </div>
       </div>
+      {pendingInstall && installRequest?.requestId === pendingInstall.request.requestId && (
+        <p role="status">
+          安装计划请求等待最新清单与当前计划结束。
+          <button
+            className="btn"
+            onClick={() => {
+              const id = pendingInstall.request.requestId;
+              handledInstalls.current.add(id);
+              setPendingInstall(null);
+              onInstallRequestHandled?.(id);
+            }}
+          >
+            取消安装计划请求
+          </button>
+        </p>
+      )}
       {state.loading && (
         <p role="status">
           {state.waiting ? "等待旧读取结束后扫描 Python…" : "正在读取 Python 来源…"}
@@ -142,8 +270,8 @@ export default function PythonInventoryPanel({
         </p>
       )}
       <p className="python-inventory-note">
-        页面读取不调用安装器或修复；mise/uv 精确安装与 Homebrew core formula
-        安装/卸载以计划中的能力、归属和影响为准； 其他来源安装仅预览，绑定和项目解析尚未开放。
+        页面读取不调用安装器或修复；mise、uv、pyenv 精确安装与 Homebrew core formula
+        安装/卸载以计划中的能力、归属和影响为准；mise 绑定可写入项目或全局选择，实际生效需另行核对。
       </p>
       <div className="python-source-grid">
         {SOURCES.map((source) => {
@@ -222,6 +350,9 @@ export default function PythonInventoryPanel({
                 className="btn"
                 disabled={
                   !active ||
+                  Boolean(planning) ||
+                  foreignPlanning ||
+                  !state.ready ||
                   state.loading ||
                   Boolean(state.error) ||
                   item.stale ||
@@ -233,7 +364,7 @@ export default function PythonInventoryPanel({
                     ? "Python 绑定当前只支持 mise 管理的实例"
                     : undefined
                 }
-                onClick={() => setPlanning({ installationId: item.installationId, action: "bind" })}
+                onClick={() => openPlan({ installationId: item.installationId, action: "bind" })}
               >
                 绑定此实例到项目
               </button>
@@ -241,13 +372,16 @@ export default function PythonInventoryPanel({
                 className="btn"
                 disabled={
                   !active ||
+                  Boolean(planning) ||
+                  foreignPlanning ||
+                  !state.ready ||
                   state.loading ||
                   Boolean(state.error) ||
                   item.stale ||
                   item.health !== "healthy" ||
                   item.providerPackage.providerId === "path"
                 }
-                onClick={() => setPlanning({ installationId: item.installationId })}
+                onClick={() => openPlan({ installationId: item.installationId })}
               >
                 预览重新验证此 Python 实例
               </button>
@@ -285,8 +419,9 @@ export default function PythonInventoryPanel({
                 </p>
                 <button
                   className="btn"
+                  disabled={!active || !state.ready || Boolean(planning) || foreignPlanning}
                   onClick={() =>
-                    setPlanning({
+                    openPlan({
                       installationId: binding.installationId,
                       action: "unbind",
                       bindingId: binding.bindingId,
@@ -306,20 +441,17 @@ export default function PythonInventoryPanel({
             toolId="python"
             snapshotRequestId={state.snapshot.requestId}
             installationId={planning.installationId}
-            initialAction={
-              planning.action === "bind"
-                ? "bind"
-                : planning.action === "unbind"
-                  ? "unbind"
-                  : undefined
-            }
+            initialAction={planning.action === "verify" ? undefined : planning.action}
+            initialProviderId={planning.initialProviderId}
+            initialPackageId={planning.initialPackageId}
+            openerElement={planning.openerElement}
             initialBinding={
               planning.action === "bind"
                 ? { strategy: "direct", scope: "project", projectPath: "" }
                 : undefined
             }
             initialBindingId={planning.bindingId}
-            onClose={() => setPlanning(null)}
+            onClose={closePlan}
             onFinished={() => {
               if (active) void state.refresh();
             }}

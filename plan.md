@@ -5,8 +5,10 @@
 > 文档导航见 [docs/README.md](./docs/README.md)，历史状态见 [2026-11-06 快照](./docs/archive/plan-status-2026-11-06.md)，
 > P0–P8 条目 17 / 24 / 37 等仍指 [原开发志](./docs/archive/devlog-P0-P8.md)。
 
-## 当前状态（2026-11-06）
+## 当前状态（2026-11-07）
 
+- 当前主线基线 `1e4859d33258850d2c3b968389cb6de2797d48aa`：第 48、49 项已合并，
+  [主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42227033305) 全部通过；第 50 项前端入口连接实现完成，本地前端 44 文件 / 370 项及构建门禁通过；远端 CI / 合并记录见本切片 PR。真实 WebView 交互因 macOS 屏幕捕获服务错误未完成。
 - 本轮审查主线基线：`fe9130fd55b23ca6b7ad4e6afe69c7bcb294f049`。[PR #7](https://github.com/3yearsZhuang/Z.Env/pull/7)
   初审版本为 `28d1783ae5097c917ec73bc2ba89b8667fc715ed`；两项 P2 回退及相关 Python 账本已修正并通过独立复核。
   最终提交、三平台 CI 与合并记录以 PR 为准。
@@ -41,16 +43,16 @@ Python 能力账本已校准至现有实现；第 49 项已修正配方默认 No
 | 优先级 / 条目 | 交付 | 验收与依赖 |
 | --- | --- | --- |
 | ✅ 已完成 / 47 | PR #7 恢复目录失败提示/重试，保留目录来源及安装/卸载/绑定/项目核对能力；校准 Python 后端账本 | 新增 4 项前端回归结果与 1 项 Rust 来源/平台矩阵测试；独立审核通过，最终 CI/合并记录见 PR |
-| ✅ 实现与本地验证 / 48 | [PR #8](https://github.com/3yearsZhuang/Z.Env/pull/8)：Vitest/undici 补丁维护、限定 minimatch 修复与完整依赖 high 阻断 | 287 项前端测试与门禁通过，完整/生产审计均为 0；远端结果见 PR，待合并；上游修复后移除限定 override |
-| ✅ 实现与本地验证 / 49 | [PR #9](https://github.com/3yearsZhuang/Z.Env/pull/9)：分工具快照重验、项目要求、Node/Python 安装摘要与临时计划隔离 | 前端 288 / Rust macOS 313 项通过，独立审核通过；远端结果见 PR，待合并；配方 executable 始终 false |
+| ✅ 已合并 / 48 | [PR #8](https://github.com/3yearsZhuang/Z.Env/pull/8)：Vitest/undici 补丁维护、限定 minimatch 修复与完整依赖 high 阻断 | 287 项前端测试与门禁通过，完整/生产审计均为 0；三平台 CI 通过；上游修复后移除限定 override |
+| ✅ 已合并 / 49 | [PR #9](https://github.com/3yearsZhuang/Z.Env/pull/9)：分工具快照重验、项目要求、Node/Python 安装摘要与临时计划隔离 | 前端 288 / Rust macOS 313 项通过，独立审核与三平台 CI 通过；配方 executable 始终 false |
+| 🚧 已实现，实机验收待补 / 50 | Node/Python 卡片对称连接本机实例与现有操作计划；保留工具/渠道/原生包身份 | 当前激活成功读取才消费意图；单份跨工具弹窗协调、键盘/焦点、失败重试与窄窗验证分别记录在 [实施记录](./docs/tool-card-actions-2026-11-06.md) |
 
-48–49 分别以独立 PR 推进，按各项实现、本地与远端验证记录状态。主视图换位与后续工具扩展依赖现有能力/动作一致。
+48–50 分别以独立 PR 推进，按各项实现、本地与远端验证记录状态。主视图换位与后续工具扩展依赖现有能力/动作一致。
 
 ## 后续切片与退出条件
 
 | 顺序 / 条目 | 交付 | 退出条件 |
 | --- | --- | --- |
-| 50 | Node/Python 软件卡片接实例和计划入口 | 复用现有清单、计划弹窗与任务面板；点击后重新核验快照/能力，错误重试、取消、切页会话、键盘与 390/460px 布局通过 |
 | 51 | macOS Node/Python 配方最小执行 | 依赖 49；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
 | 52，与 49–51 的只读工作可并行 | Python 已有虚拟环境与现有渠道验收 | `.venv` 基础解释器引用、全局作用域与终端/IDE分别核对；Node Homebrew 写入/托管、更多 formula 和真实失败取消证据补齐 |
 | 53，可独立推进底座 | launcher shim 与 Windows provider 环境 | 自有收据/文件指纹/安装删除闭环；Windows 原生 argv/cwd/env/退出码及回收验证通过；新增入口纳入统一任务 |
