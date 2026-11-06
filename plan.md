@@ -7,9 +7,9 @@
 
 ## 当前状态（2026-11-07）
 
-- 当前主线基线 `7122fd6d8f3a1a10c818894719d4052bd5514f18`：第 48–50 项及 [Python 补偿安全 PR #11](https://github.com/3yearsZhuang/Z.Env/pull/11) 已合并，[当前主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42264993263) 全部通过。
+- 本切片主线基线 `22c73d54c04de7f9378b144719c94dbf33b44f3a`：第 48–50 项、[Python 补偿安全 PR #11](https://github.com/3yearsZhuang/Z.Env/pull/11) 和 [Recipe 契约 PR #12](https://github.com/3yearsZhuang/Z.Env/pull/12) 已合并，[基线主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42272810085) 全部通过。
   [第 50 项主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42255298931) 全部通过；[PR #10](https://github.com/3yearsZhuang/Z.Env/pull/10) 的本地前端 44 文件 / 370 项、18 项浏览器模拟交互和 12 组布局检查通过。真实 WebView 交互仍未完成；确认桌面解锁并重建捕获会话后，macOS ScreenCaptureKit 仍返回内部错误 `-3811`。
-- 第 51 项按 [最小执行设计](./docs/recipe-execution-design-2026-11-07.md) 推进，[Python 补偿安全](./docs/python-compensation-safety-2026-11-07.md) 已完成；当前 [契约与记录模型切片](./docs/recipe-contract-foundation-2026-11-07.md) 保留旧 Tool 调用，Recipe 纯校验后禁用；父任务和配方执行仍未接入。
+- 第 51 项按 [最小执行设计](./docs/recipe-execution-design-2026-11-07.md) 推进，[Python 补偿安全](./docs/python-compensation-safety-2026-11-07.md) 与 [契约模型](./docs/recipe-contract-foundation-2026-11-07.md) 已合并；当前 [父作用域与阶段核心](./docs/recipe-parent-stage-core-2026-11-07.md) 保留旧 Tool 批准与 v1 记录，阶段持锁/取消和唯一查询身份已实现。Rust 356 / 前端 571 项与本地门禁通过，独立复审 PASS，远端与合并状态以 PR 为准。Recipe 纯校验后仍禁用；父记录和配方执行尚未接入。
 - 本轮审查主线基线：`fe9130fd55b23ca6b7ad4e6afe69c7bcb294f049`。[PR #7](https://github.com/3yearsZhuang/Z.Env/pull/7)
   初审版本为 `28d1783ae5097c917ec73bc2ba89b8667fc715ed`；两项 P2 回退及相关 Python 账本已修正并通过独立复核。
   最终提交、三平台 CI 与合并记录以 PR 为准。
@@ -54,7 +54,7 @@ Python 能力账本已校准至现有实现；第 49 项已修正配方默认 No
 
 | 顺序 / 条目 | 交付 | 退出条件 |
 | --- | --- | --- |
-| 51，契约与记录模型验证中 | macOS Node/Python 配方最小执行；限定显式单项目、原生 mise、各一个精确版本与 project/direct；首切片见 [契约底座](./docs/recipe-contract-foundation-2026-11-07.md) | 依赖 49 与真实 WebView 验收；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
+| 51，契约已合并，父作用域已实现 | macOS Node/Python 配方最小执行；限定显式单项目、原生 mise、各一个精确版本与 project/direct；[契约底座](./docs/recipe-contract-foundation-2026-11-07.md) 与 [父作用域](./docs/recipe-parent-stage-core-2026-11-07.md) 之后拆准备/签发、提交扫描凭证与混合 journal | 依赖 49 与真实 WebView 验收；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
 | 52，与 49–51 的只读工作可并行 | Python 已有虚拟环境与现有渠道验收 | `.venv` 基础解释器引用、全局作用域与终端/IDE分别核对；Node Homebrew 写入/托管、更多 formula 和真实失败取消证据补齐 |
 | 53，可独立推进底座 | launcher shim 与 Windows provider 环境 | 自有收据/文件指纹/安装删除闭环；Windows 原生 argv/cwd/env/退出码及回收验证通过；新增入口纳入统一任务 |
 | 54 | Node Windows/Linux 纵向推广 | 依赖 53 相关底座；逐平台安装、绑定、解除、卸载、实际路径、失败/取消与桌面 IPC 通过 |

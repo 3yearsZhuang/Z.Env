@@ -720,16 +720,16 @@ impl OperationPlanService {
         query: InventoryQueryService,
         mut context: impl FnMut() -> Result<(PythonScanOptions, PathBuf), PlanError>,
     ) -> Result<ExecutionRecord, PlanError> {
-        let mut refresh_sequence = 0;
         let mut mutation: Option<crate::inventory::query::QueryLease> = None;
-        self.execute_with_scope(
+        self.execute_tool_with_context(
             plan_id,
             &query,
             || {
                 let (options, config) = context()?;
                 Ok((options.common.clone(), config, Some(options)))
             },
-            |kind, stored, _, id| {
+            |kind, stored, _, scope| {
+                let id = scope.id();
                 if stored.view.tool_id != InventoryTool::Python
                     || !matches!(
                         stored.view.action,
@@ -788,7 +788,9 @@ impl OperationPlanService {
                             binding.revalidate(stored.target.as_ref(), &snapshot)?;
                             let lease = query
                                 .begin_tool(
-                                    format!("python-mutation-{id}"),
+                                    scope
+                                        .query_id(0, "command")
+                                        .map_err(|_| PlanError::Inventory)?,
                                     Some(ProviderId::Mise),
                                     InventoryTool::Python,
                                 )
@@ -804,7 +806,9 @@ impl OperationPlanService {
                         write.revalidate(stored.target.as_ref(), &snapshot, options)?;
                         let lease = query
                             .begin_tool(
-                                format!("python-mutation-{id}"),
+                                scope
+                                    .query_id(0, "command")
+                                    .map_err(|_| PlanError::Inventory)?,
                                 Some(stored.view.target.provider_package.provider_id),
                                 InventoryTool::Python,
                             )
@@ -818,8 +822,9 @@ impl OperationPlanService {
                         result
                     }
                     StepKind::Refresh => {
-                        refresh_sequence += 1;
-                        let request = format!("python-verify-{id}-{refresh_sequence}");
+                        let request = scope
+                            .query_id(0, "refresh")
+                            .map_err(|_| PlanError::Inventory)?;
                         let provider = stored.view.target.provider_package.provider_id;
                         let lease = match mutation.take() {
                             Some(lease) => lease,
@@ -878,7 +883,9 @@ impl OperationPlanService {
                         if mutation.is_none() {
                             let lease = query
                                 .begin_tool(
-                                    format!("python-compensate-{id}"),
+                                    scope
+                                        .query_id(0, "compensate")
+                                        .map_err(|_| PlanError::Inventory)?,
                                     Some(ProviderId::Mise),
                                     InventoryTool::Python,
                                 )

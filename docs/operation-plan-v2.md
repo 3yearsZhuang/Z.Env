@@ -12,7 +12,7 @@
 ## 落地
 
 - `operation_plan_v2` 接收 `{schemaVersion:2, subject:{kind:"tool",toolId}, request}`，
-  Tool 的 `request` 仍为原始 snapshotRequestId 与意图。仅 Node/Python 工具开放；其他工具与未知 subject
+  Tool 的 `request` 仍为原始 snapshotRequestId 与意图。仅 Node/Python 工具开放；Tool 的其他工具目标与未知 subject
   返回不支持，版本、未知字段和前端拼接 program/argv/steps 在签发前拒绝。Recipe 的专有请求纯校验后返回 `Disabled`。
 - 返回 `{schemaVersion:2, subject, plan, stepGraph}`；`plan` 保留原 v1 字段与能力，
   Node 的旧省略字段与 Python 的显式字段兼容。图中每项含 stepId、stepIndex 和 dependsOn。

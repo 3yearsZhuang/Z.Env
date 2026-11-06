@@ -13,6 +13,7 @@ mod python_pyenv;
 mod python_uv;
 mod recipe_contract;
 mod recipe_record;
+mod stages;
 mod v2;
 mod writes;
 use crate::{
@@ -803,144 +804,172 @@ impl OperationPlanService {
     ) -> Result<ExecutionRecord, PlanError> {
         let mut mutation: Option<crate::inventory::query::QueryLease> = None;
         let mut binding_transaction = bindings::Transaction::default();
-        let mut refresh_sequence = 0_u32;
-        self.execute_with(
+        self.execute_tool_with_context(
             plan_id,
             &query,
-            context,
-            |kind, stored, options, id| match kind {
-                StepKind::Preflight => {
-                    if let Some(binding) = &stored.binding {
-                        let (_, snapshot) =
-                            query.current_snapshot().map_err(|_| PlanError::Inventory)?;
-                        if stored.view.action == Action::Unbind {
-                            return binding.revalidate(&snapshot, options);
+            {
+                let mut context = context;
+                move || {
+                    let (options, config) = context()?;
+                    Ok((options, config, None))
+                }
+            },
+            |kind, stored, options, scope| {
+                let id = scope.id();
+                match kind {
+                    StepKind::Preflight => {
+                        if let Some(binding) = &stored.binding {
+                            let (_, snapshot) =
+                                query.current_snapshot().map_err(|_| PlanError::Inventory)?;
+                            if stored.view.action == Action::Unbind {
+                                return binding.revalidate(&snapshot, options);
+                            }
+                        }
+                        let provider = stored.view.target.provider_package.provider_id;
+                        let token = CancellationToken::default();
+                        let watch = CancelWatch::start(id, token.clone());
+                        let scan = scan_node_provider(provider, options, &token);
+                        drop(watch);
+                        if operations::cancelled(id) {
+                            return Err(PlanError::Cancelled);
+                        }
+                        let fresh = merge_inventory("plan-preflight".into(), now(), vec![scan])
+                            .map_err(|_| PlanError::Preconditions)?;
+                        if let Some(binding) = &stored.binding {
+                            binding.revalidate(&fresh, options)
+                        } else if let Some(write) = &stored.write {
+                            write.revalidate(&fresh, stored.target.as_ref(), options)
+                        } else {
+                            verify_target(
+                                &fresh,
+                                stored.target.as_ref().ok_or(PlanError::Unsupported)?,
+                            )
+                            .map_err(|_| PlanError::Preconditions)
                         }
                     }
-                    let provider = stored.view.target.provider_package.provider_id;
-                    let token = CancellationToken::default();
-                    let watch = CancelWatch::start(id, token.clone());
-                    let scan = scan_node_provider(provider, options, &token);
-                    drop(watch);
-                    if operations::cancelled(id) {
-                        return Err(PlanError::Cancelled);
-                    }
-                    let fresh = merge_inventory("plan-preflight".into(), now(), vec![scan])
-                        .map_err(|_| PlanError::Preconditions)?;
-                    if let Some(binding) = &stored.binding {
-                        binding.revalidate(&fresh, options)
-                    } else if let Some(write) = &stored.write {
-                        write.revalidate(&fresh, stored.target.as_ref(), options)
-                    } else {
-                        verify_target(
-                            &fresh,
-                            stored.target.as_ref().ok_or(PlanError::Unsupported)?,
-                        )
-                        .map_err(|_| PlanError::Preconditions)
-                    }
-                }
-                StepKind::Command => {
-                    if let Some(binding) = &stored.binding {
+                    StepKind::Command => {
+                        if let Some(binding) = &stored.binding {
+                            let (_, snapshot) =
+                                query.current_snapshot().map_err(|_| PlanError::Inventory)?;
+                            binding.revalidate(&snapshot, options)?;
+                            let lease = query
+                                .begin(
+                                    scope
+                                        .query_id(0, "command")
+                                        .map_err(|_| PlanError::Inventory)?,
+                                    Some(ProviderId::Mise),
+                                )
+                                .map_err(|_| PlanError::Inventory)?;
+                            lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
+                            mutation = Some(lease);
+                            return binding.apply(&mut binding_transaction, id);
+                        }
+                        let write = stored.write.as_ref().ok_or(PlanError::Disabled)?;
                         let (_, snapshot) =
                             query.current_snapshot().map_err(|_| PlanError::Inventory)?;
-                        binding.revalidate(&snapshot, options)?;
+                        write.revalidate(&snapshot, stored.target.as_ref(), options)?;
                         let lease = query
-                            .begin(format!("mutation-{id}"), Some(ProviderId::Mise))
+                            .begin(
+                                scope
+                                    .query_id(0, "command")
+                                    .map_err(|_| PlanError::Inventory)?,
+                                Some(write.provider),
+                            )
                             .map_err(|_| PlanError::Inventory)?;
                         lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
                         mutation = Some(lease);
-                        return binding.apply(&mut binding_transaction, id);
+                        let token = CancellationToken::default();
+                        let watch = CancelWatch::start(id, token.clone());
+                        let result = write.run(options, &token);
+                        drop(watch);
+                        result
                     }
-                    let write = stored.write.as_ref().ok_or(PlanError::Disabled)?;
-                    let (_, snapshot) =
-                        query.current_snapshot().map_err(|_| PlanError::Inventory)?;
-                    write.revalidate(&snapshot, stored.target.as_ref(), options)?;
-                    let lease = query
-                        .begin(format!("mutation-{id}"), Some(write.provider))
-                        .map_err(|_| PlanError::Inventory)?;
-                    lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
-                    mutation = Some(lease);
-                    let token = CancellationToken::default();
-                    let watch = CancelWatch::start(id, token.clone());
-                    let result = write.run(options, &token);
-                    drop(watch);
-                    result
-                }
-                StepKind::Refresh => {
-                    let provider = if stored.binding.is_some() {
-                        ProviderId::Mise
-                    } else {
-                        stored.view.target.provider_package.provider_id
-                    };
-                    if stored.write.is_some() || stored.binding.is_some() {
-                        crate::syscache::invalidate(if provider == ProviderId::Brew {
-                            "brew"
+                    StepKind::Refresh => {
+                        let provider = if stored.binding.is_some() {
+                            ProviderId::Mise
                         } else {
-                            "mise"
-                        });
+                            stored.view.target.provider_package.provider_id
+                        };
+                        if stored.write.is_some() || stored.binding.is_some() {
+                            crate::syscache::invalidate(if provider == ProviderId::Brew {
+                                "brew"
+                            } else {
+                                "mise"
+                            });
+                        }
+                        let lease = match mutation.take() {
+                            Some(lease) => lease,
+                            None => query
+                                .begin(
+                                    scope
+                                        .query_id(0, "refresh")
+                                        .map_err(|_| PlanError::Inventory)?,
+                                    Some(provider),
+                                )
+                                .map_err(|_| PlanError::Inventory)?,
+                        };
+                        // 写入后的核对不再继承取消，否则无法报告真实残留。
+                        let result = lease
+                            .execute(options.clone())
+                            .map_err(|_| PlanError::ScanIncomplete)?;
+                        if stored.write.is_some() && !ready(&result, provider) {
+                            return Err(PlanError::ScanIncomplete);
+                        }
+                        Ok(())
                     }
-                    refresh_sequence += 1;
-                    let lease = match mutation.take() {
-                        Some(lease) => lease,
-                        None => query
-                            .begin(format!("verify-{id}-{refresh_sequence}"), Some(provider))
-                            .map_err(|_| PlanError::Inventory)?,
-                    };
-                    // 写入后的核对不再继承取消，否则无法报告真实残留。
-                    let result = lease
-                        .execute(options.clone())
-                        .map_err(|_| PlanError::ScanIncomplete)?;
-                    if stored.write.is_some() && !ready(&result, provider) {
-                        return Err(PlanError::ScanIncomplete);
+                    StepKind::Verify => {
+                        if let Some(binding) = &stored.binding {
+                            return binding.verify(options, &mut binding_transaction, id);
+                        }
+                        let (_, snapshot) =
+                            query.current_snapshot().map_err(|_| PlanError::Inventory)?;
+                        if let Some(write) = &stored.write {
+                            write.verify(&snapshot, options)
+                        } else {
+                            verify_target(
+                                &snapshot,
+                                stored.target.as_ref().ok_or(PlanError::Unsupported)?,
+                            )
+                        }
                     }
-                    Ok(())
-                }
-                StepKind::Verify => {
-                    if let Some(binding) = &stored.binding {
-                        return binding.verify(options, &mut binding_transaction, id);
+                    StepKind::Compensate => {
+                        if mutation.is_none() {
+                            let lease = query
+                                .begin(
+                                    scope
+                                        .query_id(0, "compensate")
+                                        .map_err(|_| PlanError::Inventory)?,
+                                    Some(ProviderId::Mise),
+                                )
+                                .map_err(|_| PlanError::Inventory)?;
+                            lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
+                            mutation = Some(lease);
+                        }
+                        binding_transaction.rollback()
                     }
-                    let (_, snapshot) =
-                        query.current_snapshot().map_err(|_| PlanError::Inventory)?;
-                    if let Some(write) = &stored.write {
-                        write.verify(&snapshot, options)
-                    } else {
-                        verify_target(
-                            &snapshot,
-                            stored.target.as_ref().ok_or(PlanError::Unsupported)?,
-                        )
-                    }
-                }
-                StepKind::Compensate => {
-                    if mutation.is_none() {
-                        let lease = query
-                            .begin(format!("compensate-{id}"), Some(ProviderId::Mise))
-                            .map_err(|_| PlanError::Inventory)?;
-                        lease.mark_mutating().map_err(|_| PlanError::Inventory)?;
-                        mutation = Some(lease);
-                    }
-                    binding_transaction.rollback()
                 }
             },
         )
     }
+    #[cfg(all(test, unix))]
     fn execute_with(
         &self,
         plan_id: &str,
         query: &InventoryQueryService,
         mut context: impl FnMut() -> Result<(NodeScanOptions, PathBuf), PlanError>,
-        driver: impl FnMut(StepKind, &StoredPlan, &NodeScanOptions, &str) -> Result<(), PlanError>,
+        mut driver: impl FnMut(StepKind, &StoredPlan, &NodeScanOptions, &str) -> Result<(), PlanError>,
     ) -> Result<ExecutionRecord, PlanError> {
-        self.execute_with_scope(
+        self.execute_tool_with_context(
             plan_id,
             query,
             || {
                 let (options, config) = context()?;
                 Ok((options, config, None))
             },
-            driver,
+            |kind, stored, options, scope| driver(kind, stored, options, scope.id()),
         )
     }
-    fn execute_with_scope(
+    fn execute_tool_with_context(
         &self,
         plan_id: &str,
         query: &InventoryQueryService,
@@ -952,7 +981,12 @@ impl OperationPlanService {
             ),
             PlanError,
         >,
-        mut driver: impl FnMut(StepKind, &StoredPlan, &NodeScanOptions, &str) -> Result<(), PlanError>,
+        mut driver: impl FnMut(
+            StepKind,
+            &StoredPlan,
+            &NodeScanOptions,
+            &operations::WriteScope<'_>,
+        ) -> Result<(), PlanError>,
     ) -> Result<ExecutionRecord, PlanError> {
         if !valid_id(plan_id) {
             return Err(PlanError::Consumed);
@@ -969,10 +1003,11 @@ impl OperationPlanService {
             }
             plan.view.action.label_for(plan.view.tool_id)
         };
-        // operations::run 以 AppError 返回，内部具体失败原因在闭包内单独保留；
+        // operations::run_scoped 以 AppError 返回，内部具体失败原因在闭包内单独保留；
         // 否则 Preconditions/Stale/Expired 等会被压平成 Execution，调用方和测试无法区分。
         let plan_failure: Mutex<Option<PlanError>> = Mutex::new(None);
-        operations::run(Some(plan_id.into()), label, |id| {
+        operations::run_scoped(Some(plan_id.into()), label, |scope| {
+            let id = scope.id();
             let result = (|| {
                 let stored = {
                     let mut state = lock(&self.state);
@@ -1022,129 +1057,47 @@ impl OperationPlanService {
                         return Err(error);
                     }
                 }
-                let mut changed = false;
-                let mut refreshed = false;
-                let mut failure = None;
-                for (index, step) in stored.view.steps.iter().enumerate() {
-                    if operations::cancelled(id) {
-                        failure = Some(PlanError::Cancelled);
-                        break;
-                    }
-                    if let Err(error) =
-                        self.record(id, |r| r.steps[index].status = StepStatus::Running)
-                    {
-                        failure = Some(error);
-                        break;
-                    }
-                    let mut entered = false;
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        if step.kind == StepKind::Command {
-                            let (latest_options, latest_config, python) = context()?;
-                            Self::validate(
-                                &stored,
-                                query,
-                                &latest_options,
-                                &latest_config,
-                                python.as_ref(),
-                            )?;
-                            entered = true;
-                        }
-                        if step.kind == StepKind::Refresh {
-                            refreshed = true;
-                        }
-                        driver(step.kind, &stored, &options, id)
-                    }))
-                    .unwrap_or(Err(PlanError::Interrupted));
-                    changed |= entered;
-                    let status = if result.is_ok() {
-                        StepStatus::Completed
-                    } else {
-                        StepStatus::Failed
-                    };
-                    if let Err(error) = self.record(id, |r| r.steps[index].status = status) {
-                        failure = Some(error);
-                        break;
-                    }
-                    if let Err(error) = result {
-                        failure = Some(error);
-                        break;
-                    }
-                    operations::log(
-                        id,
-                        match step.kind {
-                            StepKind::Preflight => "前置条件核对完成",
-                            StepKind::Command => "变更步骤完成",
-                            StepKind::Refresh => "来源重扫完成",
-                            StepKind::Verify => "结果验证完成",
-                            StepKind::Compensate => "补偿完成",
-                        },
-                    );
-                }
-                if failure.is_some()
-                    && changed
-                    && (stored.binding.is_some() || stored.python_binding.is_some())
-                {
-                    let _ = self.record(id, |r| {
-                        r.steps.push(ExecutionStep {
-                            kind: StepKind::Compensate,
-                            status: StepStatus::Running,
-                        })
-                    });
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        driver(StepKind::Compensate, &stored, &options, id)
-                    }))
-                    .unwrap_or(Err(PlanError::Interrupted));
-                    let outcome = match &result {
-                        Ok(()) => CompensationOutcome::Completed,
-                        Err(PlanError::BindingConflict) => CompensationOutcome::Conflict,
-                        Err(_) => CompensationOutcome::Failed,
-                    };
-                    let _ = self.record(id, |r| {
-                        r.compensation = Some(outcome);
-                        if let Some(step) =
-                            r.steps.iter_mut().find(|s| s.kind == StepKind::Compensate)
-                        {
-                            step.status = if result.is_ok() {
-                                StepStatus::Completed
-                            } else {
-                                StepStatus::Failed
-                            };
-                        }
-                    });
-                    if let Err(error) = result {
-                        // 保留补偿的真实失败原因；收据/文件 I/O 失败不能伪装成外部修改冲突。
-                        failure = Some(error);
-                    }
-                    refreshed = false;
-                }
-                // 只读重扫属于清理阶段；取消、命令失败、恐慌或 journal 故障均不能跳过。
-                if changed && !refreshed {
-                    if let Some(index) = stored
-                        .view
-                        .steps
-                        .iter()
-                        .position(|s| s.kind == StepKind::Refresh)
-                    {
-                        let _ = self.record(id, |r| r.steps[index].status = StepStatus::Running);
-                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            driver(StepKind::Refresh, &stored, &options, id)
-                        }))
-                        .unwrap_or(Err(PlanError::Interrupted));
-                        let _ = self.record(id, |r| {
-                            r.steps[index].status = if result.is_ok() {
-                                StepStatus::Completed
-                            } else {
-                                StepStatus::Failed
+                let steps: Vec<_> = stored.view.steps.iter().map(|step| step.kind).collect();
+                let stages::ResultState { changed, failure } = stages::run(
+                    scope,
+                    &steps,
+                    stored.binding.is_some() || stored.python_binding.is_some(),
+                    || {
+                        let (latest_options, latest_config, python) = context()?;
+                        Self::validate(
+                            &stored,
+                            query,
+                            &latest_options,
+                            &latest_config,
+                            python.as_ref(),
+                        )
+                    },
+                    |kind, scope| driver(kind, &stored, &options, scope),
+                    |progress| {
+                        self.record(id, |record| match progress {
+                            stages::Progress::Step(index, status) => {
+                                record.steps[index].status = status;
                             }
-                        });
-                        if result.is_err()
-                            && !matches!(failure, Some(PlanError::Journal | PlanError::Interrupted))
-                            && !matches!(failure, Some(PlanError::BindingConflict))
-                        {
-                            failure = Some(PlanError::ScanIncomplete);
-                        }
-                    }
-                }
+                            stages::Progress::CompensationStarted => {
+                                record.steps.push(ExecutionStep {
+                                    kind: StepKind::Compensate,
+                                    status: StepStatus::Running,
+                                });
+                            }
+                            stages::Progress::CompensationFinished(status, outcome) => {
+                                record.compensation = Some(outcome);
+                                if let Some(step) = record
+                                    .steps
+                                    .iter_mut()
+                                    .find(|step| step.kind == StepKind::Compensate)
+                                {
+                                    step.status = status;
+                                }
+                            }
+                        })
+                        .map(|_| ())
+                    },
+                );
                 if let Some(error) = failure {
                     let interrupted = matches!(error, PlanError::Interrupted | PlanError::Journal)
                         || lock(&self.state).journal_failed;

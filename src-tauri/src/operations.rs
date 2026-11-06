@@ -1,7 +1,9 @@
 // 应用级变更任务：所有写环境的入口共用互斥，不依赖页面是否挂载。
 use crate::error::AppError;
 use serde::Serialize;
+use std::cell::Cell;
 use std::collections::VecDeque;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 thread_local! { static CURRENT: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) }; }
@@ -118,6 +120,60 @@ pub struct Guard {
     finished: bool,
 }
 
+/// 内部阶段借用父 Guard；不能构造、结束或拥有一个新的应用级写任务。
+/// 序号使用 Cell，使作用域引用不能跨线程共享；取消仍通过父任务 ID 接收。
+pub(crate) struct WriteScope<'guard> {
+    guard: &'guard Guard,
+    nonce: u64,
+    query_sequence: Cell<u32>,
+}
+
+impl WriteScope<'_> {
+    pub(crate) fn id(&self) -> &str {
+        &self.guard.id
+    }
+
+    pub(crate) fn cancelled(&self) -> bool {
+        cancelled(self.id())
+    }
+
+    pub(crate) fn log(&self, line: impl Into<String>) {
+        log(self.id(), line);
+    }
+
+    /// 固定长度父 nonce 避免原任务 ID 占用查询预算；所有阶段共享有界单调序号。
+    pub(crate) fn query_id(&self, item: u8, phase: &'static str) -> Result<String, AppError> {
+        if item > 1 || !matches!(phase, "command" | "refresh" | "compensate") {
+            return Err(AppError::Other("内部阶段查询范围无效".into()));
+        }
+        let sequence = self
+            .query_sequence
+            .get()
+            .checked_add(1)
+            .filter(|sequence| *sequence <= 256)
+            .ok_or_else(|| AppError::Other("内部阶段查询数量超出预算".into()))?;
+        let id = format!("stage-{:016x}-i{item}-{phase}-s{sequence}", self.nonce);
+        crate::inventory::query::validate_request_id(&id)
+            .map_err(|_| AppError::Other("内部阶段查询身份无效".into()))?;
+        self.query_sequence.set(sequence);
+        Ok(id)
+    }
+}
+
+fn next_scope_nonce() -> Result<u64, AppError> {
+    static NEXT_NONCE: AtomicU64 = AtomicU64::new(1);
+    let mut nonce = NEXT_NONCE.load(Ordering::Relaxed);
+    loop {
+        let next = nonce
+            .checked_add(1)
+            .ok_or_else(|| AppError::Other("内部写任务序号已耗尽".into()))?;
+        match NEXT_NONCE.compare_exchange_weak(nonce, next, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => return Ok(nonce),
+            Err(current) => nonce = current,
+        }
+    }
+}
+
 impl Guard {
     fn finish(&mut self, status: &str) {
         if let Ok(mut jobs) = store().lock() {
@@ -171,6 +227,14 @@ pub fn run<T>(
     label: &str,
     work: impl FnOnce(&str) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
+    run_scoped(id, label, |scope| work(scope.id()))
+}
+
+pub(crate) fn run_scoped<T>(
+    id: Option<String>,
+    label: &str,
+    work: impl FnOnce(&WriteScope<'_>) -> Result<T, AppError>,
+) -> Result<T, AppError> {
     let id = id.unwrap_or_else(|| {
         format!(
             "{}",
@@ -180,10 +244,18 @@ pub fn run<T>(
                 .as_nanos()
         )
     });
+    let nonce = next_scope_nonce()?;
     let mut guard = begin(&id, label)?;
     let previous = CURRENT.with(|current| current.replace(Some(id.clone())));
     let _scope = Scope(previous);
-    let result = work(&id);
+    let result = {
+        let scope = WriteScope {
+            guard: &guard,
+            nonce,
+            query_sequence: Cell::new(0),
+        };
+        work(&scope)
+    };
     let partial_failure = list().iter().any(|job| job.id == id && job.partial_failure);
     let interrupted_failure = list()
         .iter()
@@ -220,6 +292,11 @@ pub(crate) static TEST_LOCK: Mutex<()> = Mutex::new(());
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn status(id: &str) -> String {
+        list().into_iter().find(|job| job.id == id).unwrap().status
+    }
+
     #[test]
     fn concurrent_entry_rejected_and_guard_released_after_failure() {
         let _test_lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -263,5 +340,182 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(list()[0].status, "cancelled");
         }
+    }
+
+    #[test]
+    fn scoped_stages_share_parent_identity_and_never_reenter_the_write_guard() {
+        let _test_lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+        let parent = "scoped-parent-identity-test";
+        let previous = current_id();
+        run_scoped(Some(parent.into()), "父任务", |scope| {
+            for stage in ["command", "refresh", "compensate"] {
+                assert_eq!(scope.id(), parent);
+                assert_eq!(current_id().as_deref(), Some(parent));
+                assert_eq!(status(parent), "running");
+                scope.log(format!("内部阶段 {stage}"));
+                assert!(run(
+                    Some(format!("scoped-nested-{stage}")),
+                    "嵌套任务",
+                    |_| -> Result<(), AppError> {
+                        panic!("nested public run must not enter its closure");
+                    }
+                )
+                .is_err());
+            }
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(status(parent), "completed");
+        assert_eq!(current_id(), previous);
+        let job = list().into_iter().find(|job| job.id == parent).unwrap();
+        assert!(job.lines.iter().any(|line| line == "内部阶段 command"));
+        assert!(job.lines.iter().any(|line| line == "内部阶段 compensate"));
+    }
+
+    #[test]
+    fn parent_write_scope_excludes_an_independent_thread_until_it_finishes() {
+        let _test_lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+        let parent = "scoped-cross-thread-parent-test";
+        run_scoped(Some(parent.into()), "跨线程父任务", |scope| {
+            let contender = std::thread::spawn(|| {
+                assert!(current_id().is_none());
+                let mut entered = false;
+                let result = run(
+                    Some("scoped-cross-thread-contender-test".into()),
+                    "另一路写入",
+                    |_| {
+                        entered = true;
+                        Ok(())
+                    },
+                );
+                (result.is_err(), entered)
+            });
+            assert_eq!(contender.join().unwrap(), (true, false));
+            assert_eq!(scope.id(), parent);
+            assert_eq!(current_id().as_deref(), Some(parent));
+            assert_eq!(status(parent), "running");
+            Ok(())
+        })
+        .unwrap();
+        run(
+            Some("scoped-cross-thread-after-test".into()),
+            "后续写入",
+            |_| Ok(()),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn scoped_cancellation_stays_on_the_parent_and_releases_after_cleanup() {
+        let _test_lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+        let parent = "scoped-cancel-parent-test";
+        let previous = current_id();
+        let result: Result<(), AppError> =
+            run_scoped(Some(parent.into()), "可取消父任务", |scope| {
+                assert!(!scope.cancelled());
+                let id = scope.id().to_owned();
+                std::thread::spawn(move || cancel(&id).unwrap())
+                    .join()
+                    .unwrap();
+                assert!(scope.cancelled());
+                assert_eq!(current_id().as_deref(), Some(parent));
+                assert_eq!(status(parent), "running");
+                scope.log("必要清理保留父任务归属");
+                assert!(run(
+                    Some("scoped-cancel-contender-test".into()),
+                    "清理期间写入",
+                    |_| Ok(())
+                )
+                .is_err());
+                Err(AppError::Other("阶段收到父任务取消".into()))
+            });
+        assert!(result.is_err());
+        assert_eq!(status(parent), "cancelled");
+        assert_eq!(current_id(), previous);
+        run(
+            Some("scoped-cancel-after-test".into()),
+            "取消后写入",
+            |_| Ok(()),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn scoped_panic_restores_previous_context_and_releases_the_parent_guard() {
+        let _test_lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+        let original =
+            CURRENT.with(|current| current.replace(Some("previous-context-test".into())));
+        let _restore = Scope(original);
+        let parent = "scoped-panic-parent-test";
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            run_scoped::<()>(Some(parent.into()), "恐慌父任务", |scope| {
+                assert_eq!(scope.id(), parent);
+                assert_eq!(current_id().as_deref(), Some(parent));
+                panic!("injected scoped stage panic");
+            })
+        }));
+        assert!(result.is_err());
+        assert_eq!(status(parent), "failed");
+        assert_eq!(current_id().as_deref(), Some("previous-context-test"));
+        run(
+            Some("scoped-panic-after-test".into()),
+            "恐慌后写入",
+            |_| Ok(()),
+        )
+        .unwrap();
+        assert_eq!(current_id().as_deref(), Some("previous-context-test"));
+    }
+
+    #[test]
+    fn phase_query_ids_are_bounded_unique_and_accepted_by_inventory_leases() {
+        let _test_lock = TEST_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+        let query = crate::inventory::query::InventoryQueryService::default();
+        let parent = "long-parent-身份-".repeat(32);
+        let ids = run_scoped(Some(parent.clone()), "查询身份父任务", |scope| {
+            assert_eq!(scope.id(), parent);
+            assert!(scope.query_id(2, "command").is_err());
+            assert!(scope.query_id(0, "unknown").is_err());
+            assert!(scope.query_id(0, "command;touch x").is_err());
+            let mut ids = Vec::new();
+            let mut unique = std::collections::BTreeSet::new();
+            for index in 0..256 {
+                let item = (index % 2) as u8;
+                let phase = ["command", "refresh", "compensate"][index % 3];
+                let id = scope.query_id(item, phase)?;
+                assert!(id.len() <= 128);
+                crate::inventory::query::validate_request_id(&id).unwrap();
+                assert!(unique.insert(id.clone()));
+                let tool = if item == 0 {
+                    crate::inventory::query::InventoryTool::Node
+                } else {
+                    crate::inventory::query::InventoryTool::Python
+                };
+                let lease = query
+                    .begin_tool(id.clone(), Some(crate::domain::ProviderId::Mise), tool)
+                    .unwrap();
+                drop(lease);
+                ids.push(id);
+            }
+            assert!(scope.query_id(0, "command").is_err());
+            assert!(scope.query_id(1, "refresh").is_err());
+            assert!(matches!(
+                query.begin(ids[0].clone(), Some(crate::domain::ProviderId::Mise)),
+                Err(crate::inventory::query::QueryError::ReusedRequestId)
+            ));
+            Ok(ids)
+        })
+        .unwrap();
+        let next = run_scoped(
+            Some("query-id-next-parent-test".into()),
+            "另一个父任务",
+            |scope| scope.query_id(0, "command"),
+        )
+        .unwrap();
+        assert!(!ids.contains(&next));
+        drop(
+            query
+                .begin(next, Some(crate::domain::ProviderId::Mise))
+                .unwrap(),
+        );
     }
 }
