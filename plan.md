@@ -7,8 +7,9 @@
 
 ## 当前状态（2026-11-07）
 
-- 当前主线基线 `1e4859d33258850d2c3b968389cb6de2797d48aa`：第 48、49 项已合并，
-  [主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42227033305) 全部通过；第 50 项前端入口连接实现完成，本地前端 44 文件 / 370 项及构建门禁通过；远端 CI / 合并记录见本切片 PR。真实 WebView 交互因 macOS 屏幕捕获服务错误未完成。
+- 当前主线基线 `35688bdcd9c57286d4b69d7a06cf50041656e679`：第 48–50 项已合并，
+  [第 50 项主线 CI](https://github.com/3yearsZhuang/Z.Env/actions/runs/42255298931) 全部通过；[PR #10](https://github.com/3yearsZhuang/Z.Env/pull/10) 的本地前端 44 文件 / 370 项、18 项浏览器模拟交互和 12 组布局检查通过。真实 WebView 交互仍未完成；确认桌面解锁并重建捕获会话后，macOS ScreenCaptureKit 仍返回内部错误 `-3811`。
+- 第 51 项已形成 [最小执行设计](./docs/recipe-execution-design-2026-11-07.md)，先修 [Python 补偿安全](./docs/python-compensation-safety-2026-11-07.md)：保护其他字段的外部修改、核对收据清理，以及取消后的独立终态扫描。配方执行仍未开放。
 - 本轮审查主线基线：`fe9130fd55b23ca6b7ad4e6afe69c7bcb294f049`。[PR #7](https://github.com/3yearsZhuang/Z.Env/pull/7)
   初审版本为 `28d1783ae5097c917ec73bc2ba89b8667fc715ed`；两项 P2 回退及相关 Python 账本已修正并通过独立复核。
   最终提交、三平台 CI 与合并记录以 PR 为准。
@@ -45,7 +46,7 @@ Python 能力账本已校准至现有实现；第 49 项已修正配方默认 No
 | ✅ 已完成 / 47 | PR #7 恢复目录失败提示/重试，保留目录来源及安装/卸载/绑定/项目核对能力；校准 Python 后端账本 | 新增 4 项前端回归结果与 1 项 Rust 来源/平台矩阵测试；独立审核通过，最终 CI/合并记录见 PR |
 | ✅ 已合并 / 48 | [PR #8](https://github.com/3yearsZhuang/Z.Env/pull/8)：Vitest/undici 补丁维护、限定 minimatch 修复与完整依赖 high 阻断 | 287 项前端测试与门禁通过，完整/生产审计均为 0；三平台 CI 通过；上游修复后移除限定 override |
 | ✅ 已合并 / 49 | [PR #9](https://github.com/3yearsZhuang/Z.Env/pull/9)：分工具快照重验、项目要求、Node/Python 安装摘要与临时计划隔离 | 前端 288 / Rust macOS 313 项通过，独立审核与三平台 CI 通过；配方 executable 始终 false |
-| 🚧 已实现，实机验收待补 / 50 | Node/Python 卡片对称连接本机实例与现有操作计划；保留工具/渠道/原生包身份 | 当前激活成功读取才消费意图；单份跨工具弹窗协调、键盘/焦点、失败重试与窄窗验证分别记录在 [实施记录](./docs/tool-card-actions-2026-11-06.md) |
+| 🚧 已合并，实机验收待补 / 50 | [PR #10](https://github.com/3yearsZhuang/Z.Env/pull/10)：Node/Python 卡片对称连接本机实例与现有操作计划；保留工具/渠道/原生包身份 | 当前激活成功读取才消费意图；单份跨工具弹窗协调、键盘/焦点、失败重试与窄窗验证分别记录在 [实施记录](./docs/tool-card-actions-2026-11-06.md) |
 
 48–50 分别以独立 PR 推进，按各项实现、本地与远端验证记录状态。主视图换位与后续工具扩展依赖现有能力/动作一致。
 
@@ -53,7 +54,7 @@ Python 能力账本已校准至现有实现；第 49 项已修正配方默认 No
 
 | 顺序 / 条目 | 交付 | 退出条件 |
 | --- | --- | --- |
-| 51 | macOS Node/Python 配方最小执行 | 依赖 49；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
+| 51，设计评审 / 底座修正中 | macOS Node/Python 配方最小执行；先限定显式单项目、原生 mise、各一个精确版本与 project/direct；见 [执行设计](./docs/recipe-execution-design-2026-11-07.md) | 依赖 49 与真实 WebView 验收；一个后端写任务串接安装→配置→验证，成功项保留；失败/未执行项重扫重签；部分失败、取消、外改、补偿冲突、重启中断及真实 WebView IPC 通过 |
 | 52，与 49–51 的只读工作可并行 | Python 已有虚拟环境与现有渠道验收 | `.venv` 基础解释器引用、全局作用域与终端/IDE分别核对；Node Homebrew 写入/托管、更多 formula 和真实失败取消证据补齐 |
 | 53，可独立推进底座 | launcher shim 与 Windows provider 环境 | 自有收据/文件指纹/安装删除闭环；Windows 原生 argv/cwd/env/退出码及回收验证通过；新增入口纳入统一任务 |
 | 54 | Node Windows/Linux 纵向推广 | 依赖 53 相关底座；逐平台安装、绑定、解除、卸载、实际路径、失败/取消与桌面 IPC 通过 |
